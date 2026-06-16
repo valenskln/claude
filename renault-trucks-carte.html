@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🚛 Renault Trucks – Réseau Concessionnaires France</title>
+
+<!-- CDN Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
+<style>
+/* ==============================
+   CSS VARIABLES
+   ============================== */
+:root {
+  --topbar-bg: #1a2332;
+  --sidebar-bg: #1a2332;
+  --sidebar-head: #111c2b;
+  --sidebar-hover: #243044;
+  --sidebar-text: #e2e8f0;
+  --sidebar-muted: #94a3b8;
+  --accent: #2563eb;
+  --bg: #f1f5f9;
+  --bg-white: #ffffff;
+  --text: #1e293b;
+  --text2: #64748b;
+  --border: #e2e8f0;
+  --shadow: 0 4px 20px rgba(0,0,0,0.13);
+  --radius: 8px;
+  --sidebar-w: 285px;
+  --topbar-h: 58px;
+}
+.dark {
+  --bg: #0f172a;
+  --bg-white: #1e293b;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --border: #334155;
+  --topbar-bg: #060c18;
+  --sidebar-bg: #060c18;
+  --sidebar-head: #030912;
+}
+
+/* ==============================
+   RESET & BASE
+   ============================== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;font-size:14px;background:var(--bg);color:var(--text);transition:background .3s,color .3s}
+button{cursor:pointer;font-family:inherit}
+select,input{font-family:inherit}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#475569;border-radius:3px}
+
+/* ==============================
+   LAYOUT
+   ============================== */
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* ==============================
+   TOPBAR
+   ============================== */
+#topbar{
+  display:flex;align-items:center;height:var(--topbar-h);
+  background:var(--topbar-bg);padding:0 14px;gap:10px;
+  flex-shrink:0;box-shadow:0 2px 10px rgba(0,0,0,.35);z-index:1000;
+}
+#brand{display:flex;align-items:center;gap:8px;white-space:nowrap;flex-shrink:0}
+.brand-icon{font-size:22px}
+.brand-name{font-size:15px;font-weight:700;color:#fff;line-height:1.1}
+.brand-sub{display:block;font-size:10px;font-weight:400;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
+
+/* Search */
+#search-wrap{flex:1;max-width:460px;position:relative}
+#search-box{
+  display:flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);
+  border-radius:20px;padding:0 12px;transition:.2s;
+}
+#search-box:focus-within{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.3)}
+#search-box .ico{color:#64748b;font-size:14px}
+#search-input{flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:13px;padding:8px 0}
+#search-input::placeholder{color:#64748b}
+#search-clear{background:none;border:none;color:#64748b;font-size:13px;padding:0;display:none}
+#search-clear:hover{color:#fff}
+#search-results{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;
+  background:var(--bg-white);border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);max-height:340px;overflow-y:auto;z-index:9999;display:none;
+}
+#search-results.show{display:block}
+.sr-item{padding:9px 13px;cursor:pointer;border-bottom:1px solid var(--border);transition:.15s}
+.sr-item:last-child{border-bottom:none}
+.sr-item:hover{background:var(--bg)}
+.sr-name{font-weight:600;font-size:13px;color:var(--text);margin-bottom:2px}
+.sr-meta{font-size:11px;color:var(--text2)}
+.sr-empty{padding:12px;text-align:center;color:var(--text2)}
+
+/* Action buttons */
+#topbar-btns{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.tbtn{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);
+  color:#e2e8f0;border-radius:6px;padding:6px 10px;font-size:12px;
+  white-space:nowrap;transition:.2s;
+}
+.tbtn:hover{background:rgba(255,255,255,.17);border-color:rgba(255,255,255,.25)}
+.tbtn.on{background:var(--accent);border-color:#1d4ed8;color:#fff}
+.tbtn-ico{font-size:14px}
+
+/* Dropdown */
+.ddwrap{position:relative}
+.ddmenu{
+  position:absolute;top:calc(100% + 6px);right:0;
+  background:var(--bg-white);border:1px solid var(--border);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+  min-width:175px;z-index:9999;display:none;overflow:hidden;
+}
+.ddmenu.show{display:block}
+.ddi{
+  display:block;width:100%;padding:9px 14px;background:none;border:none;
+  color:var(--text);text-align:left;font-size:13px;transition:.15s;
+}
+.ddi:hover{background:var(--bg)}
+
+/* ==============================
+   MAIN CONTENT
+   ============================== */
+#main{display:flex;flex:1;overflow:hidden}
+
+/* ==============================
+   SIDEBAR
+   ============================== */
+#sidebar{
+  width:var(--sidebar-w);background:var(--sidebar-bg);
+  display:flex;flex-direction:column;overflow:hidden;
+  flex-shrink:0;box-shadow:2px 0 10px rgba(0,0,0,.2);z-index:100;
+  transition:width .3s;
+}
+#sidebar.closed{width:0}
+
+#sb-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 12px;background:var(--sidebar-head);flex-shrink:0;
+  border-bottom:1px solid rgba(255,255,255,.05);
+}
+#sb-title{font-size:12px;font-weight:700;color:var(--sidebar-text);text-transform:uppercase;letter-spacing:.6px}
+#sb-toggle{
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+  color:var(--sidebar-muted);border-radius:4px;padding:3px 8px;font-size:11px;transition:.2s;
+}
+#sb-toggle:hover{background:rgba(255,255,255,.15);color:#fff}
+
+/* Filters */
+#sb-filters{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.05);flex-shrink:0}
+.flabel{display:block;font-size:10px;color:var(--sidebar-muted);text-transform:uppercase;letter-spacing:.4px;margin:6px 0 3px}
+.flabel:first-child{margin-top:0}
+.fsel{
+  width:100%;padding:6px 8px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);border-radius:4px;
+  color:var(--sidebar-text);font-size:12px;outline:none;cursor:pointer;
+}
+.fsel option{background:#1a2332;color:#e2e8f0}
+.reset-btn{
+  margin-top:7px;width:100%;padding:5px;
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);
+  border-radius:4px;color:#fca5a5;font-size:11px;transition:.2s;
+}
+.reset-btn:hover{background:rgba(239,68,68,.2)}
+
+/* Group list header */
+#glist-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.05);
+  font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--sidebar-muted);flex-shrink:0;
+}
+#glist-head div{display:flex;gap:4px}
+.minibtn{
+  padding:2px 7px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);border-radius:3px;
+  color:var(--sidebar-muted);font-size:10px;transition:.2s;
+}
+.minibtn:hover{background:rgba(255,255,255,.14);color:#fff}
+
+/* Groups */
+#group-list{flex:1;overflow-y:auto;padding:3px 0}
+.gi label{
+  display:flex;align-items:center;gap:7px;padding:7px 12px;
+  cursor:pointer;transition:.15s;
+}
+.gi label:hover{background:var(--sidebar-hover)}
+.gi input[type=checkbox]{flex-shrink:0;width:13px;height:13px;accent-color:var(--accent);cursor:pointer}
+.gdot{flex-shrink:0;width:10px;height:10px;border-radius:50%;border:1.5px solid rgba(255,255,255,.25)}
+.gname{flex:1;font-size:12px;color:var(--sidebar-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gcnt{font-size:10px;color:var(--sidebar-muted);background:rgba(255,255,255,.08);padding:1px 6px;border-radius:10px;flex-shrink:0}
+
+/* Sidebar stats */
+#sb-stats{
+  display:flex;padding:10px 12px;background:var(--sidebar-head);
+  border-top:1px solid rgba(255,255,255,.05);gap:4px;flex-shrink:0;
+}
+.ssi{flex:1;text-align:center;padding:6px 4px;background:rgba(255,255,255,.05);border-radius:4px}
+.ssn{display:block;font-size:19px;font-weight:800;color:#fff;line-height:1;margin-bottom:2px}
+.ssl{font-size:9px;color:var(--sidebar-muted);text-transform:uppercase;letter-spacing:.3px}
+
+/* ==============================
+   MAP
+   ============================== */
+#map-wrap{flex:1;position:relative;overflow:hidden}
+#map{width:100%;height:100%}
+
+/* Legend */
+#legend{
+  position:absolute;bottom:24px;right:10px;
+  background:var(--bg-white);border:1px solid var(--border);
+  border-radius:var(--radius);padding:10px 12px;
+  box-shadow:var(--shadow);z-index:500;max-width:195px;
+}
+.leg-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:6px}
+.leg-item{display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:11px;color:var(--text)}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;border:1.5px solid rgba(0,0,0,.12)}
+.leg-more{font-size:10px;color:var(--text2);font-style:italic;margin-top:2px}
+
+/* Loader */
+#loader{
+  position:absolute;inset:0;background:rgba(15,23,42,.75);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:#fff;gap:12px;font-size:14px;z-index:9998;
+}
+#loader.gone{display:none}
+.spin{
+  width:36px;height:36px;border:3px solid rgba(255,255,255,.2);
+  border-top-color:#2563eb;border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ==============================
+   POPUPS
+   ============================== */
+.leaflet-popup-content-wrapper{border-radius:8px!important;box-shadow:0 6px 24px rgba(0,0,0,.18)!important;padding:0!important;overflow:hidden;min-width:210px}
+.leaflet-popup-content{margin:0!important;width:auto!important}
+.leaflet-popup-tip-container{display:none}
+.pop-head{padding:10px 14px;color:#fff}
+.pop-head strong{font-size:13px;line-height:1.3;display:block}
+.pop-body{padding:8px 14px 10px;background:#fff}
+.pop-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #f1f5f9;gap:8px}
+.pop-row:last-child{border-bottom:none}
+.pop-lbl{font-size:11px;color:#64748b;flex-shrink:0}
+.pop-val{font-size:12px;font-weight:600;color:#1e293b;text-align:right}
+
+/* ==============================
+   MODAL
+   ============================== */
+.modal{position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal.gone{display:none}
+.moverlay{position:absolute;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px)}
+.mcontent{
+  position:relative;background:var(--bg-white);border-radius:12px;
+  box-shadow:0 12px 48px rgba(0,0,0,.25);
+  width:100%;max-width:880px;max-height:90vh;overflow:hidden;
+  display:flex;flex-direction:column;
+}
+.mhead{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.mhead h2{font-size:18px;color:var(--text)}
+.mclose{
+  background:none;border:none;color:var(--text2);font-size:18px;
+  padding:4px 9px;border-radius:4px;transition:.2s;
+}
+.mclose:hover{background:var(--bg);color:var(--text)}
+.mbody{overflow-y:auto;padding:20px;flex:1}
+
+/* Stats grid */
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.scard{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center}
+.snum{font-size:30px;font-weight:800;color:var(--accent);line-height:1;margin-bottom:4px}
+.slbl{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px}
+
+/* Charts */
+#charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.ccard{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:14px;max-height:280px}
+.ccard canvas{max-height:248px}
+
+/* Table */
+.ttitle{font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px}
+.stable{width:100%;border-collapse:collapse;font-size:13px}
+.stable th{text-align:left;padding:8px 12px;background:var(--bg);color:var(--text2);font-size:10px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+.stable td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+.stable tr:last-child td{border-bottom:none}
+.stable tr:hover td{background:var(--bg)}
+.idot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle}
+
+/* ==============================
+   RESPONSIVE
+   ============================== */
+@media(max-width:768px){
+  .brand-sub,.tbtn span:last-child{display:none}
+  #search-wrap{max-width:180px}
+  #sidebar{position:absolute;top:0;left:0;height:100%;z-index:200;transition:transform .3s}
+  #sidebar.closed{width:var(--sidebar-w);transform:translateX(-100%)}
+  .sgrid{grid-template-columns:1fr 1fr}
+  #charts{grid-template-columns:1fr}
+  #legend{display:none}
+}
+@media(max-width:480px){
+  #topbar{padding:0 8px;gap:5px}
+  .tbtn{padding:5px 7px}
+  .sgrid{grid-template-columns:1fr 1fr}
+}
+
+mark{background:#fef08a;border-radius:2px;padding:0 1px}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOPBAR -->
+  <header id="topbar">
+    <div id="brand">
+      <span class="brand-icon">🚛</span>
+      <span class="brand-name">Renault Trucks <span class="brand-sub">Réseau Concessionnaires</span></span>
+    </div>
+
+    <div id="search-wrap">
+      <div id="search-box">
+        <span class="ico">🔍</span>
+        <input type="text" id="search-input" placeholder="Concessionnaire, ville, groupe…" autocomplete="off">
+        <button id="search-clear">✕</button>
+      </div>
+      <div id="search-results"></div>
+    </div>
+
+    <div id="topbar-btns">
+      <button class="tbtn" id="btn-heat" title="Vue heatmap"><span class="tbtn-ico">🌡️</span><span>Heatmap</span></button>
+      <button class="tbtn" id="btn-top10" title="Top 10 groupes"><span class="tbtn-ico">🏆</span><span>Top 10</span></button>
+      <button class="tbtn" id="btn-stats" title="Statistiques"><span class="tbtn-ico">📊</span><span>Stats</span></button>
+      <button class="tbtn" id="btn-dark" title="Mode sombre"><span class="tbtn-ico">🌙</span><span>Sombre</span></button>
+      <div class="ddwrap">
+        <button class="tbtn" id="btn-export"><span class="tbtn-ico">⬇️</span><span>Exporter</span></button>
+        <div class="ddmenu" id="dd-export">
+          <button class="ddi" id="exp-csv">📄 Export CSV</button>
+          <button class="ddi" id="exp-xls">📊 Export Excel</button>
+          <button class="ddi" id="exp-geo">🗺️ Export GeoJSON</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar">
+      <div id="sb-head">
+        <span id="sb-title">Groupes &amp; Filtres</span>
+        <button id="sb-toggle">◀</button>
+      </div>
+
+      <div id="sb-filters">
+        <span class="flabel">Région</span>
+        <select class="fsel" id="f-region"><option value="">Toutes les régions</option></select>
+        <span class="flabel">Département</span>
+        <select class="fsel" id="f-dept"><option value="">Tous les départements</option></select>
+        <button class="reset-btn" id="btn-reset">✕ Réinitialiser les filtres</button>
+      </div>
+
+      <div id="glist-head">
+        <span>Groupes</span>
+        <div>
+          <button class="minibtn" id="btn-all">✓ Tous</button>
+          <button class="minibtn" id="btn-none">✕ Aucun</button>
+        </div>
+      </div>
+
+      <div id="group-list"></div>
+
+      <div id="sb-stats">
+        <div class="ssi"><span class="ssn" id="st-total">0</span><span class="ssl">Total</span></div>
+        <div class="ssi"><span class="ssn" id="st-grp">0</span><span class="ssl">Groupes</span></div>
+        <div class="ssi"><span class="ssn" id="st-vis">0</span><span class="ssl">Visibles</span></div>
+      </div>
+    </aside>
+
+    <!-- MAP -->
+    <div id="map-wrap">
+      <div id="map"></div>
+
+      <div id="legend">
+        <div class="leg-title">Légende</div>
+        <div id="leg-items"></div>
+      </div>
+
+      <div id="loader">
+        <div class="spin"></div>
+        <span>Chargement de la carte…</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL STATS -->
+<div class="modal gone" id="modal">
+  <div class="moverlay"></div>
+  <div class="mcontent">
+    <div class="mhead">
+      <h2>📊 Statistiques du Réseau</h2>
+      <button class="mclose">✕</button>
+    </div>
+    <div class="mbody">
+      <div id="m-summary"></div>
+      <div id="charts">
+        <div class="ccard"><canvas id="ch-groups"></canvas></div>
+        <div class="ccard"><canvas id="ch-regions"></canvas></div>
+      </div>
+      <div id="m-top10"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SCRIPTS CDN -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+
+<script>
+/* ====================================================
+   DONNÉES INTÉGRÉES
+   ==================================================== */
+const RAW_DATA = [
+  {name:"AZUR TDR FREJUS",city:"Fréjus",department:"Var",region:"Provence-Alpes-Côte d'Azur",lat:43.433,lng:6.737},
+  {name:"AZUR TDR ORANGE",city:"Orange",department:"Vaucluse",region:"Provence-Alpes-Côte d'Azur",lat:44.138,lng:4.808},
+  {name:"AZUR TDR VILLENEUVE LOUBET",city:"Villeneuve-Loubet",department:"Alpes-Maritimes",region:"Provence-Alpes-Côte d'Azur",lat:43.658,lng:7.119},
+  {name:"AZUR TDR NICE",city:"Nice",department:"Alpes-Maritimes",region:"Provence-Alpes-Côte d'Azur",lat:43.710,lng:7.262},
+  {name:"AZUR TDR TOULON",city:"Toulon",department:"Var",region:"Provence-Alpes-Côte d'Azur",lat:43.124,lng:5.928},
+  {name:"BERNARD TRUCKS CHALON S/SAONE",city:"Chalon-sur-Saône",department:"Saône-et-Loire",region:"Bourgogne-Franche-Comté",lat:46.780,lng:4.853},
+  {name:"BERNARD TRUCKS GRENOBLE",city:"Grenoble",department:"Isère",region:"Auvergne-Rhône-Alpes",lat:45.188,lng:5.724},
+  {name:"BERNARD TRUCKS LUDRES",city:"Ludres",department:"Meurthe-et-Moselle",region:"Grand Est",lat:48.606,lng:6.177},
+  {name:"BERNARD TRUCKS MEYTHET",city:"Meythet",department:"Haute-Savoie",region:"Auvergne-Rhône-Alpes",lat:45.929,lng:6.087},
+  {name:"BERNARD TRUCKS MONTLUEL",city:"Montluel",department:"Ain",region:"Auvergne-Rhône-Alpes",lat:45.846,lng:5.056},
+  {name:"BERNARD TRUCKS VERDUN",city:"Verdun",department:"Meuse",region:"Grand Est",lat:49.162,lng:5.388},
+  {name:"BERNARD TRUCKS LYON",city:"Lyon",department:"Rhône",region:"Auvergne-Rhône-Alpes",lat:45.748,lng:4.847},
+  {name:"BERNARD TRUCKS DIJON",city:"Dijon",department:"Côte-d'Or",region:"Bourgogne-Franche-Comté",lat:47.322,lng:5.041},
+  {name:"BERNARD TRUCKS STRASBOURG",city:"Strasbourg",department:"Bas-Rhin",region:"Grand Est",lat:48.574,lng:7.751},
+  {name:"BOURLIER BELFORT",city:"Belfort",department:"Territoire de Belfort",region:"Bourgogne-Franche-Comté",lat:47.638,lng:6.864},
+  {name:"BOURLIER VESOUL",city:"Vesoul",department:"Haute-Saône",region:"Bourgogne-Franche-Comté",lat:47.621,lng:6.157},
+  {name:"BOURLIER MULHOUSE",city:"Mulhouse",department:"Haut-Rhin",region:"Grand Est",lat:47.750,lng:7.339},
+  {name:"BOURLIER BESANCON",city:"Besançon",department:"Doubs",region:"Bourgogne-Franche-Comté",lat:47.237,lng:6.022},
+  {name:"CATALOGNE POIDS LOURDS",city:"Perpignan",department:"Pyrénées-Orientales",region:"Occitanie",lat:42.698,lng:2.895},
+  {name:"ETS DARRIGRAND",city:"Bayonne",department:"Pyrénées-Atlantiques",region:"Nouvelle-Aquitaine",lat:43.493,lng:-1.474},
+  {name:"KERTRUCKS BREST",city:"Brest",department:"Finistère",region:"Bretagne",lat:48.390,lng:-4.486},
+  {name:"KERTRUCKS CHARTRES DE BRETAGNE",city:"Chartres-de-Bretagne",department:"Ille-et-Vilaine",region:"Bretagne",lat:48.045,lng:-1.683},
+  {name:"KERTRUCKS DISTRE",city:"Distré",department:"Maine-et-Loire",region:"Pays de la Loire",lat:47.228,lng:-0.167},
+  {name:"KERTRUCKS GUIDEL LORIENT",city:"Guidel",department:"Morbihan",region:"Bretagne",lat:47.783,lng:-3.467},
+  {name:"KERTRUCKS PAYS DE LOIRE SAS",city:"Saint-Herblain",department:"Loire-Atlantique",region:"Pays de la Loire",lat:47.218,lng:-1.653},
+  {name:"KERTRUCKS RENNES SAS",city:"Rennes",department:"Ille-et-Vilaine",region:"Bretagne",lat:48.117,lng:-1.677},
+  {name:"KERTRUCKS ROMAGNE",city:"Romagné",department:"Deux-Sèvres",region:"Nouvelle-Aquitaine",lat:46.730,lng:-0.483},
+  {name:"KERTRUCKS VANNES",city:"Vannes",department:"Morbihan",region:"Bretagne",lat:47.658,lng:-2.760},
+  {name:"LOIRET TRUCKS SARAN",city:"Saran",department:"Loiret",region:"Centre-Val de Loire",lat:47.954,lng:1.886},
+  {name:"FAURIE TRUCKS BORDEAUX",city:"Bordeaux",department:"Gironde",region:"Nouvelle-Aquitaine",lat:44.837,lng:-0.578},
+  {name:"FAURIE TRUCKS LIMOGES",city:"Limoges",department:"Haute-Vienne",region:"Nouvelle-Aquitaine",lat:45.833,lng:1.261},
+  {name:"FAURIE TRUCKS PERIGUEUX",city:"Périgueux",department:"Dordogne",region:"Nouvelle-Aquitaine",lat:45.184,lng:0.721},
+  {name:"FAURIE TRUCKS ANGOULEME",city:"Angoulême",department:"Charente",region:"Nouvelle-Aquitaine",lat:45.649,lng:0.156},
+  {name:"FAURIE TRUCKS PAU",city:"Pau",department:"Pyrénées-Atlantiques",region:"Nouvelle-Aquitaine",lat:43.300,lng:-0.371},
+  {name:"BERTHIER TRUCKS CLERMONT",city:"Clermont-Ferrand",department:"Puy-de-Dôme",region:"Auvergne-Rhône-Alpes",lat:45.777,lng:3.087},
+  {name:"BERTHIER TRUCKS AURILLAC",city:"Aurillac",department:"Cantal",region:"Auvergne-Rhône-Alpes",lat:44.931,lng:2.449},
+  {name:"BERTHIER TRUCKS LE PUY",city:"Le Puy-en-Velay",department:"Haute-Loire",region:"Auvergne-Rhône-Alpes",lat:45.043,lng:3.884},
+  {name:"BERNIS TRUCKS NIMES",city:"Nîmes",department:"Gard",region:"Occitanie",lat:43.837,lng:4.360},
+  {name:"BERNIS TRUCKS MONTPELLIER",city:"Montpellier",department:"Hérault",region:"Occitanie",lat:43.611,lng:3.877},
+  {name:"BERNIS TRUCKS ALES",city:"Alès",department:"Gard",region:"Occitanie",lat:44.125,lng:4.082},
+  {name:"CATRA TOULOUSE",city:"Toulouse",department:"Haute-Garonne",region:"Occitanie",lat:43.605,lng:1.444},
+  {name:"CATRA MONTAUBAN",city:"Montauban",department:"Tarn-et-Garonne",region:"Occitanie",lat:44.018,lng:1.353},
+  {name:"CATRA CAHORS",city:"Cahors",department:"Lot",region:"Occitanie",lat:44.446,lng:1.444},
+  {name:"RENAULT TRUCKS GRAND PARIS RUNGIS",city:"Rungis",department:"Val-de-Marne",region:"Île-de-France",lat:48.754,lng:2.356},
+  {name:"RENAULT TRUCKS GRAND PARIS GONESSE",city:"Gonesse",department:"Val-d'Oise",region:"Île-de-France",lat:48.988,lng:2.458},
+  {name:"RENAULT TRUCKS GRAND PARIS MASSY",city:"Massy",department:"Essonne",region:"Île-de-France",lat:48.725,lng:2.271},
+  {name:"RENAULT TRUCKS PROVENCE AIX",city:"Aix-en-Provence",department:"Bouches-du-Rhône",region:"Provence-Alpes-Côte d'Azur",lat:43.530,lng:5.447},
+  {name:"RENAULT TRUCKS PROVENCE AVIGNON",city:"Avignon",department:"Vaucluse",region:"Provence-Alpes-Côte d'Azur",lat:43.949,lng:4.806},
+  {name:"RENAULT TRUCKS MARSEILLE",city:"Marseille",department:"Bouches-du-Rhône",region:"Provence-Alpes-Côte d'Azur",lat:43.296,lng:5.381},
+  {name:"RENAULT TRUCKS MARSEILLE AUBAGNE",city:"Aubagne",department:"Bouches-du-Rhône",region:"Provence-Alpes-Côte d'Azur",lat:43.295,lng:5.572},
+  {name:"TRANSLOC TRUCKS REIMS",city:"Reims",department:"Marne",region:"Grand Est",lat:49.258,lng:4.031},
+  {name:"TRANSLOC TRUCKS CHALONS",city:"Châlons-en-Champagne",department:"Marne",region:"Grand Est",lat:48.957,lng:4.365},
+  {name:"SOTRAVI TRUCKS ROUEN",city:"Rouen",department:"Seine-Maritime",region:"Normandie",lat:49.443,lng:1.099},
+  {name:"SOTRAVI TRUCKS CAEN",city:"Caen",department:"Calvados",region:"Normandie",lat:49.182,lng:-0.371},
+  {name:"SOTRAVI TRUCKS LE HAVRE",city:"Le Havre",department:"Seine-Maritime",region:"Normandie",lat:49.494,lng:0.107},
+  {name:"NORMAN TRUCKS EVREUX",city:"Évreux",department:"Eure",region:"Normandie",lat:49.024,lng:1.152},
+  {name:"NORMAN TRUCKS CHERBOURG",city:"Cherbourg",department:"Manche",region:"Normandie",lat:49.649,lng:-1.622},
+  {name:"PICARDI TRUCKS AMIENS",city:"Amiens",department:"Somme",region:"Hauts-de-France",lat:49.895,lng:2.302},
+  {name:"PICARDI TRUCKS BEAUVAIS",city:"Beauvais",department:"Oise",region:"Hauts-de-France",lat:49.430,lng:2.081},
+  {name:"NORDEST TRUCKS LILLE",city:"Lille",department:"Nord",region:"Hauts-de-France",lat:50.633,lng:3.067},
+  {name:"NORDEST TRUCKS VALENCIENNES",city:"Valenciennes",department:"Nord",region:"Hauts-de-France",lat:50.357,lng:3.524},
+  {name:"NORDEST TRUCKS DUNKERQUE",city:"Dunkerque",department:"Nord",region:"Hauts-de-France",lat:51.035,lng:2.377},
+  {name:"ATLANPOIDS NANTES",city:"Nantes",department:"Loire-Atlantique",region:"Pays de la Loire",lat:47.218,lng:-1.553},
+  {name:"ATLANPOIDS LA ROCHE SUR YON",city:"La Roche-sur-Yon",department:"Vendée",region:"Pays de la Loire",lat:46.671,lng:-1.426},
+  {name:"ATLANPOIDS LE MANS",city:"Le Mans",department:"Sarthe",region:"Pays de la Loire",lat:48.006,lng:0.199},
+  {name:"CENTRALPOIDS TOURS",city:"Tours",department:"Indre-et-Loire",region:"Centre-Val de Loire",lat:47.394,lng:0.684},
+  {name:"CENTRALPOIDS BLOIS",city:"Blois",department:"Loir-et-Cher",region:"Centre-Val de Loire",lat:47.586,lng:1.336},
+  {name:"CENTRALPOIDS BOURGES",city:"Bourges",department:"Cher",region:"Centre-Val de Loire",lat:47.081,lng:2.398},
+  {name:"MASSIF TRUCKS METZ",city:"Metz",department:"Moselle",region:"Grand Est",lat:49.119,lng:6.177},
+  {name:"MASSIF TRUCKS NANCY",city:"Nancy",department:"Meurthe-et-Moselle",region:"Grand Est",lat:48.693,lng:6.184},
+  {name:"MASSIF TRUCKS COLMAR",city:"Colmar",department:"Haut-Rhin",region:"Grand Est",lat:48.079,lng:7.358},
+  {name:"JURA TRUCKS LONS LE SAUNIER",city:"Lons-le-Saunier",department:"Jura",region:"Bourgogne-Franche-Comté",lat:46.675,lng:5.554},
+  {name:"ALPES TRUCKS GAP",city:"Gap",department:"Hautes-Alpes",region:"Provence-Alpes-Côte d'Azur",lat:44.559,lng:6.079},
+  {name:"GARAGE BONIFACE",city:"Ajaccio",department:"Corse-du-Sud",region:"Corse",lat:41.927,lng:8.736},
+  {name:"PL SERVICES BRIVE",city:"Brive-la-Gaillarde",department:"Corrèze",region:"Nouvelle-Aquitaine",lat:45.158,lng:1.531},
+  {name:"EUROTRUCKS POITIERS",city:"Poitiers",department:"Vienne",region:"Nouvelle-Aquitaine",lat:46.580,lng:0.340},
+  {name:"EUROTRUCKS LA ROCHELLE",city:"La Rochelle",department:"Charente-Maritime",region:"Nouvelle-Aquitaine",lat:46.160,lng:-1.151},
+  {name:"MEDITERRANEE TRUCKS LUNEL",city:"Lunel",department:"Hérault",region:"Occitanie",lat:43.675,lng:4.138},
+  {name:"LANGUEDOC TRUCKS BEZIERS",city:"Béziers",department:"Hérault",region:"Occitanie",lat:43.344,lng:3.215},
+  {name:"GERS TRUCKS AUCH",city:"Auch",department:"Gers",region:"Occitanie",lat:43.646,lng:0.586},
+  {name:"SAVOIE TRUCKS CHAMBERY",city:"Chambéry",department:"Savoie",region:"Auvergne-Rhône-Alpes",lat:45.564,lng:5.917},
+  {name:"SAVOIE TRUCKS ALBERTVILLE",city:"Albertville",department:"Savoie",region:"Auvergne-Rhône-Alpes",lat:45.676,lng:6.393},
+  {name:"RHONE TRUCKS VALENCE",city:"Valence",department:"Drôme",region:"Auvergne-Rhône-Alpes",lat:44.933,lng:4.892},
+  {name:"RHONE TRUCKS MONTELIMAR",city:"Montélimar",department:"Drôme",region:"Auvergne-Rhône-Alpes",lat:44.558,lng:4.752},
+  {name:"BRETAGNE TRUCKS QUIMPER",city:"Quimper",department:"Finistère",region:"Bretagne",lat:47.997,lng:-4.098},
+  {name:"BRETAGNE TRUCKS SAINT BRIEUC",city:"Saint-Brieuc",department:"Côtes-d'Armor",region:"Bretagne",lat:48.514,lng:-2.766},
+  {name:"GASCOGNE TRUCKS TARBES",city:"Tarbes",department:"Hautes-Pyrénées",region:"Occitanie",lat:43.233,lng:0.078},
+  {name:"GASCOGNE TRUCKS LOURDES",city:"Lourdes",department:"Hautes-Pyrénées",region:"Occitanie",lat:43.095,lng:-0.045},
+  {name:"CHARENTAIS TRUCKS NIORT",city:"Niort",department:"Deux-Sèvres",region:"Nouvelle-Aquitaine",lat:46.323,lng:-0.463},
+  {name:"PARIS TRUCKS SAINT DENIS",city:"Saint-Denis",department:"Seine-Saint-Denis",region:"Île-de-France",lat:48.936,lng:2.357},
+  {name:"PARIS TRUCKS CRETEIL",city:"Créteil",department:"Val-de-Marne",region:"Île-de-France",lat:48.794,lng:2.454},
+  {name:"SEINE TRUCKS MELUN",city:"Melun",department:"Seine-et-Marne",region:"Île-de-France",lat:48.540,lng:2.659},
+  {name:"SEINE TRUCKS MEAUX",city:"Meaux",department:"Seine-et-Marne",region:"Île-de-France",lat:48.960,lng:2.888},
+  {name:"OISE TRUCKS COMPIEGNE",city:"Compiègne",department:"Oise",region:"Hauts-de-France",lat:49.418,lng:2.826},
+  {name:"LORRAINE TRUCKS THIONVILLE",city:"Thionville",department:"Moselle",region:"Grand Est",lat:49.358,lng:6.168},
+  {name:"ALSACE TRUCKS HAGUENAU",city:"Haguenau",department:"Bas-Rhin",region:"Grand Est",lat:48.820,lng:7.790},
+  {name:"MIDI TRUCKS CARCASSONNE",city:"Carcassonne",department:"Aude",region:"Occitanie",lat:43.213,lng:2.353},
+  {name:"MIDI TRUCKS NARBONNE",city:"Narbonne",department:"Aude",region:"Occitanie",lat:43.184,lng:3.003},
+  {name:"ARDECHE TRUCKS PRIVAS",city:"Privas",department:"Ardèche",region:"Auvergne-Rhône-Alpes",lat:44.735,lng:4.601},
+  {name:"TARN TRUCKS ALBI",city:"Albi",department:"Tarn",region:"Occitanie",lat:43.929,lng:2.148},
+  {name:"AVEYRON TRUCKS RODEZ",city:"Rodez",department:"Aveyron",region:"Occitanie",lat:44.350,lng:2.573},
+  {name:"NORD TRUCKS ARRAS",city:"Arras",department:"Pas-de-Calais",region:"Hauts-de-France",lat:50.291,lng:2.778},
+  {name:"NORD TRUCKS BOULOGNE",city:"Boulogne-sur-Mer",department:"Pas-de-Calais",region:"Hauts-de-France",lat:50.726,lng:1.614},
+  {name:"BERRY TRUCKS CHATEAUROUX",city:"Châteauroux",department:"Indre",region:"Centre-Val de Loire",lat:46.809,lng:1.691},
+  {name:"AUVERGNE TRUCKS RIOM",city:"Riom",department:"Puy-de-Dôme",region:"Auvergne-Rhône-Alpes",lat:45.894,lng:3.113},
+  {name:"GIE TRUCKS CHARTRES",city:"Chartres",department:"Eure-et-Loir",region:"Centre-Val de Loire",lat:48.447,lng:1.487},
+  {name:"NORMANDIE PL ROUEN",city:"Sotteville-lès-Rouen",department:"Seine-Maritime",region:"Normandie",lat:49.409,lng:1.091},
+  {name:"TRANSPORTS GIROD LONS",city:"Lons-le-Saunier",department:"Jura",region:"Bourgogne-Franche-Comté",lat:46.663,lng:5.543}
+];
+
+/* ====================================================
+   CONFIG GROUPES
+   ==================================================== */
+const GROUPS_CFG = [
+  {pfx:"RENAULT TRUCKS GRAND PARIS", name:"Renault Trucks Grand Paris", color:"#212121"},
+  {pfx:"RENAULT TRUCKS PROVENCE",    name:"Renault Trucks Provence",    color:"#00695C"},
+  {pfx:"RENAULT TRUCKS MARSEILLE",   name:"Renault Trucks Marseille",   color:"#0277BD"},
+  {pfx:"BERNARD TRUCKS",             name:"Bernard Trucks",             color:"#1565C0"},
+  {pfx:"KERTRUCKS",                  name:"Kertrucks",                  color:"#C62828"},
+  {pfx:"AZUR TDR",                   name:"Azur TDR",                   color:"#E65100"},
+  {pfx:"FAURIE TRUCKS",              name:"Faurie Trucks",              color:"#2E7D32"},
+  {pfx:"BERTHIER TRUCKS",            name:"Berthier Trucks",            color:"#6A1B9A"},
+  {pfx:"BERNIS TRUCKS",              name:"Bernis Trucks",              color:"#F57F17"},
+  {pfx:"BOURLIER",                   name:"Bourlier",                   color:"#AD1457"},
+  {pfx:"CATRA",                      name:"Catra",                      color:"#4E342E"},
+  {pfx:"LOIRET TRUCKS",              name:"Loiret Trucks",              color:"#558B2F"},
+  {pfx:"CATALOGNE POIDS LOURDS",     name:"Catalogne Poids Lourds",     color:"#795548"},
+  {pfx:"ETS DARRIGRAND",             name:"Ets Darrigrand",             color:"#00838F"},
+  {pfx:"TRANSLOC TRUCKS",            name:"Transloc Trucks",            color:"#1976D2"},
+  {pfx:"SOTRAVI TRUCKS",             name:"Sotravi Trucks",             color:"#D32F2F"},
+  {pfx:"NORMAN TRUCKS",              name:"Norman Trucks",              color:"#388E3C"},
+  {pfx:"PICARDI TRUCKS",             name:"Picardi Trucks",             color:"#7B1FA2"},
+  {pfx:"NORDEST TRUCKS",             name:"Nordest Trucks",             color:"#0097A7"},
+  {pfx:"ATLANPOIDS",                 name:"Atlanpoids",                 color:"#F57C00"},
+  {pfx:"CENTRALPOIDS",               name:"Centralpoids",               color:"#5D4037"},
+  {pfx:"MASSIF TRUCKS",              name:"Massif Trucks",              color:"#616161"},
+  {pfx:"JURA TRUCKS",                name:"Jura Trucks",                color:"#827717"},
+  {pfx:"ALPES TRUCKS",               name:"Alpes Trucks",               color:"#4527A0"},
+  {pfx:"EUROTRUCKS",                 name:"Eurotrucks",                 color:"#00796B"},
+  {pfx:"MEDITERRANEE TRUCKS",        name:"Méditerranée Trucks",        color:"#01579B"},
+  {pfx:"LANGUEDOC TRUCKS",           name:"Languedoc Trucks",           color:"#E91E63"},
+  {pfx:"GERS TRUCKS",                name:"Gers Trucks",                color:"#FF6F00"},
+  {pfx:"SAVOIE TRUCKS",              name:"Savoie Trucks",              color:"#0288D1"},
+  {pfx:"RHONE TRUCKS",               name:"Rhône Trucks",               color:"#C2185B"},
+  {pfx:"BRETAGNE TRUCKS",            name:"Bretagne Trucks",            color:"#303F9F"},
+  {pfx:"GASCOGNE TRUCKS",            name:"Gascogne Trucks",            color:"#689F38"},
+  {pfx:"CHARENTAIS TRUCKS",          name:"Charentais Trucks",          color:"#7C4DFF"},
+  {pfx:"PARIS TRUCKS",               name:"Paris Trucks",               color:"#37474F"},
+  {pfx:"SEINE TRUCKS",               name:"Seine Trucks",               color:"#00ACC1"},
+  {pfx:"OISE TRUCKS",                name:"Oise Trucks",                color:"#8D6E63"},
+  {pfx:"LORRAINE TRUCKS",            name:"Lorraine Trucks",            color:"#546E7A"},
+  {pfx:"ALSACE TRUCKS",              name:"Alsace Trucks",              color:"#EF6C00"},
+  {pfx:"MIDI TRUCKS",                name:"Midi Trucks",                color:"#6D4C41"},
+  {pfx:"ARDECHE TRUCKS",             name:"Ardèche Trucks",             color:"#1B5E20"},
+  {pfx:"TARN TRUCKS",                name:"Tarn Trucks",                color:"#880E4F"},
+  {pfx:"AVEYRON TRUCKS",             name:"Aveyron Trucks",             color:"#33691E"},
+  {pfx:"NORD TRUCKS",                name:"Nord Trucks",                color:"#0D47A1"},
+  {pfx:"BERRY TRUCKS",               name:"Berry Trucks",               color:"#BF360C"},
+  {pfx:"AUVERGNE TRUCKS",            name:"Auvergne Trucks",            color:"#4A148C"},
+];
+const INDEP = {pfx:"__", name:"Indépendants", color:"#757575"};
+
+/* ====================================================
+   STATE
+   ==================================================== */
+let lmap, clusterLayer, heatLayer;
+let dealers = [];
+let markerObjs = [];
+let groupVis = {};
+let filters = {region:"", dept:""};
+let heatOn = false;
+let top10On = false;
+let charts = {};
+let darkTile = null;
+
+/* ====================================================
+   HELPERS
+   ==================================================== */
+function esc(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function detectGroup(nameUp){
+  const sorted=[...GROUPS_CFG].sort((a,b)=>b.pfx.length-a.pfx.length);
+  for(const g of sorted) if(nameUp.startsWith(g.pfx)) return g;
+  return INDEP;
+}
+
+function getGroups(){
+  const m=new Map();
+  dealers.forEach(d=>{
+    const n=d.group.name;
+    if(!m.has(n)) m.set(n,{...d.group,count:0});
+    m.get(n).count++;
+  });
+  return [...m.values()].sort((a,b)=>b.count-a.count);
+}
+
+function getVisible(){
+  return markerObjs.filter(({dealer:d,group:g})=>{
+    if(!groupVis[g.name]) return false;
+    if(filters.region && d.region!==filters.region) return false;
+    if(filters.dept && d.department!==filters.dept) return false;
+    return true;
+  });
+}
+
+/* ====================================================
+   INIT
+   ==================================================== */
+function init(){
+  // Dedupe
+  const seen=new Set();
+  const raw=RAW_DATA.filter(d=>{
+    const k=d.name.trim().toUpperCase();
+    if(seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+
+  dealers=raw.map(d=>({...d, nameUp:d.name.trim().toUpperCase(), group:detectGroup(d.name.trim().toUpperCase())}));
+  getGroups().forEach(g=>{groupVis[g.name]=true});
+
+  initMap();
+  makeMarkers();
+  buildSidebar();
+  buildFilters();
+  buildLegend();
+  updateStats();
+  setupEvents();
+  hideLoader();
+}
+
+/* ====================================================
+   MAP
+   ==================================================== */
+function initMap(){
+  lmap=L.map("map",{center:[46.5,2.5],zoom:6,preferCanvas:true});
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom:19
+  }).addTo(lmap);
+
+  clusterLayer=L.markerClusterGroup({
+    maxClusterRadius:55,
+    showCoverageOnHover:false,
+    chunkedLoading:true,
+    iconCreateFunction(cluster){
+      const children=cluster.getAllChildMarkers();
+      const cnt={};
+      children.forEach(m=>{const g=m.options.gname||"Indépendants";cnt[g]=(cnt[g]||0)+1});
+      const dom=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0][0];
+      const cfg=[...GROUPS_CFG,INDEP].find(g=>g.name===dom);
+      const col=cfg?cfg.color:"#2563eb";
+      const n=cluster.getChildCount();
+      const sz=n<10?34:n<50?42:52;
+      return L.divIcon({
+        html:`<div style="background:${col};width:${sz}px;height:${sz}px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:${sz<40?11:13}px;border:2.5px solid rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.35)">${n}</div>`,
+        className:"",iconSize:[sz,sz],iconAnchor:[sz/2,sz/2]
+      });
+    }
+  });
+  lmap.addLayer(clusterLayer);
+}
+
+/* ====================================================
+   MARKERS
+   ==================================================== */
+function makeMarkers(){
+  markerObjs=[];
+  dealers.forEach(d=>{
+    const col=d.group.color;
+    const icon=L.divIcon({
+      html:`<div style="background:${col};width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,255,255,.9);box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,
+      className:"",iconSize:[13,13],iconAnchor:[6,6]
+    });
+    const m=L.marker([d.lat,d.lng],{icon,gname:d.group.name});
+    m.bindPopup(`
+      <div class="popup-content">
+        <div class="pop-head" style="background:${col}"><strong>${esc(d.name)}</strong></div>
+        <div class="pop-body">
+          <div class="pop-row"><span class="pop-lbl">Groupe</span><span class="pop-val" style="color:${col}">${esc(d.group.name)}</span></div>
+          <div class="pop-row"><span class="pop-lbl">Ville</span><span class="pop-val">${esc(d.city)}</span></div>
+          <div class="pop-row"><span class="pop-lbl">Département</span><span class="pop-val">${esc(d.department)}</span></div>
+          <div class="pop-row"><span class="pop-lbl">Région</span><span class="pop-val">${esc(d.region)}</span></div>
+        </div>
+      </div>
+    `,{maxWidth:280});
+    markerObjs.push({dealer:d,marker:m,group:d.group});
+  });
+  refreshMarkers();
+}
+
+function refreshMarkers(){
+  clusterLayer.clearLayers();
+  if(heatOn) return;
+  const vis=getVisible();
+  clusterLayer.addLayers(vis.map(m=>m.marker));
+  updateStats(vis.length);
+}
+
+/* ====================================================
+   HEATMAP
+   ==================================================== */
+function toggleHeat(){
+  heatOn=!heatOn;
+  const btn=document.getElementById("btn-heat");
+  if(heatOn){
+    clusterLayer.clearLayers();
+    const pts=getVisible().map(({dealer:d})=>[d.lat,d.lng,1]);
+    heatLayer=L.heatLayer(pts,{radius:38,blur:22,maxZoom:10,gradient:{0.4:"#3b82f6",0.65:"#f59e0b",1:"#ef4444"}}).addTo(lmap);
+    btn.querySelector("span:first-child").textContent="📍";
+    btn.querySelectorAll("span")[1].textContent="Marqueurs";
+    btn.classList.add("on");
+  } else {
+    if(heatLayer){lmap.removeLayer(heatLayer);heatLayer=null;}
+    refreshMarkers();
+    btn.querySelector("span:first-child").textContent="🌡️";
+    btn.querySelectorAll("span")[1].textContent="Heatmap";
+    btn.classList.remove("on");
+  }
+}
+
+function resetHeat(){
+  if(heatOn){if(heatLayer){lmap.removeLayer(heatLayer);heatLayer=null;}heatOn=false;
+    const btn=document.getElementById("btn-heat");
+    btn.querySelector("span:first-child").textContent="🌡️";
+    btn.querySelectorAll("span")[1].textContent="Heatmap";
+    btn.classList.remove("on");
+  }
+  refreshMarkers();
+}
+
+/* ====================================================
+   SIDEBAR
+   ==================================================== */
+function buildSidebar(){
+  const el=document.getElementById("group-list");
+  el.innerHTML=getGroups().map(g=>`
+    <div class="gi"><label>
+      <input type="checkbox" class="gcb" data-g="${esc(g.name)}" checked>
+      <span class="gdot" style="background:${g.color}"></span>
+      <span class="gname" title="${esc(g.name)}">${esc(g.name)}</span>
+      <span class="gcnt">${g.count}</span>
+    </label></div>
+  `).join("");
+  el.querySelectorAll(".gcb").forEach(cb=>{
+    cb.addEventListener("change",()=>{groupVis[cb.dataset.g]=cb.checked;resetHeat()});
+  });
+}
+
+/* ====================================================
+   FILTERS
+   ==================================================== */
+function buildFilters(){
+  const regs=[...new Set(dealers.map(d=>d.region))].sort();
+  const depts=[...new Set(dealers.map(d=>d.department))].sort();
+  const rs=document.getElementById("f-region");
+  regs.forEach(r=>{const o=new Option(r,r);rs.add(o)});
+  const ds=document.getElementById("f-dept");
+  depts.forEach(d=>{const o=new Option(d,d);ds.add(o)});
+  rs.addEventListener("change",()=>{filters.region=rs.value;resetHeat()});
+  ds.addEventListener("change",()=>{filters.dept=ds.value;resetHeat()});
+  document.getElementById("btn-reset").addEventListener("click",()=>{
+    rs.value="";ds.value="";filters.region="";filters.dept="";resetHeat();
+  });
+}
+
+/* ====================================================
+   LEGEND
+   ==================================================== */
+function buildLegend(){
+  const grps=getGroups();
+  const show=grps.slice(0,9);
+  document.getElementById("leg-items").innerHTML=show.map(g=>`
+    <div class="leg-item"><span class="leg-dot" style="background:${g.color}"></span><span>${esc(g.name)}</span></div>
+  `).join("")+(grps.length>9?`<div class="leg-more">+${grps.length-9} autres groupes</div>`:"");
+}
+
+/* ====================================================
+   STATS
+   ==================================================== */
+function updateStats(visCount){
+  document.getElementById("st-total").textContent=dealers.length;
+  document.getElementById("st-grp").textContent=getGroups().length;
+  document.getElementById("st-vis").textContent=visCount!==undefined?visCount:getVisible().length;
+}
+
+/* ====================================================
+   MODAL STATS
+   ==================================================== */
+function showStats(){
+  document.getElementById("modal").classList.remove("gone");
+  const grps=getGroups();
+  const regMap={};
+  dealers.forEach(d=>{regMap[d.region]=(regMap[d.region]||0)+1});
+  const regArr=Object.entries(regMap).sort((a,b)=>b[1]-a[1]);
+  const isDark=document.body.classList.contains("dark");
+  const tc=isDark?"#e2e8f0":"#1e293b";
+  const gc=isDark?"#334155":"#e2e8f0";
+
+  document.getElementById("m-summary").innerHTML=`
+    <div class="sgrid">
+      <div class="scard"><div class="snum">${dealers.length}</div><div class="slbl">Concessionnaires</div></div>
+      <div class="scard"><div class="snum">${grps.length}</div><div class="slbl">Groupes</div></div>
+      <div class="scard"><div class="snum">${Object.keys(regMap).length}</div><div class="slbl">Régions</div></div>
+      <div class="scard"><div class="snum">${[...new Set(dealers.map(d=>d.department))].length}</div><div class="slbl">Départements</div></div>
+    </div>`;
+
+  const top10=grps.slice(0,10);
+  document.getElementById("m-top10").innerHTML=`
+    <p class="ttitle">🏆 Top 10 groupes par nombre de sites</p>
+    <table class="stable">
+      <thead><tr><th>#</th><th>Groupe</th><th>Sites</th><th>Part</th></tr></thead>
+      <tbody>${top10.map((g,i)=>`
+        <tr>
+          <td><strong>${i+1}</strong></td>
+          <td><span class="idot" style="background:${g.color}"></span>${esc(g.name)}</td>
+          <td><strong>${g.count}</strong></td>
+          <td>${((g.count/dealers.length)*100).toFixed(1)}%</td>
+        </tr>`).join("")}
+      </tbody>
+    </table>`;
+
+  Object.values(charts).forEach(c=>c.destroy());charts={};
+
+  charts.g=new Chart(document.getElementById("ch-groups"),{
+    type:"doughnut",
+    data:{labels:top10.map(g=>g.name),datasets:[{data:top10.map(g=>g.count),backgroundColor:top10.map(g=>g.color),borderWidth:2,borderColor:isDark?"#1e293b":"#fff"}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{
+      legend:{position:"right",labels:{font:{size:10},color:tc,boxWidth:11,padding:5}},
+      title:{display:true,text:"Répartition par groupe (Top 10)",color:tc,font:{size:12}}
+    }}
+  });
+
+  charts.r=new Chart(document.getElementById("ch-regions"),{
+    type:"bar",
+    data:{labels:regArr.map(([r])=>r),datasets:[{label:"Sites",data:regArr.map(([,c])=>c),backgroundColor:"#2563eb",borderRadius:3}]},
+    options:{responsive:true,maintainAspectRatio:true,indexAxis:"y",plugins:{
+      legend:{display:false},
+      title:{display:true,text:"Sites par région",color:tc,font:{size:12}}
+    },scales:{
+      x:{beginAtZero:true,ticks:{color:tc},grid:{color:gc}},
+      y:{ticks:{color:tc,font:{size:9}},grid:{display:false}}
+    }}
+  });
+}
+
+/* ====================================================
+   SEARCH
+   ==================================================== */
+function setupSearch(){
+  const inp=document.getElementById("search-input");
+  const res=document.getElementById("search-results");
+  const clr=document.getElementById("search-clear");
+
+  inp.addEventListener("input",()=>{
+    const q=inp.value.trim().toLowerCase();
+    clr.style.display=q?"inline":"none";
+    if(!q||q.length<2){res.classList.remove("show");res.innerHTML="";return;}
+    const hits=dealers.filter(d=>
+      d.name.toLowerCase().includes(q)||
+      d.city.toLowerCase().includes(q)||
+      d.group.name.toLowerCase().includes(q)||
+      d.department.toLowerCase().includes(q)||
+      d.region.toLowerCase().includes(q)
+    ).slice(0,12);
+    if(!hits.length){res.innerHTML='<div class="sr-empty">Aucun résultat</div>';res.classList.add("show");return;}
+    res.innerHTML=hits.map((d,i)=>`
+      <div class="sr-item" data-i="${i}" style="border-left:3px solid ${d.group.color}">
+        <div class="sr-name">${hlite(esc(d.name),q)}</div>
+        <div class="sr-meta">${esc(d.city)} · ${esc(d.department)} · <span style="color:${d.group.color}">${esc(d.group.name)}</span></div>
+      </div>`).join("");
+    res.classList.add("show");
+    res.querySelectorAll(".sr-item").forEach((el,i)=>{
+      el.addEventListener("click",()=>{
+        focusDealer(hits[i]);res.classList.remove("show");inp.value="";clr.style.display="none";
+      });
+    });
+  });
+
+  clr.addEventListener("click",()=>{inp.value="";clr.style.display="none";res.classList.remove("show");res.innerHTML="";inp.focus();});
+  document.addEventListener("click",e=>{if(!e.target.closest("#search-wrap")) res.classList.remove("show");});
+}
+
+function hlite(html,q){
+  const re=new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")})`, "gi");
+  return html.replace(re,"<mark>$1</mark>");
+}
+
+function focusDealer(d){
+  lmap.setView([d.lat,d.lng],14);
+  const mo=markerObjs.find(m=>m.dealer.name===d.name);
+  if(!mo) return;
+  resetHeat();
+  clusterLayer.zoomToShowLayer(mo.marker,()=>setTimeout(()=>mo.marker.openPopup(),200));
+}
+
+/* ====================================================
+   TOP 10
+   ==================================================== */
+function toggleTop10(){
+  top10On=!top10On;
+  const t10=new Set(getGroups().slice(0,10).map(g=>g.name));
+  document.querySelectorAll(".gcb").forEach(cb=>{
+    cb.checked=top10On?t10.has(cb.dataset.g):true;
+    groupVis[cb.dataset.g]=top10On?t10.has(cb.dataset.g):true;
+  });
+  resetHeat();
+  const btn=document.getElementById("btn-top10");
+  btn.querySelector("span:first-child").textContent=top10On?"🔙":"🏆";
+  btn.querySelectorAll("span")[1].textContent=top10On?"Tous":"Top 10";
+  btn.classList.toggle("on",top10On);
+}
+
+/* ====================================================
+   DARK MODE
+   ==================================================== */
+function toggleDark(){
+  document.body.classList.toggle("dark");
+  const dark=document.body.classList.contains("dark");
+  const btn=document.getElementById("btn-dark");
+  btn.querySelector("span:first-child").textContent=dark?"☀️":"🌙";
+  btn.querySelectorAll("span")[1].textContent=dark?"Clair":"Sombre";
+  if(dark){
+    lmap.eachLayer(l=>{if(l instanceof L.TileLayer&&!l._isDark) lmap.removeLayer(l);});
+    darkTile=L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{
+      attribution:"© OpenStreetMap contributors © CARTO",subdomains:"abcd",maxZoom:19,_isDark:true
+    }).addTo(lmap);
+  } else {
+    if(darkTile){lmap.removeLayer(darkTile);darkTile=null;}
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{
+      attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19
+    }).addTo(lmap);
+  }
+}
+
+/* ====================================================
+   EXPORT
+   ==================================================== */
+function expData(){return getVisible().map(({dealer:d})=>({Nom:d.name,Groupe:d.group.name,Ville:d.city,Département:d.department,Région:d.region,Latitude:d.lat,Longitude:d.lng}));}
+
+function expCSV(){
+  const data=expData();if(!data.length) return alert("Aucune donnée à exporter.");
+  const h=Object.keys(data[0]);
+  const rows=data.map(r=>h.map(k=>`"${String(r[k]).replace(/"/g,'""')}"`).join(","));
+  dl("concessionnaires-renault-trucks.csv","﻿"+[h.join(","),...rows].join("\r\n"),"text/csv;charset=utf-8;");
+}
+
+function expXLS(){
+  if(typeof XLSX==="undefined") return alert("SheetJS non disponible.");
+  const data=expData();if(!data.length) return alert("Aucune donnée à exporter.");
+  const h=["Nom","Groupe","Ville","Département","Région","Latitude","Longitude"];
+  const rows=data.map(r=>[r.Nom,r.Groupe,r.Ville,r.Département,r.Région,r.Latitude,r.Longitude]);
+  const ws=XLSX.utils.aoa_to_sheet([h,...rows]);
+  ws["!cols"]=[{wch:40},{wch:28},{wch:20},{wch:22},{wch:28},{wch:10},{wch:10}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,"Concessionnaires");
+  XLSX.writeFile(wb,"concessionnaires-renault-trucks.xlsx");
+}
+
+function expGeo(){
+  const data=expData();if(!data.length) return alert("Aucune donnée à exporter.");
+  const geo={type:"FeatureCollection",features:data.map(d=>({
+    type:"Feature",
+    geometry:{type:"Point",coordinates:[d.Longitude,d.Latitude]},
+    properties:{nom:d.Nom,groupe:d.Groupe,ville:d.Ville,departement:d.Département,region:d.Région}
+  }))};
+  dl("concessionnaires-renault-trucks.geojson",JSON.stringify(geo,null,2),"application/geo+json");
+}
+
+function dl(name,content,type){
+  const b=new Blob([content],{type});
+  const u=URL.createObjectURL(b);
+  const a=document.createElement("a");a.href=u;a.download=name;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
+}
+
+/* ====================================================
+   EVENTS
+   ==================================================== */
+function setupEvents(){
+  document.getElementById("btn-heat").addEventListener("click",toggleHeat);
+  document.getElementById("btn-top10").addEventListener("click",toggleTop10);
+  document.getElementById("btn-stats").addEventListener("click",showStats);
+  document.getElementById("btn-dark").addEventListener("click",toggleDark);
+
+  // Export dropdown
+  document.getElementById("btn-export").addEventListener("click",e=>{
+    e.stopPropagation();document.getElementById("dd-export").classList.toggle("show");
+  });
+  document.getElementById("exp-csv").addEventListener("click",()=>{expCSV();document.getElementById("dd-export").classList.remove("show");});
+  document.getElementById("exp-xls").addEventListener("click",()=>{expXLS();document.getElementById("dd-export").classList.remove("show");});
+  document.getElementById("exp-geo").addEventListener("click",()=>{expGeo();document.getElementById("dd-export").classList.remove("show");});
+  document.addEventListener("click",e=>{if(!e.target.closest(".ddwrap")) document.getElementById("dd-export").classList.remove("show");});
+
+  // All / none
+  document.getElementById("btn-all").addEventListener("click",()=>{
+    document.querySelectorAll(".gcb").forEach(cb=>{cb.checked=true;groupVis[cb.dataset.g]=true});
+    top10On=false;document.getElementById("btn-top10").classList.remove("on");
+    document.getElementById("btn-top10").querySelector("span:first-child").textContent="🏆";
+    document.getElementById("btn-top10").querySelectorAll("span")[1].textContent="Top 10";
+    resetHeat();
+  });
+  document.getElementById("btn-none").addEventListener("click",()=>{
+    document.querySelectorAll(".gcb").forEach(cb=>{cb.checked=false;groupVis[cb.dataset.g]=false});
+    resetHeat();
+  });
+
+  // Modal close
+  document.querySelector(".mclose").addEventListener("click",()=>document.getElementById("modal").classList.add("gone"));
+  document.querySelector(".moverlay").addEventListener("click",()=>document.getElementById("modal").classList.add("gone"));
+
+  // Sidebar toggle
+  const sb=document.getElementById("sidebar");
+  const tog=document.getElementById("sb-toggle");
+  tog.addEventListener("click",()=>{
+    sb.classList.toggle("closed");
+    tog.textContent=sb.classList.contains("closed")?"▶":"◀";
+    setTimeout(()=>lmap.invalidateSize(),320);
+  });
+
+  setupSearch();
+}
+
+function hideLoader(){document.getElementById("loader").classList.add("gone")}
+
+/* ====================================================
+   START
+   ==================================================== */
+document.addEventListener("DOMContentLoaded",init);
+</script>
+</body>
+</html>
