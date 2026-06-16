@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Renault Trucks – Réseau Concessionnaires France</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+
+  <!-- App styles -->
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body class="light-mode">
+
+<div id="app">
+
+  <!-- ========== TOP BAR ========== -->
+  <header id="topbar">
+    <div id="brand">
+      <span class="brand-icon">🚛</span>
+      <span class="brand-text">Renault Trucks <span class="brand-sub">Réseau Concessionnaires</span></span>
+    </div>
+
+    <div id="search-container">
+      <div id="search-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="global-search" placeholder="Rechercher un concessionnaire, une ville, un groupe…" autocomplete="off">
+        <button id="search-clear" class="hidden">✕</button>
+      </div>
+      <div id="search-results"></div>
+    </div>
+
+    <div id="topbar-actions">
+      <button id="btn-toggle-heatmap" class="action-btn" title="Basculer vue heatmap">
+        <span>🌡️</span><span class="btn-label">Heatmap</span>
+      </button>
+      <button id="btn-top10" class="action-btn" title="Afficher les 10 plus grands groupes">
+        <span>🏆</span><span class="btn-label">Top 10</span>
+      </button>
+      <button id="btn-stats" class="action-btn" title="Statistiques">
+        <span>📊</span><span class="btn-label">Stats</span>
+      </button>
+      <button id="btn-dark-mode" class="action-btn" title="Basculer mode sombre">
+        <span>🌙</span><span class="btn-label">Sombre</span>
+      </button>
+      <div class="dropdown" id="export-dropdown">
+        <button id="btn-export" class="action-btn" title="Exporter les données">
+          <span>⬇️</span><span class="btn-label">Exporter</span>
+        </button>
+        <div class="dropdown-menu" id="export-menu">
+          <button id="export-csv" class="dropdown-item">📄 Export CSV</button>
+          <button id="export-excel" class="dropdown-item">📊 Export Excel</button>
+          <button id="export-geojson" class="dropdown-item">🗺️ Export GeoJSON</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== MAIN CONTENT ========== -->
+  <div id="main-content">
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside id="sidebar">
+      <div id="sidebar-header">
+        <h3 id="sidebar-title">Groupes &amp; Filtres</h3>
+        <button id="btn-toggle-sidebar" title="Masquer la barre">◀</button>
+      </div>
+
+      <!-- Filters -->
+      <div id="filters">
+        <label class="filter-label">Région</label>
+        <select id="filter-region" class="filter-select">
+          <option value="">Toutes les régions</option>
+        </select>
+        <label class="filter-label">Département</label>
+        <select id="filter-department" class="filter-select">
+          <option value="">Tous les départements</option>
+        </select>
+        <button id="btn-reset-filters" class="reset-btn">✕ Réinitialiser</button>
+      </div>
+
+      <!-- Groups list -->
+      <div id="groups-header">
+        <span>Groupes</span>
+        <div>
+          <button id="btn-check-all" class="mini-btn" title="Tout cocher">✓ Tous</button>
+          <button id="btn-uncheck-all" class="mini-btn" title="Tout décocher">✕ Aucun</button>
+        </div>
+      </div>
+      <div id="group-list"></div>
+
+      <!-- Sidebar stats -->
+      <div id="sidebar-stats">
+        <div class="stat-item">
+          <span id="stat-total" class="stat-num">0</span>
+          <span class="stat-label">Total</span>
+        </div>
+        <div class="stat-item">
+          <span id="stat-groups" class="stat-num">0</span>
+          <span class="stat-label">Groupes</span>
+        </div>
+        <div class="stat-item">
+          <span id="stat-visible" class="stat-num">0</span>
+          <span class="stat-label">Visibles</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===== MAP ===== -->
+    <div id="map-container">
+      <div id="map"></div>
+      <div id="map-legend">
+        <div class="legend-title">Légende</div>
+        <div id="legend-items"></div>
+      </div>
+      <div id="map-loader">
+        <div class="loader-spinner"></div>
+        <div>Chargement de la carte…</div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+
+</div><!-- /app -->
+
+<!-- ========== STATS MODAL ========== -->
+<div id="stats-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modal-title">📊 Statistiques du Réseau</h2>
+      <button class="modal-close" aria-label="Fermer">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="stats-summary"></div>
+      <div id="charts-container">
+        <div class="chart-card">
+          <canvas id="chart-groups"></canvas>
+        </div>
+        <div class="chart-card">
+          <canvas id="chart-regions"></canvas>
+        </div>
+      </div>
+      <div id="top10-table"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
