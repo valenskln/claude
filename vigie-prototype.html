@@ -326,7 +326,10 @@
       3. Colle-la ci-dessous
     </p>
     <label class="fld" for="aiskey">Clé API aisstream.io</label>
-    <input type="password" id="aiskey" autocomplete="off" placeholder="ex. 2f7c1a…">
+    <div style="display:flex;gap:6px">
+      <input type="password" id="aiskey" autocomplete="off" placeholder="ex. 2f7c1a…" style="flex:1">
+      <button id="aiseye" title="Afficher / masquer la clé" style="flex:none">👁</button>
+    </div>
     <label class="fld" for="aisscope">Couverture</label>
     <select id="aisscope">
       <option value="zones" selected>Zones à risque uniquement (recommandé)</option>
@@ -336,6 +339,7 @@
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn-primary" id="aisconnect">Se connecter</button>
       <button id="aiscancel">Annuler</button>
+      <button id="aisforget" title="Effacer la clé mémorisée dans ce navigateur" style="margin-left:auto">Oublier la clé</button>
     </div>
     <div id="aisstatus"></div>
     <p class="sub" style="color:var(--ink3);font-size:11.5px;margin-top:14px">
@@ -748,7 +752,8 @@ function startLive(key, scope){
         live.status='off'; live.ws=null;
         setAisStatus('Aucune donnée reçue en 20 s. Ferme les AUTRES onglets du prototype ou du testeur (une seule connexion par clé autorisée !), attends 30 s, puis réessaie.','err');
       }else{
-        setAisStatus(`Connecté — en attente des navires (${sec} s)…`,'ok');
+        const fp=live.key.length>8 ? live.key.slice(0,4)+'…'+live.key.slice(-4) : live.key;
+        setAisStatus(`Connecté — en attente des navires (${sec} s) · clé utilisée : ${fp} (${live.key.length} car.)`,'ok');
       }
     },1000);
   };
@@ -767,7 +772,8 @@ function startLive(key, scope){
     }
     handleAis(m);
   };
-  ws.onclose=()=>{
+  ws.onclose=ev=>{
+    console.log('[VIGIE] connexion fermée, code', ev && ev.code);
     clearInterval(live.watch);
     if(live.status==='on'){ stopLive(); setAisStatus('Connexion interrompue.','err'); }
     else if(live.status!=='off'){
@@ -1050,11 +1056,22 @@ document.getElementById('bMode').onclick=()=>{
   }
 };
 document.getElementById('aisconnect').onclick=()=>{
-  const key=document.getElementById('aiskey').value.trim();
+  // nettoie tout caractère invisible (espaces, retours, caractères de largeur nulle)
+  const key=document.getElementById('aiskey').value.replace(/[\s\u200B-\u200D\u2060\uFEFF]/g,'');
+  document.getElementById('aiskey').value=key;
   if(!key){ setAisStatus('Colle d’abord ta clé API aisstream.io.','err'); return; }
   try{ localStorage.setItem('vigie_aiskey',key); }catch(e){}
   cargoOnly=document.getElementById('aiscargo').checked;
   startLive(key, document.getElementById('aisscope').value);
+};
+document.getElementById('aiseye').onclick=()=>{
+  const f=document.getElementById('aiskey');
+  f.type = f.type==='password' ? 'text' : 'password';
+};
+document.getElementById('aisforget').onclick=()=>{
+  try{ localStorage.removeItem('vigie_aiskey'); }catch(e){}
+  document.getElementById('aiskey').value='';
+  setAisStatus('Clé mémorisée effacée — recolle ta clé depuis aisstream.io (page API Keys).','ok');
 };
 document.getElementById('aiscargo').onchange=e=>{ cargoOnly=e.target.checked; };
 document.getElementById('aiscancel').onclick=()=>{ aismodal.style.display='none'; };
