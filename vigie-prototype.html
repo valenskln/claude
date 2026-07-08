@@ -738,6 +738,7 @@ function startLive(key, scope){
   try{ ws=new WebSocket('wss://stream.aisstream.io/v0/stream'); }
   catch(err){ setAisStatus('Connexion impossible : cet environnement bloque les connexions externes. Ouvre le fichier sur ton ordinateur.','err'); return; }
   live.ws=ws; live.status='connecting';
+  ws.binaryType='arraybuffer';   // aisstream envoie des trames BINAIRES contenant du JSON
   const sub={APIKey:live.key, BoundingBoxes:[[[-90,-180],[90,180]]]};
   ws.onopen=()=>{
     console.log('[VIGIE] abonnement (monde entier, filtrage local) envoyé');
@@ -758,7 +759,11 @@ function startLive(key, scope){
     },1000);
   };
   ws.onmessage=ev=>{
-    let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
+    let m;
+    try{
+      const txt = typeof ev.data==='string' ? ev.data : new TextDecoder().decode(ev.data);
+      m=JSON.parse(txt);
+    }catch(e){ console.warn('[VIGIE] message illisible :', e.message); return; }
     if(m.error){
       console.warn('[VIGIE] erreur serveur :', m.error);
       setAisStatus('Réponse du serveur : '+m.error,'err'); return;

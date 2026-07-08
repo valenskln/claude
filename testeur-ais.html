@@ -35,13 +35,15 @@ document.getElementById('go').onclick = () => {
   log.innerHTML = ''; t0 = Date.now(); n = 0;
   line('Ouverture de la connexion wss://stream.aisstream.io/v0/stream …', 'info');
   ws = new WebSocket('wss://stream.aisstream.io/v0/stream');
+  ws.binaryType = 'arraybuffer';   // aisstream envoie des trames binaires contenant du JSON
   ws.onopen = () => {
     line('CONNEXION OUVERTE ✓ — envoi de l’abonnement (monde entier, sans filtre)', 'ok');
     ws.send(JSON.stringify({ APIKey: key, BoundingBoxes: [[[-90, -180], [90, 180]]] }));
   };
   ws.onmessage = ev => {
     n++;
-    if(n <= 10) line('MESSAGE ' + n + ' reçu ✓ : ' + ev.data.slice(0, 160), 'ok');
+    const txt = typeof ev.data === 'string' ? ev.data : new TextDecoder().decode(ev.data);
+    if(n <= 10) line('MESSAGE ' + n + ' reçu ✓ : ' + txt.slice(0, 160), 'ok');
     else if(n % 50 === 0) line(n + ' messages reçus ✓ — le flux fonctionne parfaitement.', 'ok');
   };
   ws.onclose = ev => line('CONNEXION FERMÉE — code ' + ev.code + (ev.reason ? ' · raison : ' + ev.reason : '') +
