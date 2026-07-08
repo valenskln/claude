@@ -26,6 +26,27 @@ await page.waitForTimeout(800);
 await page.screenshot({ path: dir + '/shot4-light.png' });
 console.log('theme after toggle:', await page.evaluate(() => document.documentElement.dataset.theme));
 console.log('font loaded:', await page.evaluate(() => document.fonts.check('14px Manrope')));
+// search
+await page.locator('#shipsearch').fill('MAERSK');
+await page.waitForTimeout(400);
+const nres = await page.locator('#searchres .sr').count();
+console.log('search results for MAERSK:', nres);
+if (nres > 0) { await page.locator('#searchres .sr').first().click(); await page.waitForTimeout(600); }
+await page.screenshot({ path: dir + '/shot7-search.png' });
+// top-5 filter
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
+const before = await page.locator('#kShips').textContent();
+await page.locator('#ftop').click();
+await page.waitForTimeout(800);
+console.log('ships before/after top5 filter:', before, '→', await page.locator('#kShips').textContent());
+await page.locator('#ftop').click();
+// deep zoom on Malacca
+await page.evaluate(() => { view.clat = 1.8; view.clon = 102.5; view.scale = 150; viewDirty = true; });
+await page.waitForTimeout(600);
+await page.screenshot({ path: dir + '/shot8-zoom.png' });
+await page.evaluate(() => { view.clat = 18; view.clon = 25; view.scale = 3.4; viewDirty = true; });
+await page.waitForTimeout(400);
 // AIS modal flow
 await page.locator('#bMode').click();
 await page.waitForTimeout(400);
