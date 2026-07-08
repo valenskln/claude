@@ -719,39 +719,36 @@ function boxesFor(scope){
 }
 const aismodal=document.getElementById('aismodal'), aisstatus=document.getElementById('aisstatus');
 function setAisStatus(txt, cls){ aisstatus.textContent=txt; aisstatus.className=cls||''; }
-function sendSub(sub){
-  console.log('[VIGIE] abonnement envoyé :', JSON.stringify(sub));
-  live.ws.send(JSON.stringify(sub));
+function nearAnyZone(lat,lon){
+  return ZONES.some(z=>havKm(lat,lon,z.c[0],z.c[1]) < z.r*2.2);
 }
+// Méthode prouvée par le testeur : abonnement monde entier, une seule boîte,
+// aucun filtre serveur. Le tri (zones, cargos) est fait localement par VIGIE.
 function startLive(key, scope){
   stopLive(true);
+  live.key=key; live.scope=scope;
+  live.zoneFilter = (scope==='zones');
+  live.msg=0;
   setAisStatus('Connexion à aisstream.io…');
   let ws;
   try{ ws=new WebSocket('wss://stream.aisstream.io/v0/stream'); }
   catch(err){ setAisStatus('Connexion impossible : cet environnement bloque les connexions externes. Ouvre le fichier sur ton ordinateur.','err'); return; }
-  live.ws=ws; live.status='connecting'; live.msg=0; live.stage=1; live.t0=Date.now();
+  live.ws=ws; live.status='connecting';
+  const sub={APIKey:live.key, BoundingBoxes:[[[-90,-180],[90,180]]]};
   ws.onopen=()=>{
-    sendSub({APIKey:key, BoundingBoxes:boxesFor(scope),
-      FilterMessageTypes:['PositionReport','ShipStaticData']});
+    console.log('[VIGIE] abonnement (monde entier, filtrage local) envoyé');
+    ws.send(JSON.stringify(sub));
     live.status='waiting'; live.t0=Date.now();
-    setAisStatus('Connecté — abonnement envoyé, en attente des premiers navires…','ok');
-    // chien de garde : si rien n'arrive, on simplifie l'abonnement par paliers
     live.watch=setInterval(()=>{
       if(live.status!=='waiting'){ clearInterval(live.watch); return; }
       const sec=Math.round((Date.now()-live.t0)/1000);
-      if(live.stage===1 && sec>=10){
-        live.stage=2;
-        sendSub({APIKey:key, BoundingBoxes:boxesFor(scope)});   // sans filtre de types
-        setAisStatus('Toujours rien après 10 s — test sans filtre de types de messages…','ok');
-      }else if(live.stage===2 && sec>=20){
-        live.stage=3;
-        sendSub({APIKey:key, BoundingBoxes:[[[-90,-180],[90,180]]]});  // monde entier
-        setAisStatus('Test en couverture monde entier (sans aucun filtre)…','ok');
-      }else if(live.stage===3 && sec>=35){
+      if(sec>=20){
         clearInterval(live.watch);
-        setAisStatus('Aucune donnée reçue en 35 s. Vérifie : 1) la clé sur aisstream.io (page API Keys — copie-la sans espaces), 2) réessaie dans quelques minutes (une clé neuve peut mettre un peu de temps à s’activer), 3) regarde la console du navigateur (F12) pour d’éventuels messages.','err');
+        try{ ws.onclose=null; ws.close(); }catch(e){}
+        live.status='off'; live.ws=null;
+        setAisStatus('Aucune donnée reçue en 20 s. Ferme les AUTRES onglets du prototype ou du testeur (une seule connexion par clé autorisée !), attends 30 s, puis réessaie.','err');
       }else{
-        setAisStatus(`Connecté — abonnement envoyé (${sec} s, palier ${live.stage}/3)…`,'ok');
+        setAisStatus(`Connecté — en attente des navires (${sec} s)…`,'ok');
       }
     },1000);
   };
@@ -765,7 +762,6 @@ function startLive(key, scope){
     if(live.msg<=3) console.log('[VIGIE] message reçu :', m.MessageType, m.MetaData && m.MetaData.ShipName);
     if(live.status!=='on'){
       live.status='on'; clearInterval(live.watch);
-      if(live.stage===3) console.warn('[VIGIE] les données ne passent qu’en couverture monde entier — signaler ce cas.');
       MODE='live'; onModeChange();
       aismodal.style.display='none';
     }
@@ -777,7 +773,7 @@ function startLive(key, scope){
     else if(live.status!=='off'){
       live.status='off';
       if(!aisstatus.textContent.startsWith('Réponse'))
-        setAisStatus('Connexion fermée par le serveur — clé invalide ou non activée ? Vérifie-la sur aisstream.io (page API Keys), puis réessaie.','err');
+        setAisStatus('Connexion fermée par le serveur. Une seule connexion par clé : ferme les autres onglets du prototype/testeur et réessaie dans 30 s.','err');
     }
   };
   ws.onerror=()=>{
@@ -793,6 +789,10 @@ function stopLive(silent){
 }
 function handleAis(m){
   const meta=m.MetaData||{}; const mmsi=meta.MMSI; if(mmsi==null) return;
+  // couverture monde + choix "zones" : on ne garde que les navires proches des zones
+  if(live.zoneFilter && typeof meta.latitude==='number'){
+    if(!nearAnyZone(meta.latitude, meta.longitude)){ live.vessels.delete(mmsi); return; }
+  }
   let v=live.vessels.get(mmsi);
   if(!v){
     v={mmsi, live:true, name:'', op:'', lat:null, lon:null, cog:0, sog:0,
