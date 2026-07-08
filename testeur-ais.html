@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Testeur AIS — diagnostic brut</title>
+<style>
+  body{font:14px/1.5 system-ui,sans-serif; background:#0b1520; color:#e8eef4; padding:24px; max-width:780px; margin:auto}
+  input{font:inherit; padding:8px 12px; width:340px; border-radius:6px; border:1px solid #345; background:#122030; color:#fff}
+  button{font:inherit; padding:8px 16px; border-radius:6px; border:1px solid #4fc3e8; background:#4fc3e8; color:#06121c; font-weight:700; cursor:pointer}
+  #log{margin-top:18px; background:#060d14; border:1px solid #234; border-radius:8px; padding:12px; height:420px; overflow-y:auto;
+       font-family:ui-monospace,Consolas,monospace; font-size:12px; white-space:pre-wrap}
+  .ok{color:#5fd39a} .err{color:#ff7a6b} .info{color:#8fa3b5}
+</style>
+</head>
+<body>
+<h2>🔌 Testeur AIS brut (aisstream.io)</h2>
+<p>Colle ta clé et clique. Ce testeur se connecte en couverture <b>monde entier, sans aucun filtre</b> et affiche tout ce qui se passe, seconde par seconde.</p>
+<input id="key" type="password" placeholder="Clé API aisstream.io">
+<button id="go">Tester</button>
+<div id="log"></div>
+<script>
+'use strict';
+const log = document.getElementById('log');
+let t0 = 0, n = 0, ws = null;
+function line(txt, cls){
+  const d = document.createElement('div');
+  d.className = cls || '';
+  d.textContent = ((Date.now() - t0) / 1000).toFixed(1) + ' s — ' + txt;
+  log.appendChild(d); log.scrollTop = 1e9;
+}
+document.getElementById('go').onclick = () => {
+  const key = document.getElementById('key').value.trim();
+  if(!key){ alert('Colle ta clé API d’abord.'); return; }
+  if(ws){ try{ ws.close(); }catch(e){} }
+  log.innerHTML = ''; t0 = Date.now(); n = 0;
+  line('Ouverture de la connexion wss://stream.aisstream.io/v0/stream …', 'info');
+  ws = new WebSocket('wss://stream.aisstream.io/v0/stream');
+  ws.onopen = () => {
+    line('CONNEXION OUVERTE ✓ — envoi de l’abonnement (monde entier, sans filtre)', 'ok');
+    ws.send(JSON.stringify({ APIKey: key, BoundingBoxes: [[[-90, -180], [90, 180]]] }));
+  };
+  ws.onmessage = ev => {
+    n++;
+    if(n <= 10) line('MESSAGE ' + n + ' reçu ✓ : ' + ev.data.slice(0, 160), 'ok');
+    else if(n % 50 === 0) line(n + ' messages reçus ✓ — le flux fonctionne parfaitement.', 'ok');
+  };
+  ws.onclose = ev => line('CONNEXION FERMÉE — code ' + ev.code + (ev.reason ? ' · raison : ' + ev.reason : '') +
+    ' (1000 = normal · 1006 = coupée sans explication)', 'err');
+  ws.onerror = () => line('ERREUR de connexion (détails éventuels dans la console F12)', 'err');
+  setInterval(() => { if(ws && ws.readyState === 1 && n === 0) line('connexion ouverte, toujours aucun message…', 'info'); }, 5000);
+};
+</script>
+</body>
+</html>
