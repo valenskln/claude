@@ -182,6 +182,22 @@
   #modal ul{padding-left:18px}
   #modal .sub{color:var(--ink2); font-size:12.5px}
 
+  /* ===== Formulaire AIS ===== */
+  .fld{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink2); margin:14px 0 4px}
+  input[type=text], input[type=password], select{
+    font:inherit; color:var(--ink); background:var(--panel2); border:1px solid var(--line);
+    border-radius:8px; padding:8px 12px; width:100%;
+  }
+  input:focus-visible, select:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+  .checkrow{display:flex; align-items:center; gap:8px; margin-top:12px; font-size:13px}
+  .checkrow input{width:auto}
+  #aisstatus{margin-top:12px; font-size:12.5px; min-height:18px}
+  #aisstatus.ok{color:var(--ok)} #aisstatus.err{color:var(--red)}
+  .btn-primary{background:var(--accent); color:var(--panel); border-color:var(--accent); font-weight:700}
+  .btn-primary:hover{background:var(--accent); filter:brightness(1.12)}
+  .badge.live{border-color:var(--ok); color:var(--ok)}
+  #modal ol{padding-left:20px} #modal ol li{margin-bottom:4px}
+
   /* ===== Legend ===== */
   #legend{
     position:fixed; left:50%; transform:translateX(-50%); bottom:12px; z-index:15;
@@ -215,12 +231,12 @@
     <b>VIGIE<em>.</em></b>
     <span>Flux maritime × risque géopolitique</span>
   </div>
-  <span class="badge">Prototype · données simulées</span>
+  <span class="badge" id="modeBadge">Prototype · données simulées</span>
   <div id="kpis">
     <div class="kpi"><div class="v" id="kShips">–</div><div class="l">Navires</div></div>
     <div class="kpi"><div class="v" id="kZones">–</div><div class="l">Zones suivies</div></div>
     <div class="kpi"><div class="v warn" id="kAlerts">–</div><div class="l">En zone à risque</div></div>
-    <div class="kpi"><div class="v mono" id="kClock" style="font-size:13.5px">–</div><div class="l">Heure simulée</div></div>
+    <div class="kpi"><div class="v mono" id="kClock" style="font-size:13.5px">–</div><div class="l" id="kClockL">Heure simulée</div></div>
   </div>
   <div id="ptoggles">
     <button class="small" id="tgL">Zones</button>
@@ -230,6 +246,7 @@
     <button id="bPause" title="Pause / lecture">⏸</button>
     <button id="bSpeed" class="mono" title="Vitesse de simulation">1 s = 1 h</button>
     <button id="bHeat" class="on" title="Afficher / masquer la heatmap">Heatmap</button>
+    <button id="bMode" title="Basculer entre simulation et flux AIS réel">🛰️ AIS direct</button>
     <button id="bTheme" title="Basculer jour / nuit">☀️ Jour</button>
     <button id="bInfo" title="À propos du prototype">?</button>
   </div>
@@ -283,13 +300,49 @@
       <li>Les <b>positions des navires</b> : flotte fictive animée le long des corridors. En production, elles viendraient d’un flux AIS temps réel (aisstream.io, Spire Maritime, MarineTraffic…).</li>
       <li>Le temps est accéléré (réglable en haut à droite) pour rendre les mouvements visibles.</li>
     </ul>
-    <h4>Pour passer au temps réel (prochaines étapes)</h4>
+    <h4>Le temps réel est intégré 🛰️</h4>
     <ul>
-      <li><b>Flux AIS</b> : connexion WebSocket à un fournisseur (gratuit pour tester : aisstream.io) → positions réelles, identités IMO, cap, vitesse.</li>
+      <li>Clique sur <b>« AIS direct »</b> dans l'en-tête et colle ta clé gratuite aisstream.io : les vrais navires remplacent la simulation, et tout le moteur (heatmap, alertes, classement) s'applique à leurs positions réelles.</li>
+      <li>⚠️ Fonctionne en ouvrant le fichier sur ton ordinateur — l'aperçu Claude bloque les connexions externes par sécurité.</li>
+    </ul>
+    <h4>Prochaines étapes</h4>
+    <ul>
       <li><b>Scoring dynamique</b> : alimenter les scores avec GDELT / ACLED / UKMTO / IMB au lieu de valeurs fixées à la main.</li>
-      <li><b>Backend</b> : stockage des trajectoires, calculs de proximité côté serveur, notifications push / e-mail.</li>
+      <li><b>Backend</b> : stockage des trajectoires, calculs de proximité côté serveur, notifications push / e-mail, comptes utilisateurs.</li>
     </ul>
     <p class="sub" style="margin-top:16px">Astuce : cliquez sur un navire ou une zone sur la carte, ou dans les classements. Molette pour zoomer, cliquer-glisser pour déplacer.</p>
+  </div>
+</div>
+
+<div id="aismodal" class="aismodal" role="dialog" aria-modal="true" aria-label="Connexion AIS" style="position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:var(--ovl)">
+  <div style="position:relative;width:min(520px,92vw);max-height:84vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px 28px">
+    <button class="x" id="ax" aria-label="Fermer">✕</button>
+    <h2 style="font-size:17px;margin-bottom:4px">🛰️ Passer aux positions réelles</h2>
+    <p class="sub" style="color:var(--ink2);font-size:12.5px;margin-bottom:12px">
+      Flux AIS en direct fourni par <b>aisstream.io</b> (gratuit).</p>
+    <p style="font-size:13px;line-height:1.6">
+      1. Crée un compte gratuit sur <b>aisstream.io</b> (connexion via ton compte GitHub)<br>
+      2. Menu « API Keys » → génère une clé<br>
+      3. Colle-la ci-dessous
+    </p>
+    <label class="fld" for="aiskey">Clé API aisstream.io</label>
+    <input type="password" id="aiskey" autocomplete="off" placeholder="ex. 2f7c1a…">
+    <label class="fld" for="aisscope">Couverture</label>
+    <select id="aisscope">
+      <option value="zones" selected>Zones à risque uniquement (recommandé)</option>
+      <option value="world">Monde entier (très gros volume — tests courts)</option>
+    </select>
+    <label class="checkrow"><input type="checkbox" id="aiscargo"> Cargos uniquement (type AIS 70–79 — peut mettre quelques minutes à se remplir)</label>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn-primary" id="aisconnect">Se connecter</button>
+      <button id="aiscancel">Annuler</button>
+    </div>
+    <div id="aisstatus"></div>
+    <p class="sub" style="color:var(--ink3);font-size:11.5px;margin-top:14px">
+      ⚠️ Dans l’aperçu Claude (artifact), les connexions externes sont bloquées par sécurité :
+      pour le direct, télécharge <b>vigie-prototype.html</b> et ouvre-le sur ton ordinateur.
+      Couverture : antennes côtières (les océans lointains ont des trous — c’est normal).
+      Ta clé reste dans ton navigateur, elle n’est envoyée qu’à aisstream.io.</p>
   </div>
 </div>
 
@@ -467,6 +520,8 @@ const SPEEDS = [[600,'1 s = 10 min'],[3600,'1 s = 1 h'],[10800,'1 s = 3 h']];
 let speedIdx = 1, paused=false, showHeat=true;
 let simTime = Date.now();
 let selShip=null, selZone=null;
+let MODE='sim';                    // 'sim' (flotte simulée) ou 'live' (flux AIS réel)
+function activeShips(){ return MODE==='live' ? liveList() : SHIPS; }
 
 function stepShips(dtSim){ // dtSim en secondes simulées
   for(const s of SHIPS){
@@ -481,7 +536,7 @@ function stepShips(dtSim){ // dtSim en secondes simulées
 }
 function assessRisk(){
   let inZone=0;
-  for(const s of SHIPS){
+  for(const s of activeShips()){
     let best=0, bz=null, bd=0;
     for(const z of ZONES){
       const d = havKm(s.lat,s.lon,z.c[0],z.c[1]);
@@ -493,12 +548,13 @@ function assessRisk(){
       // transitions d'état -> alertes
       const prev = s.zoneState[z.id]||0;              // 0 dehors, 1 approche, 2 dedans
       const cur = d<=z.r ? 2 : (d<near ? 1 : 0);
-      if(cur>prev){
+      if(cur>prev && s.seen){                          // pas d'alerte à la 1re évaluation
         if(cur===1) pushAlert(s,z,'approche',d);
         if(cur===2) pushAlert(s,z,'entrée',d);
       }
       s.zoneState[z.id]=cur;
     }
+    s.seen=true;
     s.exp=best; s.worstZone=bz; s.worstDist=bd;
     if(Object.values(s.zoneState).includes(2)) inZone++;
   }
@@ -515,13 +571,14 @@ let feedItems = [], alertsSincePause=0;
 function fmtT(ms){ return new Date(ms).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
 function pushAlert(s,z,kind,d){
   const red = kind==='entrée';
-  feedItems.unshift({t:simTime, txt:`${s.name} — ${kind==='entrée'?'est entré dans':'approche de'} ${z.name}`, red});
+  const label = s.name || ('MMSI '+s.mmsi);
+  feedItems.unshift({t:MODE==='live'?Date.now():simTime, txt:`${label} — ${kind==='entrée'?'est entré dans':'approche de'} ${z.name}`, red});
   feedItems = feedItems.slice(0,30);
   renderFeed();
   if(toastsEl.children.length>=4) toastsEl.firstChild.remove();
   const el=document.createElement('div');
   el.className='toast'+(red?' red':'');
-  el.innerHTML = `<b>${red?'🔴':'⚠️'} ${esc(s.name)} · ${esc(s.op)}</b>
+  el.innerHTML = `<b>${red?'🔴':'⚠️'} ${esc(label)}${s.op?' · '+esc(s.op):''}</b>
     ${red?'Est entré dans':'S’approche de'} <b>${esc(z.name)}</b> — score ${z.score.toFixed(1)}/10
     <small>· ${Math.round(d)} km du centre de zone</small>`;
   el.onclick=()=>{selectShip(s)};
@@ -599,7 +656,7 @@ function draw(){
     }
   }
   // route du navire sélectionné
-  if(selShip){
+  if(selShip && !selShip.live){
     const r=ROUTES[selShip.route];
     ctx.strokeStyle=T.route; ctx.setLineDash([3,5]); ctx.lineWidth=1.4;
     ctx.beginPath();
@@ -607,15 +664,19 @@ function draw(){
     ctx.stroke(); ctx.setLineDash([]);
   }
   // navires
-  for(const s of SHIPS){
+  for(const s of activeShips()){
     const [x,y]=prj(s.lat,s.lon);
     if(x<-20||x>W+20||y<-20||y>H+20) continue;
     const st=shipState(s);
     const col = st===2?T.inZ:st===1?T.near:T.ship;
-    // orientation
-    const p2=posOnRoute(s.route, Math.min(ROUTES[s.route].len, Math.max(0,s.dist+s.dir*30)));
-    const [x2,y2]=prj(p2.lat,p2.lon);
-    const ang=Math.atan2(y2-y,x2-x);
+    // orientation : cap AIS (cog, 0 = nord) en direct, direction de route en simulation
+    let ang;
+    if(s.live){ ang=((s.cog||0)-90)*Math.PI/180; }
+    else{
+      const p2=posOnRoute(s.route, Math.min(ROUTES[s.route].len, Math.max(0,s.dist+s.dir*30)));
+      const [x2,y2]=prj(p2.lat,p2.lon);
+      ang=Math.atan2(y2-y,x2-x);
+    }
     ctx.save(); ctx.translate(x,y); ctx.rotate(ang);
     ctx.fillStyle=col;
     ctx.beginPath(); ctx.moveTo(6,0); ctx.lineTo(-4,3.4); ctx.lineTo(-2.2,0); ctx.lineTo(-4,-3.4); ctx.closePath(); ctx.fill();
@@ -626,18 +687,133 @@ function draw(){
   ctx.textAlign='left';
 }
 
+/* ================= Flux AIS réel (aisstream.io) ================= */
+const live={ws:null, vessels:new Map(), status:'off', msg:0};
+let cargoOnly=false;
+const OP_PREFIX=[['MSC','MSC'],['MAERSK','Maersk'],['CMA CGM','CMA CGM'],['COSCO','COSCO'],
+  ['OOCL','OOCL (COSCO)'],['HAPAG','Hapag-Lloyd'],['EVER ','Evergreen'],['ONE ','ONE'],
+  ['HMM ','HMM'],['ZIM ','ZIM'],['YM ','Yang Ming'],['WAN HAI','Wan Hai']];
+function opGuess(name){
+  const n=(name||'').toUpperCase();
+  for(const [p,op] of OP_PREFIX) if(n.startsWith(p)) return op;
+  return '';
+}
+function liveList(){
+  const now=Date.now(), out=[];
+  for(const v of live.vessels.values()){
+    if(v.lat==null) continue;
+    if(now-v.t>15*60*1000){ live.vessels.delete(v.mmsi); continue; }   // signal périmé
+    if(cargoOnly && !(v.type>=70 && v.type<80)) continue;
+    out.push(v);
+  }
+  return out;
+}
+function boxesFor(scope){
+  if(scope==='world') return [[[-90,-180],[90,180]]];
+  return ZONES.map(z=>{
+    const km=z.r*1.8, dla=km/111,
+      dlo=km/(111*Math.max(.2,Math.cos(z.c[0]*Math.PI/180)));
+    return [[Math.max(-90,z.c[0]-dla), Math.max(-180,z.c[1]-dlo)],
+            [Math.min(90,z.c[0]+dla), Math.min(180,z.c[1]+dlo)]];
+  });
+}
+const aismodal=document.getElementById('aismodal'), aisstatus=document.getElementById('aisstatus');
+function setAisStatus(txt, cls){ aisstatus.textContent=txt; aisstatus.className=cls||''; }
+function startLive(key, scope){
+  stopLive(true);
+  setAisStatus('Connexion à aisstream.io…');
+  let ws;
+  try{ ws=new WebSocket('wss://stream.aisstream.io/v0/stream'); }
+  catch(err){ setAisStatus('Connexion impossible : cet environnement bloque les connexions externes. Ouvre le fichier sur ton ordinateur.','err'); return; }
+  live.ws=ws; live.status='connecting'; live.msg=0;
+  ws.onopen=()=>{
+    ws.send(JSON.stringify({APIKey:key, BoundingBoxes:boxesFor(scope),
+      FilterMessageTypes:['PositionReport','ShipStaticData']}));
+    live.status='waiting';
+    setAisStatus('Connecté — en attente des premiers navires (quelques secondes)…','ok');
+  };
+  ws.onmessage=ev=>{
+    let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
+    if(m.error){ setAisStatus('Réponse du serveur : '+m.error,'err'); return; }
+    live.msg++;
+    if(live.status!=='on'){
+      live.status='on'; MODE='live'; onModeChange();
+      aismodal.style.display='none';
+    }
+    handleAis(m);
+  };
+  ws.onclose=()=>{
+    if(live.status==='on'){ stopLive(); setAisStatus('Connexion interrompue.','err'); }
+    else if(live.status!=='off'){
+      live.status='off';
+      if(!aisstatus.textContent.startsWith('Réponse'))
+        setAisStatus('Connexion refusée — clé invalide, ou réseau bloqué (aperçu Claude).','err');
+    }
+  };
+  ws.onerror=()=>{
+    if(live.status!=='on')
+      setAisStatus('Impossible de joindre aisstream.io. Dans l’aperçu Claude c’est normal (connexions externes bloquées) : télécharge le fichier et ouvre-le en local.','err');
+  };
+}
+function stopLive(silent){
+  if(live.ws){ const w=live.ws; live.ws=null; try{w.onclose=null; w.close();}catch(e){} }
+  live.vessels.clear(); live.status='off';
+  if(!silent && MODE==='live'){ MODE='sim'; onModeChange(); }
+}
+function handleAis(m){
+  const meta=m.MetaData||{}; const mmsi=meta.MMSI; if(mmsi==null) return;
+  let v=live.vessels.get(mmsi);
+  if(!v){
+    v={mmsi, live:true, name:'', op:'', lat:null, lon:null, cog:0, sog:0,
+       type:null, dest:'', imo:null, t:0, exp:0, zoneState:{}, worstZone:null, worstDist:0};
+    live.vessels.set(mmsi,v);
+  }
+  const nm=(meta.ShipName||'').trim();
+  if(nm && !v.name){ v.name=nm; v.op=opGuess(nm); }
+  if(m.MessageType==='PositionReport' && m.Message && m.Message.PositionReport){
+    const p=m.Message.PositionReport;
+    v.lat=p.Latitude; v.lon=p.Longitude; v.cog=p.Cog||v.cog; v.sog=p.Sog||0; v.t=Date.now();
+  }else if(m.MessageType==='ShipStaticData' && m.Message && m.Message.ShipStaticData){
+    const s=m.Message.ShipStaticData;
+    if(s.Type) v.type=s.Type;
+    if(s.Destination) v.dest=s.Destination.trim();
+    if(s.ImoNumber) v.imo=s.ImoNumber;
+    if(v.lat==null && meta.latitude){ v.lat=meta.latitude; v.lon=meta.longitude; v.t=Date.now(); }
+  }
+}
+function onModeChange(){
+  const badge=document.getElementById('modeBadge'), bMode=document.getElementById('bMode');
+  const lbl=document.getElementById('kClockL');
+  if(MODE==='live'){
+    badge.textContent='Direct · flux AIS réel'; badge.classList.add('live');
+    bMode.textContent='🛰️ AIS : direct'; bMode.classList.add('on');
+    lbl.textContent='Temps réel';
+    document.getElementById('bSpeed').style.display='none';
+  }else{
+    badge.textContent='Prototype · données simulées'; badge.classList.remove('live');
+    bMode.textContent='🛰️ AIS direct'; bMode.classList.remove('on');
+    lbl.textContent='Heure simulée';
+    document.getElementById('bSpeed').style.display='';
+  }
+  selShip=null; selZone=null; detail.style.display='none';
+  feedItems=[]; toastsEl.innerHTML=''; renderFeed();
+  assessRisk(); renderRanks();
+}
+
 /* ================= Boucle ================= */
 let lastT=performance.now(), acc=0;
 function frame(t){
   const dt=Math.min(.1,(t-lastT)/1000); lastT=t;
   if(!paused){
-    simTime += dt*simSpeed*1000;
-    stepShips(dt*simSpeed);
+    if(MODE==='sim'){
+      simTime += dt*simSpeed*1000;
+      stepShips(dt*simSpeed);
+    }
     acc+=dt;
     if(acc>0.45){acc=0; assessRisk(); renderRanks(); if(selShip) renderShipCard(selShip); }
   }
   document.getElementById('kClock').textContent =
-    new Date(simTime).toLocaleString('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'});
+    new Date(MODE==='live'?Date.now():simTime).toLocaleString('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'});
   draw();
   requestAnimationFrame(frame);
 }
@@ -655,20 +831,28 @@ function renderZones(){
     const z=ZONES.find(q=>q.id===el.dataset.z); selectZone(z,true);
   });
 }
+let lastTop=[];
 function renderRanks(){
-  const top=[...SHIPS].sort((a,b)=>b.exp-a.exp).slice(0,8);
-  slist.innerHTML = top.map(s=>{
+  const all=activeShips();
+  const top=[...all].sort((a,b)=>b.exp-a.exp).slice(0,8);
+  lastTop=top;
+  slist.innerHTML = top.length ? top.map((s,i)=>{
     const st=shipState(s);
     const col= st===2?T.inZ:st===1?T.near:T.ship;
-    return `<div class="srow" data-s="${esc(s.name)}">
+    const label = s.name || ('MMSI '+s.mmsi);
+    const sub = s.live
+      ? `${esc(s.op||'armateur n.c.')}${s.dest?' · → '+esc(s.dest):''}`
+      : `${esc(s.op)} · ${esc(ROUTES[s.route].name)}`;
+    return `<div class="srow" data-i="${i}">
       <span class="dot" style="background:${col}"></span>
-      <span>${esc(s.name)}<br><small>${esc(s.op)} · ${esc(ROUTES[s.route].name)}</small></span>
+      <span>${esc(label)}<br><small>${sub}</small></span>
       <span class="exp mono" style="color:${s.exp>0?riskCSS(Math.max(3,s.exp)):'var(--ink3)'}">${s.exp>0?s.exp.toFixed(1):'—'}</span>
-    </div>`;}).join('');
+    </div>`;}).join('')
+    : `<div class="empty">${MODE==='live'?'En attente des premiers signaux AIS…':'Calcul en cours…'}</div>`;
   slist.querySelectorAll('.srow').forEach(el=>el.onclick=()=>{
-    const s=SHIPS.find(q=>q.name===el.dataset.s); if(s) selectShip(s,true);
+    const s=lastTop[+el.dataset.i]; if(s) selectShip(s,true);
   });
-  document.getElementById('kShips').textContent=SHIPS.length;
+  document.getElementById('kShips').textContent=all.length;
   document.getElementById('kZones').textContent=ZONES.length;
 }
 
@@ -680,6 +864,7 @@ function selectShip(s, center){
   renderShipCard(s);
 }
 function renderShipCard(s){
+  if(s.live) return renderLiveCard(s);
   const z=s.worstZone, ends=ENDS[s.route], goingTo = s.dir>0?ends[1]:ends[0];
   const st=shipState(s);
   const stTxt = st===2?`<b style="color:var(--red)">EN ZONE À RISQUE</b>`:st===1?`<b style="color:var(--amber)">EN APPROCHE</b>`:`<span style="color:var(--ok)">R.A.S.</span>`;
@@ -698,6 +883,31 @@ function renderShipCard(s){
       <div class="riskbarw"><div class="riskbar" style="width:${s.exp*10}%;background:${riskCSS(Math.max(3,s.exp))}"></div></div>
       <b class="mono">${s.exp.toFixed(1)}</b></div>
     ${z && s.exp>0.3 ? `<div class="ctx"><b style="color:${riskCSS(z.score)}">${esc(z.name)}</b> — à ${Math.round(s.worstDist)} km · ${esc(z.ctx)}</div>`:''}
+  `;
+  detail.querySelector('.x').onclick=()=>{detail.style.display='none'; selShip=null;};
+}
+function renderLiveCard(v){
+  const z=v.worstZone;
+  const st=shipState(v);
+  const stTxt = st===2?`<b style="color:var(--red)">EN ZONE À RISQUE</b>`:st===1?`<b style="color:var(--amber)">EN APPROCHE</b>`:`<span style="color:var(--ok)">R.A.S.</span>`;
+  const typeTxt = (v.type>=70&&v.type<80)?'cargo':(v.type>=80&&v.type<90)?'tanker':(v.type?'type AIS '+v.type:'type n.c.');
+  detail.style.display='block';
+  detail.innerHTML=`<button class="x" aria-label="Fermer">✕</button>
+    <h2>🛰️ ${esc(v.name||('MMSI '+v.mmsi))}</h2>
+    <div class="sub">${esc(v.op||'armateur non identifié')} · ${typeTxt} · <b style="color:var(--ok)">position réelle</b></div>
+    <dl class="kv">
+      <dt>MMSI</dt><dd class="mono">${esc(v.mmsi)}</dd>
+      ${v.imo?`<dt>IMO</dt><dd class="mono">${esc(v.imo)}</dd>`:''}
+      ${v.dest?`<dt>Destination</dt><dd>${esc(v.dest)} <small style="color:var(--ink3)">(déclarée)</small></dd>`:''}
+      <dt>Vitesse</dt><dd class="mono">${(v.sog||0).toFixed(1)} nds</dd>
+      <dt>Position</dt><dd class="mono">${v.lat.toFixed(3)}°, ${v.lon.toFixed(3)}°</dd>
+      <dt>Reçu il y a</dt><dd class="mono">${Math.round((Date.now()-v.t)/1000)} s</dd>
+      <dt>Statut</dt><dd>${stTxt}</dd>
+    </dl>
+    <div class="riskline"><span>Exposition</span>
+      <div class="riskbarw"><div class="riskbar" style="width:${v.exp*10}%;background:${riskCSS(Math.max(3,v.exp))}"></div></div>
+      <b class="mono">${v.exp.toFixed(1)}</b></div>
+    ${z && v.exp>0.3 ? `<div class="ctx"><b style="color:${riskCSS(z.score)}">${esc(z.name)}</b> — à ${Math.round(v.worstDist)} km · ${esc(z.ctx)}</div>`:''}
   `;
   detail.querySelector('.x').onclick=()=>{detail.style.display='none'; selShip=null;};
 }
@@ -758,7 +968,7 @@ cv.addEventListener('wheel',e=>{
 
 function hitShip(px,py){
   let best=null, bd=144;
-  for(const s of SHIPS){
+  for(const s of activeShips()){
     const [x,y]=prj(s.lat,s.lon);
     const d=(x-px)**2+(y-py)**2;
     if(d<bd){bd=d; best=s;}
@@ -797,9 +1007,31 @@ const modal=document.getElementById('modal');
 document.getElementById('bInfo').onclick=()=>modal.style.display='flex';
 document.getElementById('mx').onclick=()=>modal.style.display='none';
 modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none'});
+
+// --- connexion AIS ---
+document.getElementById('bMode').onclick=()=>{
+  if(MODE==='live'){ stopLive(); }
+  else{
+    setAisStatus('');
+    try{ document.getElementById('aiskey').value=localStorage.getItem('vigie_aiskey')||''; }catch(e){}
+    aismodal.style.display='flex';
+    document.getElementById('aiskey').focus();
+  }
+};
+document.getElementById('aisconnect').onclick=()=>{
+  const key=document.getElementById('aiskey').value.trim();
+  if(!key){ setAisStatus('Colle d’abord ta clé API aisstream.io.','err'); return; }
+  try{ localStorage.setItem('vigie_aiskey',key); }catch(e){}
+  cargoOnly=document.getElementById('aiscargo').checked;
+  startLive(key, document.getElementById('aisscope').value);
+};
+document.getElementById('aiscargo').onchange=e=>{ cargoOnly=e.target.checked; };
+document.getElementById('aiscancel').onclick=()=>{ aismodal.style.display='none'; };
+document.getElementById('ax').onclick=()=>{ aismodal.style.display='none'; };
+aismodal.addEventListener('click',e=>{if(e.target===aismodal)aismodal.style.display='none'});
 document.getElementById('tgL').onclick=()=>{document.getElementById('pl').classList.toggle('open');document.getElementById('pr').classList.remove('open')};
 document.getElementById('tgR').onclick=()=>{document.getElementById('pr').classList.toggle('open');document.getElementById('pl').classList.remove('open')};
-addEventListener('keydown',e=>{if(e.key==='Escape'){modal.style.display='none'; detail.style.display='none'; selShip=selZone=null;}});
+addEventListener('keydown',e=>{if(e.key==='Escape'){modal.style.display='none'; aismodal.style.display='none'; detail.style.display='none'; selShip=selZone=null;}});
 
 /* ================= Démarrage ================= */
 stepShips(0); assessRisk();

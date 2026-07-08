@@ -26,6 +26,18 @@ await page.waitForTimeout(800);
 await page.screenshot({ path: dir + '/shot4-light.png' });
 console.log('theme after toggle:', await page.evaluate(() => document.documentElement.dataset.theme));
 console.log('font loaded:', await page.evaluate(() => document.fonts.check('14px Manrope')));
+// AIS modal flow
+await page.locator('#bMode').click();
+await page.waitForTimeout(400);
+console.log('ais modal visible:', await page.locator('#aismodal').isVisible());
+await page.screenshot({ path: dir + '/shot5-ais.png' });
+// connect with a dummy key: should reach the server and get an auth error (proves the plumbing)
+await page.locator('#aiskey').fill('cle-de-test-invalide');
+await page.locator('#aisconnect').click();
+await page.waitForTimeout(6000);
+console.log('ais status:', JSON.stringify(await page.locator('#aisstatus').textContent()));
+console.log('mode still sim:', await page.evaluate(() => typeof MODE !== 'undefined' ? MODE : 'n/a'));
+await page.screenshot({ path: dir + '/shot6-ais-status.png' });
 console.log('ship rows:', rows);
 console.log('kpis:', await page.locator('#kShips').textContent(), await page.locator('#kAlerts').textContent());
 console.log('errors:', errors.length ? errors.join('\n') : 'none');
