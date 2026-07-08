@@ -21,6 +21,19 @@ sans installation ni connexion à un serveur.
   des corridors, temps accéléré). En production, elles viendront d'un flux **AIS**
   temps réel (aisstream.io pour tester gratuitement, puis Spire / MarineTraffic à l'échelle).
 
+## Le dossier `proto/` (sources de fabrication)
+
+- `vigie-proto.html` — le code source du prototype (avec les marqueurs `//WORLD_DATA` et `__MANROPE_B64__`)
+- `world_compact.js` — le fond de carte mondial compacté (généré par `compact.js`)
+- `manrope.b64` — la police Manrope encodée en base64
+- `build.js` — assemble le tout : `node build.js` produit le fichier final `vigie.html`
+- `check.mjs` — test automatique dans un navigateur (captures d'écran, erreurs JS)
+
+Pour reconstruire le prototype après une modification de `vigie-proto.html` :
+```bash
+cd proto && node build.js
+```
+
 ## Prochaines étapes envisagées
 1. **Brancher un flux AIS réel** (WebSocket aisstream.io) → positions, IMO, cap, vitesse.
 2. **Scoring dynamique** des zones : GDELT, ACLED, UKMTO, IMB, Joint War Committee.

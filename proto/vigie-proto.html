@@ -1,0 +1,805 @@
+<title>VIGIE · Tracker maritime & risque géopolitique</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @font-face{
+    font-family:'Manrope'; font-style:normal; font-weight:400 800; font-display:swap;
+    src:url("data:font/woff2;base64,__MANROPE_B64__") format('woff2');
+  }
+  :root{
+    --ocean:#07111C; --panel:#0C1926; --panel2:#102030; --line:#1C3247;
+    --ink:#E8EEF4; --ink2:#8FA3B5; --ink3:#5C7285;
+    --accent:#4FC3E8; --amber:#E8B84B; --orange:#E8792E; --red:#E0402F;
+    --ok:#4FC38B;
+    --panelT:rgba(12,25,38,.93); --hdr1:rgba(7,17,28,.96); --hdr2:rgba(7,17,28,.82);
+    --ovl:rgba(3,8,14,.7); --scoreInk:#07111C;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --ocean:#E4E8F2; --panel:#FFFFFF; --panel2:#EDF0F8; --line:#D4DAE8;
+      --ink:#141C30; --ink2:#57637C; --ink3:#8A94AB;
+      --accent:#1470C2; --amber:#B07908; --orange:#C25218; --red:#BE352A;
+      --ok:#1F8A5D;
+      --panelT:rgba(255,255,255,.93); --hdr1:rgba(238,241,248,.97); --hdr2:rgba(238,241,248,.86);
+      --ovl:rgba(28,38,60,.42); --scoreInk:#FFFFFF;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ocean:#07111C; --panel:#0C1926; --panel2:#102030; --line:#1C3247;
+    --ink:#E8EEF4; --ink2:#8FA3B5; --ink3:#5C7285;
+    --accent:#4FC3E8; --amber:#E8B84B; --orange:#E8792E; --red:#E0402F;
+    --ok:#4FC38B;
+    --panelT:rgba(12,25,38,.93); --hdr1:rgba(7,17,28,.96); --hdr2:rgba(7,17,28,.82);
+    --ovl:rgba(3,8,14,.7); --scoreInk:#07111C;
+    color-scheme: dark;
+  }
+  :root[data-theme="light"]{
+    --ocean:#E4E8F2; --panel:#FFFFFF; --panel2:#EDF0F8; --line:#D4DAE8;
+    --ink:#141C30; --ink2:#57637C; --ink3:#8A94AB;
+    --accent:#1470C2; --amber:#B07908; --orange:#C25218; --red:#BE352A;
+    --ok:#1F8A5D;
+    --panelT:rgba(255,255,255,.93); --hdr1:rgba(238,241,248,.97); --hdr2:rgba(238,241,248,.86);
+    --ovl:rgba(28,38,60,.42); --scoreInk:#FFFFFF;
+    color-scheme: light;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--ocean); color:var(--ink); overflow:hidden;
+    font:14px/1.5 'Manrope',"Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  .mono{font-family:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace}
+
+  /* ===== Header ===== */
+  #hdr{
+    position:fixed; inset:0 0 auto 0; height:58px; z-index:30;
+    display:flex; align-items:center; gap:16px; padding:0 16px;
+    background:linear-gradient(180deg, var(--hdr1), var(--hdr2));
+    border-bottom:1px solid var(--line); backdrop-filter:blur(6px);
+  }
+  #brand{display:flex; flex-direction:column; line-height:1.15; min-width:170px}
+  #brand b{font-size:17px; letter-spacing:.14em}
+  #brand b em{font-style:normal; color:var(--accent)}
+  #brand span{font-size:10.5px; color:var(--ink2); letter-spacing:.06em; text-transform:uppercase}
+  .badge{
+    font-size:10px; letter-spacing:.1em; text-transform:uppercase; white-space:nowrap;
+    border:1px solid var(--amber); color:var(--amber); border-radius:3px; padding:3px 8px;
+  }
+  #kpis{display:flex; gap:8px; margin-left:auto}
+  .kpi{
+    background:var(--panel); border:1px solid var(--line); border-radius:6px;
+    padding:5px 12px; text-align:right; min-width:86px;
+  }
+  .kpi .v{font-size:16px; font-weight:600; font-variant-numeric:tabular-nums}
+  .kpi .l{font-size:9.5px; color:var(--ink2); text-transform:uppercase; letter-spacing:.08em}
+  .kpi .v.warn{color:var(--orange)}
+  #ctrls{display:flex; gap:6px}
+  button{
+    font:inherit; font-weight:600; color:var(--ink); background:var(--panel); border:1px solid var(--line);
+    border-radius:20px; padding:6px 14px; cursor:pointer;
+  }
+  button:hover{background:var(--panel2)}
+  button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
+  button.on{border-color:var(--accent); color:var(--accent)}
+  button.small{padding:3px 8px; font-size:12px}
+
+  /* ===== Map ===== */
+  #map{position:fixed; inset:0; cursor:grab}
+  #map.drag{cursor:grabbing}
+  #tip{
+    position:fixed; z-index:40; pointer-events:none; display:none;
+    background:var(--panel); border:1px solid var(--line); border-radius:5px;
+    padding:4px 9px; font-size:12px;
+  }
+  #tip b{color:var(--accent)}
+
+  /* ===== Panels ===== */
+  .panel{
+    position:fixed; top:70px; bottom:12px; width:295px; z-index:20;
+    display:flex; flex-direction:column; gap:10px; overflow-y:auto;
+    scrollbar-width:thin;
+  }
+  #pl{left:12px} #pr{right:12px}
+  .card{
+    background:var(--panelT); border:1px solid var(--line); border-radius:12px;
+    padding:12px 13px; backdrop-filter:blur(4px);
+  }
+  .card h3{
+    font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--ink2);
+    margin-bottom:9px; display:flex; justify-content:space-between; align-items:center;
+  }
+  .zrow{display:flex; align-items:center; gap:9px; padding:6px 4px; border-radius:6px; cursor:pointer}
+  .zrow:hover{background:var(--panel2)}
+  .zscore{
+    width:36px; height:24px; border-radius:4px; flex:none;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:12.5px; color:var(--scoreInk); font-variant-numeric:tabular-nums;
+  }
+  .zname{font-size:12.5px; line-height:1.25}
+  .zname small{display:block; color:var(--ink3); font-size:10.5px}
+  .ztrend{margin-left:auto; font-size:12px; color:var(--ink2)}
+  .srow{display:flex; align-items:center; gap:8px; padding:5px 4px; border-radius:6px; cursor:pointer; font-size:12.5px}
+  .srow:hover{background:var(--panel2)}
+  .dot{width:9px; height:9px; border-radius:50%; flex:none}
+  .srow .exp{margin-left:auto; font-variant-numeric:tabular-nums; font-weight:600}
+  .srow small{color:var(--ink3)}
+  #feed{display:flex; flex-direction:column; gap:6px; font-size:11.5px}
+  #feed .ev{display:flex; gap:8px; align-items:baseline}
+  #feed .t{color:var(--ink3); flex:none; font-size:10.5px}
+  #feed .ev.a{color:var(--amber)} #feed .ev.r{color:var(--red)}
+  .empty{color:var(--ink3); font-size:12px; font-style:italic}
+
+  /* ===== Detail card ===== */
+  #detail{
+    position:fixed; left:12px; bottom:12px; width:340px; z-index:25; display:none;
+    background:var(--panelT); border:1px solid var(--line); border-radius:14px;
+    padding:15px 16px; backdrop-filter:blur(6px);
+  }
+  #detail h2{font-size:15px; letter-spacing:.02em; margin-bottom:2px; padding-right:24px}
+  #detail .sub{color:var(--ink2); font-size:12px; margin-bottom:10px}
+  #detail .ctx{font-size:12.5px; color:var(--ink); line-height:1.55; margin:8px 0}
+  .chips{display:flex; flex-wrap:wrap; gap:5px; margin-top:8px}
+  .chip{font-size:10.5px; border:1px solid var(--line); color:var(--ink2); border-radius:20px; padding:2px 9px}
+  .kv{display:grid; grid-template-columns:auto 1fr; gap:2px 14px; font-size:12px; margin-top:6px}
+  .kv dt{color:var(--ink3)} .kv dd{font-variant-numeric:tabular-nums}
+  #detail .x, #modal .x{
+    position:absolute; top:8px; right:8px; border:none; background:none;
+    color:var(--ink2); font-size:15px; padding:4px 8px;
+  }
+  .riskline{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12px}
+  .riskbarw{flex:1; height:6px; border-radius:3px; background:var(--panel2); overflow:hidden}
+  .riskbar{height:100%; border-radius:3px}
+
+  /* ===== Toasts ===== */
+  #toasts{position:fixed; right:12px; bottom:12px; z-index:50; display:flex; flex-direction:column; gap:8px; width:320px}
+  .toast{
+    background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--amber);
+    border-radius:8px; padding:10px 13px; font-size:12.5px; line-height:1.4;
+    animation:pop .25s ease-out;
+  }
+  .toast.red{border-left-color:var(--red)}
+  .toast b{display:block; font-size:12px}
+  .toast small{color:var(--ink2)}
+  @keyframes pop{from{transform:translateY(12px); opacity:0} to{transform:none; opacity:1}}
+  @media (prefers-reduced-motion:reduce){.toast{animation:none}}
+
+  /* ===== Modal ===== */
+  #modal{position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center; background:var(--ovl)}
+  #modal>div{
+    position:relative; width:min(620px, 92vw); max-height:84vh; overflow-y:auto;
+    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:26px 28px;
+  }
+  #modal h2{font-size:17px; margin-bottom:4px}
+  #modal h4{font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--accent); margin:18px 0 6px}
+  #modal p, #modal li{font-size:13px; color:var(--ink); line-height:1.6}
+  #modal ul{padding-left:18px}
+  #modal .sub{color:var(--ink2); font-size:12.5px}
+
+  /* ===== Legend ===== */
+  #legend{
+    position:fixed; left:50%; transform:translateX(-50%); bottom:12px; z-index:15;
+    display:flex; gap:14px; align-items:center; font-size:11px; color:var(--ink2);
+    background:var(--panelT); border:1px solid var(--line); border-radius:20px; padding:6px 16px;
+  }
+  #legend .sw{width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:5px; vertical-align:-1px}
+  #legend .sw.s1{background:var(--accent)} #legend .sw.s2{background:var(--amber)} #legend .sw.s3{background:var(--red)}
+  #legend .grad{width:70px; height:8px; border-radius:4px; display:inline-block; margin-right:5px; vertical-align:-1px;
+    background:linear-gradient(90deg,var(--amber),var(--orange),var(--red))}
+
+  /* ===== Responsive ===== */
+  #ptoggles{display:none; gap:6px}
+  @media (max-width:1120px){
+    .panel{display:none}
+    .panel.open{display:flex; background:var(--panelT); border-radius:12px; padding:8px; width:min(320px, 92vw)}
+    #ptoggles{display:flex}
+    #kpis .kpi:nth-child(4){display:none}
+  }
+  @media (max-width:760px){
+    #hdr{flex-wrap:wrap; height:auto; padding:8px 10px; row-gap:6px}
+    .panel{top:110px}
+    #brand span{display:none}
+    #kpis{margin-left:0}
+    #detail{width:min(340px, 92vw)}
+  }
+</style>
+
+<header id="hdr">
+  <div id="brand">
+    <b>VIGIE<em>.</em></b>
+    <span>Flux maritime × risque géopolitique</span>
+  </div>
+  <span class="badge">Prototype · données simulées</span>
+  <div id="kpis">
+    <div class="kpi"><div class="v" id="kShips">–</div><div class="l">Navires</div></div>
+    <div class="kpi"><div class="v" id="kZones">–</div><div class="l">Zones suivies</div></div>
+    <div class="kpi"><div class="v warn" id="kAlerts">–</div><div class="l">En zone à risque</div></div>
+    <div class="kpi"><div class="v mono" id="kClock" style="font-size:13.5px">–</div><div class="l">Heure simulée</div></div>
+  </div>
+  <div id="ptoggles">
+    <button class="small" id="tgL">Zones</button>
+    <button class="small" id="tgR">Navires</button>
+  </div>
+  <div id="ctrls">
+    <button id="bPause" title="Pause / lecture">⏸</button>
+    <button id="bSpeed" class="mono" title="Vitesse de simulation">1 s = 1 h</button>
+    <button id="bHeat" class="on" title="Afficher / masquer la heatmap">Heatmap</button>
+    <button id="bTheme" title="Basculer jour / nuit">☀️ Jour</button>
+    <button id="bInfo" title="À propos du prototype">?</button>
+  </div>
+</header>
+
+<canvas id="map"></canvas>
+<div id="tip"></div>
+
+<aside class="panel" id="pl">
+  <div class="card">
+    <h3>Zones à risque · classement</h3>
+    <div id="zlist"></div>
+  </div>
+</aside>
+
+<aside class="panel" id="pr">
+  <div class="card">
+    <h3>Navires les plus exposés</h3>
+    <div id="slist"><div class="empty">Calcul en cours…</div></div>
+  </div>
+  <div class="card">
+    <h3>Journal des alertes</h3>
+    <div id="feed"><div class="empty">Aucune alerte pour l’instant.</div></div>
+  </div>
+</aside>
+
+<div id="detail" role="dialog" aria-label="Détail"></div>
+<div id="toasts" role="status" aria-live="polite"></div>
+
+<div id="legend">
+  <span><span class="grad"></span>Intensité du risque</span>
+  <span><span class="sw s1"></span>Navire</span>
+  <span><span class="sw s2"></span>En approche</span>
+  <span><span class="sw s3"></span>En zone</span>
+</div>
+
+<div id="modal" role="dialog" aria-modal="true" aria-label="À propos">
+  <div>
+    <button class="x" id="mx" aria-label="Fermer">✕</button>
+    <h2>VIGIE — prototype de faisabilité</h2>
+    <p class="sub">Croiser le tracking des porte-conteneurs avec l’analyse du risque géopolitique.</p>
+    <h4>Ce qui est réel dans ce prototype</h4>
+    <ul>
+      <li>Les <b>8 zones à risque</b>, leurs scores et le contexte : basés sur la situation géopolitique réelle (zones listées par le Joint War Committee, attaques en mer Rouge, guerre en mer Noire, piraterie dans le golfe de Guinée…).</li>
+      <li>Les <b>routes maritimes</b> : corridors réels du commerce conteneurisé, y compris le déroutement par le cap de Bonne-Espérance.</li>
+      <li>Les <b>armateurs</b> : les 9 premiers opérateurs mondiaux.</li>
+      <li>Le <b>moteur d’alerte</b> : détection de proximité et d’entrée en zone, classement d’exposition — c’est la vraie logique du produit final.</li>
+    </ul>
+    <h4>Ce qui est simulé</h4>
+    <ul>
+      <li>Les <b>positions des navires</b> : flotte fictive animée le long des corridors. En production, elles viendraient d’un flux AIS temps réel (aisstream.io, Spire Maritime, MarineTraffic…).</li>
+      <li>Le temps est accéléré (réglable en haut à droite) pour rendre les mouvements visibles.</li>
+    </ul>
+    <h4>Pour passer au temps réel (prochaines étapes)</h4>
+    <ul>
+      <li><b>Flux AIS</b> : connexion WebSocket à un fournisseur (gratuit pour tester : aisstream.io) → positions réelles, identités IMO, cap, vitesse.</li>
+      <li><b>Scoring dynamique</b> : alimenter les scores avec GDELT / ACLED / UKMTO / IMB au lieu de valeurs fixées à la main.</li>
+      <li><b>Backend</b> : stockage des trajectoires, calculs de proximité côté serveur, notifications push / e-mail.</li>
+    </ul>
+    <p class="sub" style="margin-top:16px">Astuce : cliquez sur un navire ou une zone sur la carte, ou dans les classements. Molette pour zoomer, cliquer-glisser pour déplacer.</p>
+  </div>
+</div>
+
+<script>
+//WORLD_DATA
+</script>
+<script>
+'use strict';
+/* ================= Données : zones à risque (réelles, éditoriales) ================= */
+const ZONES = [
+  {id:'redsea', name:'Mer Rouge · Bab el-Mandeb', c:[14,42.8], r:750, score:9.1, trend:'▲',
+   ctx:'Depuis fin 2023, les Houthis ciblent les navires marchands au missile balistique et au drone naval. La plupart des grands armateurs ont suspendu le transit et déroutent leurs services Asie–Europe par le cap de Bonne-Espérance (+10 à 14 jours de mer). Les primes d’assurance « risque de guerre » ont été multipliées pour les navires qui passent encore.',
+   f:['Conflit armé','Attaques anti-navires','Assurance majorée','Déroutements massifs']},
+  {id:'blacksea', name:'Mer Noire nord-ouest', c:[45.2,30.8], r:480, score:8.4, trend:'▶',
+   ctx:'Guerre Russie–Ukraine : le corridor d’exportation ukrainien fonctionne sous menace permanente. Mines dérivantes, frappes sur les infrastructures portuaires d’Odesa, zone classée à haut risque par le Joint War Committee des assureurs de Londres.',
+   f:['Guerre active','Mines dérivantes','Frappes portuaires']},
+  {id:'hormuz', name:'Détroit d’Ormuz · Golfe', c:[26.4,56.4], r:380, score:7.8, trend:'▲',
+   ctx:'Un cinquième du pétrole mondial transite par ce goulet de 40 km. Tensions Iran–Occident : saisies de navires marchands par les Gardiens de la révolution, brouillage GPS récurrent signalé par les équipages. Pas de blocus à ce jour, mais un risque d’escalade structurel.',
+   f:['Tensions étatiques','Saisies de navires','Brouillage GNSS']},
+  {id:'guinea', name:'Golfe de Guinée', c:[3.2,4.5], r:600, score:6.2, trend:'▼',
+   ctx:'Longtemps épicentre mondial de la piraterie, avec des enlèvements d’équipages contre rançon au large du Nigeria. Net recul depuis 2021 grâce aux patrouilles régionales et internationales, mais le risque résiduel reste le plus élevé au monde pour les gens de mer.',
+   f:['Piraterie','Enlèvements d’équipages','Criminalité maritime']},
+  {id:'taiwan', name:'Détroit de Taïwan', c:[24.2,119.6], r:420, score:6.0, trend:'▲',
+   ctx:'Exercices militaires chinois d’ampleur encerclant régulièrement l’île ; le scénario d’un blocus est désormais modélisé par les assureurs et les chargeurs. Près de la moitié de la flotte mondiale de porte-conteneurs croise à proximité chaque année.',
+   f:['Tensions étatiques','Exercices militaires','Risque de blocus']},
+  {id:'scs', name:'Mer de Chine méridionale', c:[12,114.5], r:850, score:4.9, trend:'▲',
+   ctx:'Revendications territoriales chinoises contestées par les États riverains ; incidents répétés entre garde-côtes chinois et navires philippins autour des récifs disputés (canons à eau, abordages). Le trafic marchand n’est pas directement ciblé à ce stade.',
+   f:['Litiges territoriaux','Incidents garde-côtes']},
+  {id:'malacca', name:'Détroit de Malacca · Singapour', c:[2.8,100.8], r:420, score:3.4, trend:'▶',
+   ctx:'Le passage le plus fréquenté du monde (~90 000 navires/an). Vols à main armée opportunistes sur des navires au mouillage ou en transit lent : risque faible mais récurrent, sans violence lourde, suivi par le ReCAAP.',
+   f:['Vols à main armée','Densité de trafic extrême']},
+  {id:'panama', name:'Canal de Panama', c:[9.1,-79.6], r:260, score:2.8, trend:'▶',
+   ctx:'Risque opérationnel plus que sécuritaire : les sécheresses récurrentes réduisent le niveau du lac Gatún et donc le nombre de transits quotidiens — files d’attente, enchères de créneaux, surcoûts. Un point de fragilité logistique majeur du commerce mondial.',
+   f:['Contrainte climatique','Congestion','Enchères de créneaux']},
+];
+
+/* ================= Routes (corridors réels, points [lat, lon]) ================= */
+const ROUTES = {
+  suez: {name:'Asie–Europe via Suez', note:'maintient le transit mer Rouge', pts:[
+    [51.95,3.6],[50.1,-1.5],[48.4,-5.8],[43.3,-9.8],[36.9,-9.6],[35.95,-5.6],[37.2,3],[36.4,14.5],
+    [34.3,24],[31.9,31.4],[29.8,32.6],[27.2,34.4],[24,36.2],[19.5,39.5],[15.5,41.8],[12.6,43.3],
+    [12.9,47.5],[12.5,54.5],[9.5,64],[6.5,74],[5.7,80.6],[5.2,88],[5.6,95.2],[4.2,98.6],[2.4,101.4],
+    [1.2,103.9],[3,105.8],[7,109],[12,111.8],[17,114],[21,116.8],[23.2,118.6],[24.7,119.9],[27.5,122.3],[30.8,122.8]]},
+  cap: {name:'Asie–Europe via le Cap', note:'dérouté pour éviter la mer Rouge', pts:[
+    [51.95,3.6],[50.1,-1.5],[48.4,-5.8],[43.3,-9.8],[33,-13],[27.5,-15.8],[20,-18.2],[14.2,-18.5],
+    [8,-15.5],[3.5,-10],[-2,-6],[-9,0],[-16,6],[-24,11.5],[-31,15.5],[-35.4,18.4],[-35.6,22],[-35,27],
+    [-32.5,31.5],[-27.5,42],[-25.5,47.5],[-18,57],[-8,68],[0,76],[5.7,80.6],[5.2,88],[5.6,95.2],
+    [4.2,98.6],[2.4,101.4],[1.2,103.9],[3,105.8],[7,109],[12,111.8],[17,114],[21,116.8],[23.2,118.6],
+    [24.7,119.9],[27.5,122.3],[30.8,122.8]]},
+  transpac: {name:'Transpacifique', note:'Chine → côte ouest US', pts:[
+    [30.8,122.8],[29.5,127],[30.5,131.5],[32.2,135.5],[34.4,140.2],[38,147],[43,158],[46.5,170],
+    [48.5,182],[48.5,196],[45,212],[40,227],[35.5,236.5],[33.6,241.4]]},
+  transat: {name:'Transatlantique', note:'Europe ↔ côte est US', pts:[
+    [51.95,3.6],[50.1,-1.5],[49.2,-7],[48.5,-15],[46.5,-28],[43.5,-42],[41.2,-58],[40.3,-71],[40.4,-73.6]]},
+  gulf: {name:'Asie–Golfe (Jebel Ali)', note:'transit détroit d’Ormuz', pts:[
+    [1.2,103.9],[2.4,101.4],[4.2,98.6],[5.6,95.2],[5.9,88],[5.7,80.6],[8.5,73],[13,66.5],[18,62],
+    [23,60],[25.2,57.8],[26.35,56.6],[25.9,55.9],[25.3,55.3]]},
+  blacksea: {name:'Corridor mer Noire', note:'exports céréaliers ukrainiens', pts:[
+    [40.9,28.5],[41.25,29.12],[41.9,29.6],[43.4,30.2],[45,30.6],[46,30.85]]},
+  guinee: {name:'Europe–Afrique de l’Ouest', note:'dessertes golfe de Guinée', pts:[
+    [51.95,3.6],[50.1,-1.5],[48.4,-5.8],[43.3,-9.8],[33,-13],[27.5,-15.8],[20,-18.2],[14.2,-18.3],
+    [9,-15.2],[5.2,-8],[4.6,-4.2],[4.4,-0.5],[5.4,3.2],[6,4.5]]},
+};
+const ENDS = { suez:['Rotterdam','Shanghai'], cap:['Rotterdam','Shanghai'], transpac:['Shanghai','Los Angeles'],
+  transat:['Rotterdam','New York'], gulf:['Singapour','Jebel Ali'], blacksea:['Istanbul','Odesa'], guinee:['Rotterdam','Lagos'] };
+
+/* ================= Flotte simulée ================= */
+const OPS = ['MSC','Maersk','CMA CGM','COSCO','Hapag-Lloyd','ONE','Evergreen','HMM','ZIM'];
+const NAMES = {
+  'MSC':['MSC ARIA','MSC ALDEBARAN','MSC LUCIA','MSC AMBRA','MSC TESSA','MSC NOA'],
+  'Maersk':['MAERSK ATLAS','MADRID MAERSK','MAERSK ESSEX','MAERSK SELETAR','MUNICH MAERSK'],
+  'CMA CGM':['CMA CGM MARSEILLE','CMA CGM A. DE SAINT-EXUPÉRY','CMA CGM RIVOLI','CMA CGM LOUVRE','CMA CGM PALAIS ROYAL'],
+  'COSCO':['COSCO SHIPPING UNIVERSE','COSCO SHIPPING PLANET','COSCO PACIFIC','COSCO HARMONY'],
+  'Hapag-Lloyd':['HAMBURG EXPRESS','BERLIN EXPRESS','MANILA EXPRESS','DUBLIN EXPRESS'],
+  'ONE':['ONE INNOVATION','ONE INTEGRITY','ONE APUS','ONE STORK'],
+  'Evergreen':['EVER ACE','EVER ALOT','EVER FORWARD','EVER GIVEN'],
+  'HMM':['HMM ALGECIRAS','HMM OSLO','HMM HAMBURG'],
+  'ZIM':['ZIM SAMMY OFEK','ZIM MOUNT EVEREST','ZIM USA'],
+};
+// répartition volontaire : beaucoup de navires déroutés par le Cap (réalité 2024-2026)
+const FLEET_PLAN = [['suez',7],['cap',10],['transpac',8],['transat',6],['gulf',5],['blacksea',3],['guinee',4]];
+
+let seed = 42;
+function rnd(){ seed = (seed*1103515245 + 12345) & 0x7fffffff; return seed/0x7fffffff; }
+
+const R_EARTH = 6371;
+function havKm(a1,o1,a2,o2){
+  const d=Math.PI/180, la1=a1*d, la2=a2*d, dla=(a2-a1)*d, dlo=(o2-o1)*d;
+  const h=Math.sin(dla/2)**2 + Math.cos(la1)*Math.cos(la2)*Math.sin(dlo/2)**2;
+  return 2*R_EARTH*Math.asin(Math.min(1,Math.sqrt(h)));
+}
+// distances cumulées par route
+for(const k in ROUTES){
+  const r=ROUTES[k]; r.cum=[0];
+  for(let i=1;i<r.pts.length;i++)
+    r.cum.push(r.cum[i-1]+havKm(...r.pts[i-1],...r.pts[i]));
+  r.len=r.cum[r.cum.length-1];
+}
+function posOnRoute(route, dist){
+  const r=ROUTES[route], c=r.cum;
+  let i=1; while(i<c.length-1 && c[i]<dist) i++;
+  const t=(dist-c[i-1])/Math.max(1e-6,(c[i]-c[i-1]));
+  const [a1,o1]=r.pts[i-1], [a2,o2]=r.pts[i];
+  let dlo=o2-o1; // pas de wrap nécessaire: lons continues par construction
+  return {lat:a1+(a2-a1)*t, lon:o1+dlo*t, seg:i};
+}
+
+const SHIPS = [];
+{
+  const pool = {}; for(const o of OPS) pool[o]=[...NAMES[o]];
+  let opIdx = 0;
+  for(const [route,n] of FLEET_PLAN){
+    for(let i=0;i<n;i++){
+      let op = OPS[opIdx++ % OPS.length];
+      if(!pool[op].length) op = OPS.find(o=>pool[o].length) || op;
+      const name = pool[op].length ? pool[op].splice(Math.floor(rnd()*pool[op].length),1)[0]
+                                   : op.toUpperCase()+' '+Math.floor(100+rnd()*900);
+      SHIPS.push({
+        name, op, route,
+        dir: rnd()<0.5?1:-1,
+        dist: rnd()*ROUTES[route].len,
+        kn: 16+rnd()*7,                    // vitesse en nœuds
+        teu: Math.round(8000+rnd()*16000),
+        lat:0, lon:0, seg:0, exp:0, zoneState:{}, worstZone:null,
+      });
+    }
+  }
+}
+
+/* ================= Vue / projection ================= */
+const cv = document.getElementById('map'), ctx = cv.getContext('2d');
+let W=0,H=0,DPR=1;
+const view = {clon:25, clat:18, scale:3.4};
+function resize(){
+  DPR = Math.min(2, window.devicePixelRatio||1);
+  W = innerWidth; H = innerHeight;
+  cv.width = W*DPR; cv.height = H*DPR;
+  cv.style.width = W+'px'; cv.style.height = H+'px';
+}
+addEventListener('resize', ()=>{resize(); draw();});
+resize();
+
+function prj(lat,lon){
+  let dl = lon - view.clon; dl = ((dl+540)%360)-180;
+  return [W/2 + dl*view.scale, H/2 - (lat-view.clat)*view.scale];
+}
+function unprj(x,y){
+  let lon = view.clon + (x - W/2)/view.scale; lon = ((lon+540)%360)-180;
+  return [view.clat + (H/2 - y)/view.scale, lon];
+}
+
+/* ================= Thèmes (couleurs du canvas) ================= */
+const THEMES = {
+  dark:{ land:'#17293A', landStroke:'rgba(66,105,140,.35)', grat:'rgba(30,53,75,.45)',
+    label:'rgba(143,163,181,.9)', ship:'#4FC3E8', near:'#E8B84B', inZ:'#E0402F',
+    route:'rgba(79,195,232,.45)', AMB:[232,184,75], ORA:[232,121,46], RED:[224,64,47] },
+  light:{ land:'#FAFBFE', landStroke:'rgba(122,138,168,.55)', grat:'rgba(150,162,190,.35)',
+    label:'rgba(70,84,110,.95)', ship:'#1470C2', near:'#B07908', inZ:'#BE352A',
+    route:'rgba(20,112,194,.5)', AMB:[176,121,8], ORA:[194,82,24], RED:[190,53,42] },
+};
+let T = THEMES.dark;
+
+/* ================= Couleurs de risque ================= */
+function lerp(a,b,t){return a+(b-a)*t}
+function mix(c1,c2,t){ return [lerp(c1[0],c2[0],t),lerp(c1[1],c2[1],t),lerp(c1[2],c2[2],t)]; }
+function riskRGB(s){ // score 0-10
+  const c = s<5 ? mix(T.AMB,T.ORA,(s-2)/3) : mix(T.ORA,T.RED,Math.min(1,(s-5)/3.5));
+  return c.map(Math.round);
+}
+function riskCSS(s,a=1){ const c=riskRGB(s); return `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
+
+/* ================= Simulation ================= */
+let simSpeed = 3600;               // secondes simulées par seconde réelle
+const SPEEDS = [[600,'1 s = 10 min'],[3600,'1 s = 1 h'],[10800,'1 s = 3 h']];
+let speedIdx = 1, paused=false, showHeat=true;
+let simTime = Date.now();
+let selShip=null, selZone=null;
+
+function stepShips(dtSim){ // dtSim en secondes simulées
+  for(const s of SHIPS){
+    const kmh = s.kn*1.852;
+    s.dist += s.dir * kmh * dtSim/3600;
+    const L = ROUTES[s.route].len;
+    if(s.dist>=L){s.dist=L; s.dir=-1;}
+    if(s.dist<=0){s.dist=0; s.dir=1;}
+    const p = posOnRoute(s.route, s.dist);
+    s.lat=p.lat; s.lon=p.lon; s.seg=p.seg;
+  }
+}
+function assessRisk(){
+  let inZone=0;
+  for(const s of SHIPS){
+    let best=0, bz=null, bd=0;
+    for(const z of ZONES){
+      const d = havKm(s.lat,s.lon,z.c[0],z.c[1]);
+      const near = z.r*1.6;
+      let e=0;
+      if(d<=z.r) e=z.score;
+      else if(d<near) e=z.score*0.55*(near-d)/(near-z.r);
+      if(e>best){best=e; bz=z; bd=d;}
+      // transitions d'état -> alertes
+      const prev = s.zoneState[z.id]||0;              // 0 dehors, 1 approche, 2 dedans
+      const cur = d<=z.r ? 2 : (d<near ? 1 : 0);
+      if(cur>prev){
+        if(cur===1) pushAlert(s,z,'approche',d);
+        if(cur===2) pushAlert(s,z,'entrée',d);
+      }
+      s.zoneState[z.id]=cur;
+    }
+    s.exp=best; s.worstZone=bz; s.worstDist=bd;
+    if(Object.values(s.zoneState).includes(2)) inZone++;
+  }
+  document.getElementById('kAlerts').textContent = inZone;
+}
+function shipState(s){
+  const v = Object.values(s.zoneState);
+  return v.includes(2)?2:(v.includes(1)?1:0);
+}
+
+/* ================= Alertes ================= */
+const feedEl = document.getElementById('feed'), toastsEl = document.getElementById('toasts');
+let feedItems = [], alertsSincePause=0;
+function fmtT(ms){ return new Date(ms).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+function pushAlert(s,z,kind,d){
+  const red = kind==='entrée';
+  feedItems.unshift({t:simTime, txt:`${s.name} — ${kind==='entrée'?'est entré dans':'approche de'} ${z.name}`, red});
+  feedItems = feedItems.slice(0,30);
+  renderFeed();
+  if(toastsEl.children.length>=4) toastsEl.firstChild.remove();
+  const el=document.createElement('div');
+  el.className='toast'+(red?' red':'');
+  el.innerHTML = `<b>${red?'🔴':'⚠️'} ${esc(s.name)} · ${esc(s.op)}</b>
+    ${red?'Est entré dans':'S’approche de'} <b>${esc(z.name)}</b> — score ${z.score.toFixed(1)}/10
+    <small>· ${Math.round(d)} km du centre de zone</small>`;
+  el.onclick=()=>{selectShip(s)};
+  toastsEl.appendChild(el);
+  setTimeout(()=>el.remove(), 6500);
+}
+function renderFeed(){
+  feedEl.innerHTML = feedItems.length? feedItems.map(f=>
+    `<div class="ev ${f.red?'r':'a'}"><span class="t mono">${fmtT(f.t)}</span><span>${esc(f.txt)}</span></div>`).join('')
+    : '<div class="empty">Aucune alerte pour l’instant.</div>';
+}
+function esc(x){ return String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ================= Rendu carte ================= */
+function draw(){
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.clearRect(0,0,W,H);
+  // graticule
+  ctx.strokeStyle=T.grat; ctx.lineWidth=1;
+  ctx.beginPath();
+  for(let lon=-180;lon<=180;lon+=20){const [x]=prj(0,lon); ctx.moveTo(x,0); ctx.lineTo(x,H);}
+  for(let lat=-60;lat<=80;lat+=20){const [,y]=prj(lat,0); ctx.moveTo(0,y); ctx.lineTo(W,y);}
+  ctx.stroke();
+  // continents — lons "déroulées" pour éviter les traits qui traversent l'antiméridien
+  ctx.fillStyle=T.land; ctx.strokeStyle=T.landStroke;
+  ctx.beginPath();
+  for(const poly of WORLD){
+    let prevLon = poly[0]/5;
+    let d0 = prevLon - view.clon; d0 = ((d0+540)%360)-180;   // ancrage du 1er point
+    let x = W/2 + d0*view.scale;
+    let y = H/2 - (poly[1]/5 - view.clat)*view.scale;
+    ctx.moveTo(x,y);
+    let lonAcc = 0;
+    for(let i=2;i<poly.length;i+=2){
+      let lon = poly[i]/5;
+      let dl = lon - prevLon;
+      if(dl>180) dl-=360; else if(dl<-180) dl+=360;          // continuité
+      lonAcc += dl; prevLon = lon;
+      x = W/2 + (d0+lonAcc)*view.scale;
+      y = H/2 - (poly[i+1]/5 - view.clat)*view.scale;
+      ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+  }
+  ctx.fill(); ctx.stroke();
+  // heatmap zones
+  for(const z of ZONES){
+    const [x,y]=prj(z.c[0],z.c[1]);
+    const ry=(z.r/111)*view.scale, rx=ry/Math.max(.25,Math.cos(z.c[0]*Math.PI/180));
+    if(showHeat){
+      const g=ctx.createRadialGradient(x,y,0,x,y,Math.max(rx,ry));
+      const a=0.16+0.045*z.score;
+      g.addColorStop(0, riskCSS(z.score, a));
+      g.addColorStop(0.65, riskCSS(z.score, a*0.5));
+      g.addColorStop(1, riskCSS(z.score, 0));
+      ctx.save(); ctx.translate(x,y); ctx.scale(rx/Math.max(rx,ry), ry/Math.max(rx,ry)); ctx.translate(-x,-y);
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,Math.max(rx,ry),0,7); ctx.fill();
+      ctx.restore();
+    }
+    // contour + libellé
+    ctx.save();
+    ctx.strokeStyle=riskCSS(z.score, selZone===z?0.9:0.5);
+    ctx.setLineDash([5,5]); ctx.lineWidth=selZone===z?2:1.2;
+    ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,7); ctx.stroke();
+    ctx.restore();
+    if(view.scale>2.2){
+      ctx.font='10.5px ui-monospace,Consolas,monospace';
+      ctx.textAlign='center';
+      const label=`${z.score.toFixed(1)}`;
+      ctx.fillStyle=riskCSS(z.score,.95);
+      ctx.fillText(label, x, y-ry-6);
+      ctx.fillStyle=T.label;
+      ctx.font='9.5px Manrope,"Segoe UI",sans-serif';
+      ctx.fillText(z.name.toUpperCase(), x, y-ry-18);
+    }
+  }
+  // route du navire sélectionné
+  if(selShip){
+    const r=ROUTES[selShip.route];
+    ctx.strokeStyle=T.route; ctx.setLineDash([3,5]); ctx.lineWidth=1.4;
+    ctx.beginPath();
+    r.pts.forEach((p,i)=>{const [x,y]=prj(p[0],p[1]); i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  // navires
+  for(const s of SHIPS){
+    const [x,y]=prj(s.lat,s.lon);
+    if(x<-20||x>W+20||y<-20||y>H+20) continue;
+    const st=shipState(s);
+    const col = st===2?T.inZ:st===1?T.near:T.ship;
+    // orientation
+    const p2=posOnRoute(s.route, Math.min(ROUTES[s.route].len, Math.max(0,s.dist+s.dir*30)));
+    const [x2,y2]=prj(p2.lat,p2.lon);
+    const ang=Math.atan2(y2-y,x2-x);
+    ctx.save(); ctx.translate(x,y); ctx.rotate(ang);
+    ctx.fillStyle=col;
+    ctx.beginPath(); ctx.moveTo(6,0); ctx.lineTo(-4,3.4); ctx.lineTo(-2.2,0); ctx.lineTo(-4,-3.4); ctx.closePath(); ctx.fill();
+    if(s===selShip){ ctx.strokeStyle=col; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(0,0,10,0,7); ctx.stroke(); }
+    else if(st>0){ ctx.strokeStyle=col; ctx.globalAlpha=.5; ctx.beginPath(); ctx.arc(0,0,9,0,7); ctx.stroke(); ctx.globalAlpha=1; }
+    ctx.restore();
+  }
+  ctx.textAlign='left';
+}
+
+/* ================= Boucle ================= */
+let lastT=performance.now(), acc=0;
+function frame(t){
+  const dt=Math.min(.1,(t-lastT)/1000); lastT=t;
+  if(!paused){
+    simTime += dt*simSpeed*1000;
+    stepShips(dt*simSpeed);
+    acc+=dt;
+    if(acc>0.45){acc=0; assessRisk(); renderRanks(); if(selShip) renderShipCard(selShip); }
+  }
+  document.getElementById('kClock').textContent =
+    new Date(simTime).toLocaleString('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'});
+  draw();
+  requestAnimationFrame(frame);
+}
+
+/* ================= Panneaux ================= */
+const zlist=document.getElementById('zlist'), slist=document.getElementById('slist');
+function renderZones(){
+  zlist.innerHTML = [...ZONES].sort((a,b)=>b.score-a.score).map(z=>`
+    <div class="zrow" data-z="${z.id}">
+      <div class="zscore" style="background:${riskCSS(z.score)}">${z.score.toFixed(1)}</div>
+      <div class="zname">${esc(z.name)}<small>${esc(z.f[0])}${z.f[1]?' · '+esc(z.f[1]):''}</small></div>
+      <div class="ztrend" title="tendance">${z.trend}</div>
+    </div>`).join('');
+  zlist.querySelectorAll('.zrow').forEach(el=>el.onclick=()=>{
+    const z=ZONES.find(q=>q.id===el.dataset.z); selectZone(z,true);
+  });
+}
+function renderRanks(){
+  const top=[...SHIPS].sort((a,b)=>b.exp-a.exp).slice(0,8);
+  slist.innerHTML = top.map(s=>{
+    const st=shipState(s);
+    const col= st===2?T.inZ:st===1?T.near:T.ship;
+    return `<div class="srow" data-s="${esc(s.name)}">
+      <span class="dot" style="background:${col}"></span>
+      <span>${esc(s.name)}<br><small>${esc(s.op)} · ${esc(ROUTES[s.route].name)}</small></span>
+      <span class="exp mono" style="color:${s.exp>0?riskCSS(Math.max(3,s.exp)):'var(--ink3)'}">${s.exp>0?s.exp.toFixed(1):'—'}</span>
+    </div>`;}).join('');
+  slist.querySelectorAll('.srow').forEach(el=>el.onclick=()=>{
+    const s=SHIPS.find(q=>q.name===el.dataset.s); if(s) selectShip(s,true);
+  });
+  document.getElementById('kShips').textContent=SHIPS.length;
+  document.getElementById('kZones').textContent=ZONES.length;
+}
+
+/* ================= Sélection & fiches ================= */
+const detail=document.getElementById('detail');
+function selectShip(s, center){
+  selShip=s; selZone=null;
+  if(center){ view.clat=s.lat; view.clon=s.lon; view.scale=Math.max(view.scale,6); }
+  renderShipCard(s);
+}
+function renderShipCard(s){
+  const z=s.worstZone, ends=ENDS[s.route], goingTo = s.dir>0?ends[1]:ends[0];
+  const st=shipState(s);
+  const stTxt = st===2?`<b style="color:var(--red)">EN ZONE À RISQUE</b>`:st===1?`<b style="color:var(--amber)">EN APPROCHE</b>`:`<span style="color:var(--ok)">R.A.S.</span>`;
+  detail.style.display='block';
+  detail.innerHTML=`<button class="x" aria-label="Fermer">✕</button>
+    <h2>🚢 ${esc(s.name)}</h2>
+    <div class="sub">${esc(s.op)} · porte-conteneurs ${s.teu.toLocaleString('fr-FR')} EVP</div>
+    <dl class="kv">
+      <dt>Route</dt><dd>${esc(ROUTES[s.route].name)} <small style="color:var(--ink3)">(${esc(ROUTES[s.route].note)})</small></dd>
+      <dt>Destination</dt><dd>${esc(goingTo)}</dd>
+      <dt>Vitesse</dt><dd class="mono">${s.kn.toFixed(1)} nds</dd>
+      <dt>Position</dt><dd class="mono">${s.lat.toFixed(2)}°, ${(((s.lon+540)%360)-180).toFixed(2)}°</dd>
+      <dt>Statut</dt><dd>${stTxt}</dd>
+    </dl>
+    <div class="riskline"><span>Exposition</span>
+      <div class="riskbarw"><div class="riskbar" style="width:${s.exp*10}%;background:${riskCSS(Math.max(3,s.exp))}"></div></div>
+      <b class="mono">${s.exp.toFixed(1)}</b></div>
+    ${z && s.exp>0.3 ? `<div class="ctx"><b style="color:${riskCSS(z.score)}">${esc(z.name)}</b> — à ${Math.round(s.worstDist)} km · ${esc(z.ctx)}</div>`:''}
+  `;
+  detail.querySelector('.x').onclick=()=>{detail.style.display='none'; selShip=null;};
+}
+function selectZone(z, center){
+  selZone=z; selShip=null;
+  if(center){ view.clat=z.c[0]; view.clon=z.c[1]; view.scale=Math.max(5.5, view.scale); }
+  const inside=SHIPS.filter(s=>s.zoneState[z.id]===2);
+  detail.style.display='block';
+  detail.innerHTML=`<button class="x" aria-label="Fermer">✕</button>
+    <h2><span style="color:${riskCSS(z.score)}">●</span> ${esc(z.name)}</h2>
+    <div class="sub">Score de risque <b class="mono" style="color:${riskCSS(z.score)}">${z.score.toFixed(1)}/10</b> · tendance ${z.trend}</div>
+    <div class="ctx">${esc(z.ctx)}</div>
+    <div class="chips">${z.f.map(f=>`<span class="chip">${esc(f)}</span>`).join('')}</div>
+    <dl class="kv" style="margin-top:10px">
+      <dt>Navires en zone</dt><dd>${inside.length? inside.map(s=>esc(s.name)).join(', '):'aucun actuellement'}</dd>
+      <dt>Rayon surveillé</dt><dd class="mono">${z.r} km</dd>
+    </dl>`;
+  detail.querySelector('.x').onclick=()=>{detail.style.display='none'; selZone=null;};
+}
+
+/* ================= Interactions carte ================= */
+const tip=document.getElementById('tip');
+let drag=null;
+cv.addEventListener('pointerdown',e=>{ drag={x:e.clientX,y:e.clientY,moved:false}; cv.classList.add('drag'); cv.setPointerCapture(e.pointerId); });
+cv.addEventListener('pointermove',e=>{
+  if(drag){
+    const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+    if(Math.abs(dx)+Math.abs(dy)>3) drag.moved=true;
+    view.clon-=dx/view.scale; view.clat+=dy/view.scale;
+    view.clat=Math.max(-70,Math.min(80,view.clat));
+    drag.x=e.clientX; drag.y=e.clientY;
+    return;
+  }
+  const s=hitShip(e.clientX,e.clientY);
+  if(s){ tip.style.display='block'; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+10)+'px';
+    tip.innerHTML=`<b>${esc(s.name)}</b> · ${esc(s.op)}`; cv.style.cursor='pointer'; }
+  else{ tip.style.display='none'; cv.style.cursor='grab'; }
+});
+cv.addEventListener('pointerup',e=>{
+  cv.classList.remove('drag');
+  const wasDrag = drag && drag.moved; drag=null;
+  if(wasDrag) return;
+  const s=hitShip(e.clientX,e.clientY);
+  if(s){ selectShip(s); return; }
+  const [lat,lon]=unprj(e.clientX,e.clientY);
+  const z=ZONES.find(z=>havKm(lat,lon,z.c[0],z.c[1])<z.r);
+  if(z) selectZone(z);
+});
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const f = e.deltaY<0?1.18:1/1.18;
+  const [lat,lon]=unprj(e.clientX,e.clientY);
+  view.scale=Math.max(1.6,Math.min(40,view.scale*f));
+  // garder le point sous la souris
+  const [x2,y2]=prj(lat,lon);
+  view.clon+=(x2-e.clientX)/view.scale; view.clat-=(y2-e.clientY)/view.scale;
+},{passive:false});
+
+function hitShip(px,py){
+  let best=null, bd=144;
+  for(const s of SHIPS){
+    const [x,y]=prj(s.lat,s.lon);
+    const d=(x-px)**2+(y-py)**2;
+    if(d<bd){bd=d; best=s;}
+  }
+  return best;
+}
+
+/* ================= Contrôles ================= */
+document.getElementById('bPause').onclick=e=>{
+  paused=!paused; e.currentTarget.textContent=paused?'▶':'⏸'; e.currentTarget.classList.toggle('on',paused);
+};
+document.getElementById('bSpeed').onclick=e=>{
+  speedIdx=(speedIdx+1)%SPEEDS.length; simSpeed=SPEEDS[speedIdx][0];
+  e.currentTarget.textContent=SPEEDS[speedIdx][1];
+};
+document.getElementById('bHeat').onclick=e=>{
+  showHeat=!showHeat; e.currentTarget.classList.toggle('on',showHeat);
+};
+const bTheme=document.getElementById('bTheme');
+function applyTheme(name, stamp=true){
+  T = THEMES[name] || THEMES.dark;
+  if(stamp) document.documentElement.dataset.theme = name;
+  bTheme.textContent = name==='dark' ? '☀️ Jour' : '🌙 Nuit';
+  renderZones(); renderRanks();
+  if(selShip) renderShipCard(selShip);
+  if(selZone) selectZone(selZone,false);
+}
+bTheme.onclick=()=>applyTheme((document.documentElement.dataset.theme==='light')?'dark':'light');
+// synchronise le canvas si l'hôte (visionneuse) change le thème de la page
+new MutationObserver(()=>{
+  const t=document.documentElement.dataset.theme;
+  if(t && THEMES[t] && T!==THEMES[t]) applyTheme(t,false);
+}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+const modal=document.getElementById('modal');
+document.getElementById('bInfo').onclick=()=>modal.style.display='flex';
+document.getElementById('mx').onclick=()=>modal.style.display='none';
+modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none'});
+document.getElementById('tgL').onclick=()=>{document.getElementById('pl').classList.toggle('open');document.getElementById('pr').classList.remove('open')};
+document.getElementById('tgR').onclick=()=>{document.getElementById('pr').classList.toggle('open');document.getElementById('pl').classList.remove('open')};
+addEventListener('keydown',e=>{if(e.key==='Escape'){modal.style.display='none'; detail.style.display='none'; selShip=selZone=null;}});
+
+/* ================= Démarrage ================= */
+stepShips(0); assessRisk();
+// on purge les alertes générées à l'initialisation (les navires démarrent déjà placés)
+feedItems=[]; toastsEl.innerHTML=''; renderFeed();
+applyTheme(document.documentElement.dataset.theme
+  || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+requestAnimationFrame(frame);
+</script>
