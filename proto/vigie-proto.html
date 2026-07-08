@@ -713,35 +713,65 @@ function boxesFor(scope){
 }
 const aismodal=document.getElementById('aismodal'), aisstatus=document.getElementById('aisstatus');
 function setAisStatus(txt, cls){ aisstatus.textContent=txt; aisstatus.className=cls||''; }
+function sendSub(sub){
+  console.log('[VIGIE] abonnement envoyé :', JSON.stringify(sub));
+  live.ws.send(JSON.stringify(sub));
+}
 function startLive(key, scope){
   stopLive(true);
   setAisStatus('Connexion à aisstream.io…');
   let ws;
   try{ ws=new WebSocket('wss://stream.aisstream.io/v0/stream'); }
   catch(err){ setAisStatus('Connexion impossible : cet environnement bloque les connexions externes. Ouvre le fichier sur ton ordinateur.','err'); return; }
-  live.ws=ws; live.status='connecting'; live.msg=0;
+  live.ws=ws; live.status='connecting'; live.msg=0; live.stage=1; live.t0=Date.now();
   ws.onopen=()=>{
-    ws.send(JSON.stringify({APIKey:key, BoundingBoxes:boxesFor(scope),
-      FilterMessageTypes:['PositionReport','ShipStaticData']}));
-    live.status='waiting';
-    setAisStatus('Connecté — en attente des premiers navires (quelques secondes)…','ok');
+    sendSub({APIKey:key, BoundingBoxes:boxesFor(scope),
+      FilterMessageTypes:['PositionReport','ShipStaticData']});
+    live.status='waiting'; live.t0=Date.now();
+    setAisStatus('Connecté — abonnement envoyé, en attente des premiers navires…','ok');
+    // chien de garde : si rien n'arrive, on simplifie l'abonnement par paliers
+    live.watch=setInterval(()=>{
+      if(live.status!=='waiting'){ clearInterval(live.watch); return; }
+      const sec=Math.round((Date.now()-live.t0)/1000);
+      if(live.stage===1 && sec>=10){
+        live.stage=2;
+        sendSub({APIKey:key, BoundingBoxes:boxesFor(scope)});   // sans filtre de types
+        setAisStatus('Toujours rien après 10 s — test sans filtre de types de messages…','ok');
+      }else if(live.stage===2 && sec>=20){
+        live.stage=3;
+        sendSub({APIKey:key, BoundingBoxes:[[[-90,-180],[90,180]]]});  // monde entier
+        setAisStatus('Test en couverture monde entier (sans aucun filtre)…','ok');
+      }else if(live.stage===3 && sec>=35){
+        clearInterval(live.watch);
+        setAisStatus('Aucune donnée reçue en 35 s. Vérifie : 1) la clé sur aisstream.io (page API Keys — copie-la sans espaces), 2) réessaie dans quelques minutes (une clé neuve peut mettre un peu de temps à s’activer), 3) regarde la console du navigateur (F12) pour d’éventuels messages.','err');
+      }else{
+        setAisStatus(`Connecté — abonnement envoyé (${sec} s, palier ${live.stage}/3)…`,'ok');
+      }
+    },1000);
   };
   ws.onmessage=ev=>{
     let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
-    if(m.error){ setAisStatus('Réponse du serveur : '+m.error,'err'); return; }
+    if(m.error){
+      console.warn('[VIGIE] erreur serveur :', m.error);
+      setAisStatus('Réponse du serveur : '+m.error,'err'); return;
+    }
     live.msg++;
+    if(live.msg<=3) console.log('[VIGIE] message reçu :', m.MessageType, m.MetaData && m.MetaData.ShipName);
     if(live.status!=='on'){
-      live.status='on'; MODE='live'; onModeChange();
+      live.status='on'; clearInterval(live.watch);
+      if(live.stage===3) console.warn('[VIGIE] les données ne passent qu’en couverture monde entier — signaler ce cas.');
+      MODE='live'; onModeChange();
       aismodal.style.display='none';
     }
     handleAis(m);
   };
   ws.onclose=()=>{
+    clearInterval(live.watch);
     if(live.status==='on'){ stopLive(); setAisStatus('Connexion interrompue.','err'); }
     else if(live.status!=='off'){
       live.status='off';
       if(!aisstatus.textContent.startsWith('Réponse'))
-        setAisStatus('Connexion refusée — clé invalide, ou réseau bloqué (aperçu Claude).','err');
+        setAisStatus('Connexion fermée par le serveur — clé invalide ou non activée ? Vérifie-la sur aisstream.io (page API Keys), puis réessaie.','err');
     }
   };
   ws.onerror=()=>{
@@ -750,6 +780,7 @@ function startLive(key, scope){
   };
 }
 function stopLive(silent){
+  clearInterval(live.watch);
   if(live.ws){ const w=live.ws; live.ws=null; try{w.onclose=null; w.close();}catch(e){} }
   live.vessels.clear(); live.status='off';
   if(!silent && MODE==='live'){ MODE='sim'; onModeChange(); }
