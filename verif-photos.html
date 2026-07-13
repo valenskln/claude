@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Vérif photos — VIGIE</title>
+<style>
+  body{font:15px/1.5 system-ui,sans-serif; background:#0d1826; color:#e8eef4; margin:0; padding:26px; max-width:820px; margin:auto}
+  h1{font-size:20px} .sub{color:#8fa3b5; font-size:13px; margin-bottom:18px}
+  .path{background:#060d14; border:1px solid #234; border-radius:6px; padding:8px 12px; font-family:ui-monospace,monospace; font-size:12px; word-break:break-all; margin-bottom:20px}
+  .grid{display:flex; flex-direction:column; gap:10px}
+  .row{display:flex; align-items:center; gap:14px; background:#122030; border:1px solid #1c3247; border-radius:10px; padding:10px 14px}
+  .row img{width:110px; height:64px; object-fit:cover; border-radius:6px; background:#060d14; flex:none}
+  .row .no{width:110px; height:64px; border-radius:6px; background:#060d14; display:flex; align-items:center; justify-content:center; font-size:26px; flex:none}
+  .info{flex:1}
+  .info b{font-size:15px} .info .found{color:#5fd39a; font-size:13px} .info .miss{color:#ff7a6b; font-size:13px}
+  .info code{background:#060d14; padding:1px 6px; border-radius:4px; font-size:12px}
+  .foot{margin-top:22px; font-size:13px; color:#8fa3b5; line-height:1.6}
+</style>
+</head>
+<body>
+<h1>🔍 Vérification des photos</h1>
+<p class="sub">Range ce fichier dans le <b>même dossier</b> que <code>vigie-prototype.html</code> (le dossier <code>photos</code> doit être juste à côté), puis ouvre-le.</p>
+<div class="path">Ce fichier est ouvert depuis :<br><span id="loc"></span></div>
+<div class="grid" id="grid"></div>
+<div class="foot" id="foot"></div>
+
+<script>
+document.getElementById('loc').textContent = location.href;
+const OPS = [
+  ['CMA CGM','cma-cgm'], ['MSC','msc'], ['Maersk','maersk'],
+  ['Hapag-Lloyd','hapag-lloyd'], ['ONE','one'], ['Evergreen','evergreen'], ['COSCO','cosco'],
+];
+const EXT = ['jpg','jpeg','png','webp','JPG','PNG'];
+const grid = document.getElementById('grid');
+let okCount = 0, done = 0;
+
+OPS.forEach(([label, base]) => {
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = `<div class="no">⏳</div><div class="info"><b>${label}</b><div class="st">recherche…</div></div>`;
+  grid.appendChild(row);
+  const noBox = row.querySelector('.no');
+  const st = row.querySelector('.st');
+
+  let i = 0;
+  function tryNext() {
+    if (i >= EXT.length) {
+      st.innerHTML = `<span class="miss">❌ introuvable</span> — attendu : <code>photos/${base}.jpg</code>`;
+      noBox.textContent = '❌';
+      finish();
+      return;
+    }
+    const url = `photos/${base}.${EXT[i]}`;
+    const img = new Image();
+    img.onload = () => {
+      const el = document.createElement('img');
+      el.src = url;
+      noBox.replaceWith(el);
+      st.innerHTML = `<span class="found">✅ trouvée</span> : <code>${url}</code>`;
+      okCount++; finish();
+    };
+    img.onerror = () => { i++; tryNext(); };
+    img.src = url;
+  }
+  tryNext();
+
+  function finish() {
+    done++;
+    if (done === OPS.length) {
+      const foot = document.getElementById('foot');
+      if (okCount === OPS.length) {
+        foot.innerHTML = '🎉 <b>Les 7 photos sont trouvées !</b> Elles s’afficheront dans VIGIE. Si tu ne les vois toujours pas dans l’app, vide le cache (Ctrl+Maj+R) et rouvre <code>vigie-prototype.html</code>.';
+      } else if (okCount === 0) {
+        foot.innerHTML = '⚠️ <b>Aucune photo trouvée.</b> Cause la plus probable : le dossier <code>photos</code> n’est pas à côté de ce fichier, ou les noms ne correspondent pas. Vérifie que tu as bien un dossier <code>photos</code> ici, contenant par ex. <code>cma-cgm.jpg</code>. Attention à la double extension (<code>cma-cgm.jpg.jpg</code>) souvent invisible sur Windows.';
+      } else {
+        foot.innerHTML = `✅ ${okCount}/7 trouvées. Pour celles marquées ❌, vérifie le nom exact (minuscules, sans espace, sans double extension) et l’emplacement dans le dossier <code>photos</code>.`;
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
