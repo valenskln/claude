@@ -229,6 +229,7 @@
   /* ===== Illustration navire ===== */
   .shipart{margin:4px 0 10px; border-radius:10px; overflow:hidden; background:var(--panel2)}
   .shipart svg{display:block; width:100%; height:auto}
+  .shipart img{display:block; width:100%; height:112px; object-fit:cover}
 
   /* ===== Filtres flotte ===== */
   .checkrow.pad{display:block; padding:2px 4px; margin-top:2px; line-height:1.45}
@@ -1036,6 +1037,28 @@ function renderRanks(){
   document.getElementById('kZones').textContent=ZONES.length;
 }
 
+/* ================= Photos des navires (dossier local ./photos, repli SVG) ================= */
+const SHIP_PHOTOS={
+  'CMA CGM':'photos/cma-cgm.jpg', 'MSC':'photos/msc.jpg', 'Maersk':'photos/maersk.jpg',
+  'Hapag-Lloyd':'photos/hapag-lloyd.jpg', 'ONE':'photos/one.jpg', 'Evergreen':'photos/evergreen.jpg',
+};
+// vraies livrées (couleur de coque) pour l'illustration de secours
+const HULLS={
+  'CMA CGM':'#1B2D5B', 'MSC':'#20242C', 'Maersk':'#5CB8E4',
+  'Hapag-Lloyd':'#2E3338', 'ONE':'#C94795', 'Evergreen':'#1E7A46', 'COSCO':'#27447A',
+};
+function shipVisual(op){
+  const src=SHIP_PHOTOS[op];
+  if(src) return `<div class="shipart" data-op="${esc(op)}">
+    <img src="${src}" alt="Porte-conteneurs ${esc(op)}" loading="lazy"
+      onerror="window.artFallback(this)"></div>`;
+  return `<div class="shipart">${shipArt(op)}</div>`;
+}
+window.artFallback=function(img){
+  const box=img.closest('.shipart');
+  if(box) box.innerHTML=shipArt(box.dataset.op||'');
+};
+
 /* ================= Illustration navire (SVG aux couleurs de l'armateur) ================= */
 function shade(hex, amt){
   const n=parseInt(hex.slice(1),16);
@@ -1046,6 +1069,7 @@ function shade(hex, amt){
 }
 function shipArt(op){
   const c = OP_COLORS[op] || null;
+  const hullC = HULLS[op] || '#2E4156';
   const shades = c ? [c, shade(c,-32), shade(c,26), '#9AA8BA'] : ['#8A97A8','#6E7C8E','#A5B2C2','#95A2B4'];
   let boxes='';
   for(let row=0; row<3; row++){
@@ -1065,7 +1089,7 @@ function shipArt(op){
     <rect x="63" y="50" width="24" height="4" fill="#3A4A5C"/>
     <rect x="63" y="58" width="24" height="4" fill="#3A4A5C"/>
     <rect x="66" y="24" width="13" height="12" rx="1.5" fill="${c||'#5A6B7E'}"/>
-    <path d="M36 78 L324 78 L338 88 L318 106 L56 106 L42 92 Z" fill="#2E4156"/>
+    <path d="M36 78 L324 78 L338 88 L318 106 L56 106 L42 92 Z" fill="${hullC}"/>
     <rect x="42" y="78" width="288" height="5" fill="${c||'#5A6B7E'}"/>
     ${name}
     <path d="M0 108 Q22 103 45 108 T90 108 T135 108 T180 108 T225 108 T270 108 T315 108 T360 108 L360 130 L0 130 Z"
@@ -1091,7 +1115,7 @@ function renderShipCard(s){
   detail.innerHTML=`<button class="x" aria-label="Fermer">✕</button>
     <h2>🚢 ${esc(s.name)}</h2>
     <div class="sub">${esc(s.op)} · porte-conteneurs ${s.teu.toLocaleString('fr-FR')} EVP</div>
-    <div class="shipart">${shipArt(s.op)}</div>
+    ${shipVisual(s.op)}
     <dl class="kv">
       <dt>Route</dt><dd>${esc(ROUTES[s.route].name)} <small style="color:var(--ink3)">(${esc(ROUTES[s.route].note)})</small></dd>
       <dt>Destination</dt><dd>${esc(goingTo)}</dd>
@@ -1115,7 +1139,7 @@ function renderLiveCard(v){
   detail.innerHTML=`<button class="x" aria-label="Fermer">✕</button>
     <h2>🛰️ ${esc(v.name||('MMSI '+v.mmsi))}</h2>
     <div class="sub">${esc(v.op||'armateur non identifié')} · ${typeTxt} · <b style="color:var(--ok)">position réelle</b></div>
-    <div class="shipart">${shipArt(v.op)}</div>
+    ${shipVisual(v.op)}
     <dl class="kv">
       <dt>MMSI</dt><dd class="mono">${esc(v.mmsi)}</dd>
       ${v.imo?`<dt>IMO</dt><dd class="mono">${esc(v.imo)}</dd>`:''}

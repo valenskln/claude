@@ -33,6 +33,15 @@ const nres = await page.locator('#searchres .sr').count();
 console.log('search results for MAERSK:', nres);
 if (nres > 0) { await page.locator('#searchres .sr').first().click(); await page.waitForTimeout(600); }
 await page.screenshot({ path: dir + '/shot7-search.png' });
+// photo or SVG fallback in the ship card
+await page.waitForTimeout(700);
+console.log('ship card visual:', await page.evaluate(() => {
+  const a = document.querySelector('#detail .shipart');
+  if (!a) return 'none';
+  const img = a.querySelector('img');
+  if (img) return 'img loaded=' + (img.naturalWidth > 0);
+  return a.querySelector('svg') ? 'svg fallback' : 'empty';
+}));
 // top-5 filter
 await page.keyboard.press('Escape');
 await page.waitForTimeout(300);
