@@ -1038,25 +1038,29 @@ function renderRanks(){
 }
 
 /* ================= Photos des navires (dossier local ./photos, repli SVG) ================= */
-const SHIP_PHOTOS={
-  'CMA CGM':'photos/cma-cgm.jpg', 'MSC':'photos/msc.jpg', 'Maersk':'photos/maersk.jpg',
-  'Hapag-Lloyd':'photos/hapag-lloyd.jpg', 'ONE':'photos/one.jpg', 'Evergreen':'photos/evergreen.jpg',
+const SHIP_PHOTO_BASE={
+  'CMA CGM':'photos/cma-cgm', 'MSC':'photos/msc', 'Maersk':'photos/maersk',
+  'Hapag-Lloyd':'photos/hapag-lloyd', 'ONE':'photos/one', 'Evergreen':'photos/evergreen',
 };
+const PHOTO_EXT=['jpg','jpeg','png','webp','JPG','PNG'];   // on tente ces formats dans l'ordre
 // vraies livrées (couleur de coque) pour l'illustration de secours
 const HULLS={
   'CMA CGM':'#1B2D5B', 'MSC':'#20242C', 'Maersk':'#5CB8E4',
   'Hapag-Lloyd':'#2E3338', 'ONE':'#C94795', 'Evergreen':'#1E7A46', 'COSCO':'#27447A',
 };
 function shipVisual(op){
-  const src=SHIP_PHOTOS[op];
-  if(src) return `<div class="shipart" data-op="${esc(op)}">
-    <img src="${src}" alt="Porte-conteneurs ${esc(op)}" loading="lazy"
+  const base=SHIP_PHOTO_BASE[op];
+  if(base) return `<div class="shipart" data-op="${esc(op)}" data-base="${base}" data-ext="0">
+    <img src="${base}.${PHOTO_EXT[0]}" alt="Porte-conteneurs ${esc(op)}" loading="lazy"
       onerror="window.artFallback(this)"></div>`;
   return `<div class="shipart">${shipArt(op)}</div>`;
 }
+// on essaie chaque extension possible, puis on retombe sur l'illustration SVG
 window.artFallback=function(img){
-  const box=img.closest('.shipart');
-  if(box) box.innerHTML=shipArt(box.dataset.op||'');
+  const box=img.closest('.shipart'); if(!box) return;
+  const i=(+box.dataset.ext||0)+1;
+  if(i<PHOTO_EXT.length){ box.dataset.ext=i; img.src=box.dataset.base+'.'+PHOTO_EXT[i]; }
+  else box.innerHTML=shipArt(box.dataset.op||'');
 };
 
 /* ================= Illustration navire (SVG aux couleurs de l'armateur) ================= */
