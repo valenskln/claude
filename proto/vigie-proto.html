@@ -1208,7 +1208,7 @@ function selectZone(z, center){
   const inside=activeShips().filter(s=>s.zoneState[z.id]===2);
   const P=z.parts||{};
   const PARTS=[['Fond structurel',P.base,4],['Incidents maritimes',P.mar,3.5],
-    ['Conflit (presse)',P.con,2.5],['Catastrophes',P.nat,3],['Attention médiatique',P.ten,1.5]];
+    ['Conflit (presse)',P.con,2.5],['Catastrophes',P.nat,3],['Météo marine',P.met??P.ten,1.5]];
   const partsHtml = PARTS.filter(p=>p[1]!=null).map(([l,v,max])=>
     `<div class="partrow"><span>${l}</span><div class="pw"><div class="pv" style="width:${Math.min(100,v/max*100)}%;background:${riskCSS(Math.max(3,z.score))}"></div></div><b class="mono">${(+v).toFixed(1)}</b></div>`).join('');
   const whyHtml = (z.why&&z.why.length)?`<ul class="why">${z.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'';

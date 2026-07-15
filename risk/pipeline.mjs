@@ -14,6 +14,8 @@ import { fetchZoneSignals } from './sources/gdelt.mjs';
 import { fetchAsam } from './sources/asam.mjs';
 import { fetchGdacs } from './sources/gdacs.mjs';
 import { fetchUsgs } from './sources/usgs.mjs';
+import { fetchWaves } from './sources/meteo.mjs';
+import { fetchStorms } from './sources/nhc.mjs';
 import { havKm, decay } from './sources/util.mjs';
 
 // ---------- arguments ----------
@@ -40,8 +42,8 @@ try { if (existsSync(HIST)) history = JSON.parse(readFileSync(HIST, 'utf8')); } 
 
 // ---------- collecte des sources mondiales ----------
 console.log(`VIGIE pipeline — ${ZONES.length} zones — ${OFFLINE ? 'HORS-LIGNE (scores de base)' : 'en ligne'}`);
-let asam = [], gdacs = [], usgs = [];
-const srcOk = { asam: false, gdacs: false, usgs: false, gdelt: 0 };
+let asam = [], gdacs = [], usgs = [], storms = [], waves = [];
+const srcOk = { asam: false, gdacs: false, usgs: false, meteo: false, nhc: false, gdelt: 0 };
 if (!OFFLINE) {
   try { asam = await fetchAsam(); srcOk.asam = true; console.log(`ASAM  : ${asam.length} incidents (90 j)`); }
   catch (e) { console.warn(`ASAM  : ÉCHEC — ${e.message}`); }
@@ -49,6 +51,10 @@ if (!OFFLINE) {
   catch (e) { console.warn(`GDACS : ÉCHEC — ${e.message}`); }
   try { usgs = await fetchUsgs(); srcOk.usgs = true; console.log(`USGS  : ${usgs.length} séismes ≥4.5 (24 h)`); }
   catch (e) { console.warn(`USGS  : ÉCHEC — ${e.message}`); }
+  try { storms = await fetchStorms(); srcOk.nhc = true; console.log(`NHC   : ${storms.length} cyclones actifs`); }
+  catch (e) { console.warn(`NHC   : ÉCHEC — ${e.message}`); }
+  try { waves = await fetchWaves(ZONES); srcOk.meteo = true; console.log(`MÉTÉO : vagues max ${Math.max(...waves, 0)} m`); }
+  catch (e) { console.warn(`MÉTÉO : ÉCHEC — ${e.message}`); }
 }
 
 // ---------- date FR courte ----------
@@ -56,9 +62,10 @@ const frDate = ms => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', 
 
 // ---------- calcul zone par zone ----------
 const zonesOut = [];
-for (const z of ZONES) {
+for (let zi = 0; zi < ZONES.length; zi++) {
+  const z = ZONES[zi];
   const p = prev[z.id] || {};
-  const parts = { base: r1(clamp(z.base + (z.jwc ? 1 : 0), 0, 4)), mar: 0, con: 0, nat: 0, ten: 0 };
+  const parts = { base: r1(clamp(z.base + (z.jwc ? 1 : 0), 0, 4)), mar: 0, con: 0, nat: 0, met: 0 };
   const why = [];
   let hl = [], inc = [];
 
@@ -75,8 +82,8 @@ for (const z of ZONES) {
     }
   } else { parts.mar = (p.parts && p.parts.mar) || 0; inc = p.inc || []; }
 
-  // — catastrophes naturelles (GDACS + USGS) —
-  if (srcOk.gdacs || srcOk.usgs) {
+  // — catastrophes naturelles (GDACS + USGS + cyclones NHC) —
+  if (srcOk.gdacs || srcOk.usgs || srcOk.nhc) {
     let nat = 0;
     for (const g of gdacs) {
       if (havKm(g.lat, g.lon, z.c[0], z.c[1]) <= z.r * 1.5) {
@@ -90,8 +97,22 @@ for (const z of ZONES) {
         why.push(`séisme M${q.mag.toFixed(1)}${q.tsunami ? ' avec alerte tsunami' : ''} — ${q.place}`);
       }
     }
+    for (const s of storms) {
+      if (havKm(s.lat, s.lon, z.c[0], z.c[1]) <= z.r * 1.5) {
+        nat += s.major ? 2 : 1;
+        why.push(`${s.kind} ${s.name} en activité à proximité (NOAA)`);
+      }
+    }
     parts.nat = r1(Math.min(3, nat));
   } else { parts.nat = (p.parts && p.parts.nat) || 0; }
+
+  // — météo marine : vague maximale prévue sous 36 h au centre de zone —
+  if (srcOk.meteo) {
+    const w = waves[zi] || 0;
+    parts.met = r1(w >= 9 ? 1.5 : w >= 7 ? 1.1 : w >= 5 ? 0.7 : w >= 4 ? 0.4 : 0);
+    if (w >= 7) why.push(`mer très dangereuse prévue : vagues jusqu'à ${w} m sous 36 h`);
+    else if (w >= 5) why.push(`mer forte prévue : vagues jusqu'à ${w} m sous 36 h`);
+  } else { parts.met = (p.parts && (p.parts.met ?? p.parts.ten)) || 0; }
 
   // — presse mondiale (GDELT) : un appel par zone, analyse des titres —
   if (!OFFLINE) {
@@ -99,24 +120,21 @@ for (const z of ZONES) {
     if (g.ok) {
       srcOk.gdelt++;
       parts.con = r1(Math.min(2.5, 2.5 * g.conflict / 10));   // titres "conflit" sur 3 j
-      parts.ten = r1(Math.min(1.5, 1.5 * g.count / 35));      // attention médiatique
       if (g.conflict >= 5)
         why.push(`actualité conflictuelle : ${g.conflict} titres évoquant attaques ou tensions en 3 j`);
       else if (g.conflict >= 2)
         why.push(`signaux conflictuels dans la presse (${g.conflict} titres en 3 j)`);
-      if (g.count >= 30) why.push('très forte attention médiatique sur la zone');
       hl = g.headlines.length ? g.headlines : (p.hl || []);
     } else {
       parts.con = (p.parts && p.parts.con) || 0;
-      parts.ten = (p.parts && p.parts.ten) || 0;
       hl = p.hl || [];
     }
-  } else { parts.con = 0; parts.ten = 0; hl = []; }
+  } else { parts.con = 0; hl = []; }
 
   if (z.jwc) why.push('zone listée par les assureurs de guerre (Joint War Committee)');
   if (why.length === 0) why.push('aucun signal dynamique notable — risque structurel de fond');
 
-  const score = r1(clamp(parts.base + parts.mar + parts.con + parts.nat + parts.ten, 0, 10));
+  const score = r1(clamp(parts.base + parts.mar + parts.con + parts.nat + parts.met, 0, 10));
 
   // — tendance vs il y a ~7 jours —
   let trend = '▶';
@@ -134,13 +152,13 @@ for (const z of ZONES) {
   if (parts.mar >= 0.5) f.push('Incidents maritimes');
   if (parts.con >= 0.8) f.push('Conflit armé');
   if (parts.nat >= 1) f.push('Catastrophe naturelle');
-  if (parts.ten >= 0.7) f.push('Attention médiatique');
+  if (parts.met >= 0.7) f.push('Météo dangereuse');
   if (z.jwc) f.push('Zone JWC');
   if (!f.length) f.push(z.type === 'détroit' ? 'Passage stratégique' : 'Veille de fond');
 
   zonesOut.push({ id: z.id, name: z.name, c: z.c, r: z.r, type: z.type, jwc: z.jwc,
     score, trend, parts, why, hl, inc, ctx: z.ctx, f });
-  console.log(`  ${z.id.padEnd(14)} score ${score}  [base ${parts.base} mar ${parts.mar} con ${parts.con} nat ${parts.nat} ten ${parts.ten}] ${trend}`);
+  console.log(`  ${z.id.padEnd(14)} score ${score}  [base ${parts.base} mar ${parts.mar} con ${parts.con} nat ${parts.nat} met ${parts.met}] ${trend}`);
 }
 
 // ---------- écriture ----------
