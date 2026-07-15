@@ -109,6 +109,18 @@
     font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--ink2);
     margin-bottom:9px; display:flex; justify-content:space-between; align-items:center;
   }
+  .fresh{font-size:9px; letter-spacing:.04em; color:var(--ink3); text-transform:none; text-align:right}
+  .why{margin:8px 0 2px; padding-left:16px; font-size:12px; line-height:1.5; color:var(--ink)}
+  .why li{margin-bottom:3px}
+  .hl{margin-top:10px; display:flex; flex-direction:column; gap:6px}
+  .hl a{color:var(--accent); text-decoration:none; font-size:12px; line-height:1.35; display:block}
+  .hl a:hover{text-decoration:underline}
+  .hl small{color:var(--ink3); display:block; font-size:10.5px}
+  .partrow{display:flex; align-items:center; gap:8px; font-size:10.5px; color:var(--ink2); margin-top:3px}
+  .partrow span:first-child{width:112px; flex:none}
+  .partrow .pw{flex:1; height:5px; background:var(--panel2); border-radius:3px; overflow:hidden}
+  .partrow .pv{height:100%; border-radius:3px}
+  .partrow b{width:24px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600}
   .zrow{display:flex; align-items:center; gap:9px; padding:6px 4px; border-radius:6px; cursor:pointer}
   .zrow:hover{background:var(--panel2)}
   .zscore{
@@ -287,7 +299,7 @@
       <small style="color:var(--ink3)">MSC · Maersk · CMA CGM · COSCO · Hapag-Lloyd</small></label>
   </div>
   <div class="card">
-    <h3>Zones à risque · classement</h3>
+    <h3>Zones à risque · classement <span id="riskFresh" class="fresh"></span></h3>
     <div id="zlist"></div>
   </div>
 </aside>
@@ -386,8 +398,45 @@
 </script>
 <script>
 'use strict';
-/* ================= Données : zones à risque (réelles, éditoriales) ================= */
-const ZONES = [
+/* ================= Zones à risque : scores dynamiques =================
+   Les scores sont calculés toutes les heures par le pipeline GitHub Actions
+   (sources : GDELT, NGA ASAM, GDACS, USGS) et publiés dans risk.json.
+   Un instantané est embarqué en secours pour l'usage hors-ligne. */
+const RISK_URL = 'https://valenskln.github.io/claude/risk.json';
+const RISK_SNAPSHOT = __RISK_SNAPSHOT__;
+
+let ZONES = [];
+let riskUpdatedAt = null, riskLive = false;
+
+function applyRisk(data){
+  if(!data || !Array.isArray(data.zones) || !data.zones.length) return;
+  ZONES = data.zones.map(z=>({
+    id:z.id, name:z.name, c:z.c, r:z.r, type:z.type, jwc:!!z.jwc,
+    score:+z.score||0, trend:z.trend||'▶',
+    parts:z.parts||{}, why:z.why||[], hl:z.hl||[], inc:z.inc||[],
+    ctx:z.ctx||'', f:z.f||[],
+  }));
+  riskUpdatedAt = Date.parse(data.updatedAt)||null;
+  // re-baseline silencieuse des états navire↔zone (évite une rafale d'alertes)
+  const all = (typeof SHIPS!=='undefined'?SHIPS:[]).concat(
+    (typeof live!=='undefined' && live.vessels)?[...live.vessels.values()]:[]);
+  for(const s of all){ s.zoneState={}; s.seen=false; }
+  if(typeof selZone!=='undefined' && selZone){
+    const again = ZONES.find(q=>q.id===selZone.id);
+    if(again) selectZone(again,false); else { selZone=null; detail.style.display='none'; }
+  }
+  if(typeof renderZones==='function'){ renderZones(); assessRisk(); renderRanks(); }
+}
+function riskFreshness(){
+  if(!riskUpdatedAt) return 'données embarquées';
+  const m = Math.max(0, Math.round((Date.now()-riskUpdatedAt)/60000));
+  const when = m<60 ? `il y a ${m} min` : `il y a ${Math.round(m/60)} h`;
+  return (riskLive?'en direct · MAJ ':'instantané · ')+when;
+}
+
+/* ---- anciennes zones éditoriales conservées ci-dessous comme référence de
+       secours ultime si le snapshot injecté était vide (ne devrait pas arriver) */
+const ZONES_LEGACY = [
   {id:'redsea', name:'Mer Rouge · Bab el-Mandeb', c:[14,42.8], r:750, score:9.1, trend:'▲',
    ctx:'Depuis fin 2023, les Houthis ciblent les navires marchands au missile balistique et au drone naval. La plupart des grands armateurs ont suspendu le transit et déroutent leurs services Asie–Europe par le cap de Bonne-Espérance (+10 à 14 jours de mer). Les primes d’assurance « risque de guerre » ont été multipliées pour les navires qui passent encore.',
    f:['Conflit armé','Attaques anti-navires','Assurance majorée','Déroutements massifs']},
@@ -622,7 +671,7 @@ function assessRisk(){
       // transitions d'état -> alertes
       const prev = s.zoneState[z.id]||0;              // 0 dehors, 1 approche, 2 dedans
       const cur = d<=z.r ? 2 : (d<near ? 1 : 0);
-      if(cur>prev && s.seen){                          // pas d'alerte à la 1re évaluation
+      if(cur>prev && s.seen && z.score>=4){            // pas d'alerte à la 1re évaluation, ni pour les zones calmes
         if(cur===1) pushAlert(s,z,'approche',d);
         if(cur===2) pushAlert(s,z,'entrée',d);
       }
@@ -754,7 +803,7 @@ function draw(){
     ctx.setLineDash([5,5]); ctx.lineWidth=selZone===z?2:1.2;
     ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,7); ctx.stroke();
     ctx.restore();
-    if(view.scale>2.2){
+    if(z.score>=5 || view.scale>7 || z===selZone){
       ctx.font='10.5px ui-monospace,Consolas,monospace';
       ctx.textAlign='center';
       const label=`${z.score.toFixed(1)}`;
@@ -992,6 +1041,7 @@ function frame(t){
 /* ================= Panneaux ================= */
 const zlist=document.getElementById('zlist'), slist=document.getElementById('slist');
 function renderZones(){
+  const fr=document.getElementById('riskFresh'); if(fr) fr.textContent=riskFreshness();
   zlist.innerHTML = [...ZONES].sort((a,b)=>b.score-a.score).map(z=>`
     <div class="zrow" data-z="${z.id}">
       <div class="zscore" style="background:${riskCSS(z.score)}">${z.score.toFixed(1)}</div>
@@ -1155,15 +1205,26 @@ function renderLiveCard(v){
 function selectZone(z, center){
   selZone=z; selShip=null;
   if(center){ view.clat=z.c[0]; view.clon=z.c[1]; view.scale=Math.max(5.5, view.scale); viewDirty=true; }
-  const inside=SHIPS.filter(s=>s.zoneState[z.id]===2);
+  const inside=activeShips().filter(s=>s.zoneState[z.id]===2);
+  const P=z.parts||{};
+  const PARTS=[['Fond structurel',P.base,4],['Incidents maritimes',P.mar,3.5],
+    ['Conflit (presse géoloc.)',P.con,2.5],['Catastrophes',P.nat,3],['Tension médiatique',P.ten,1.5]];
+  const partsHtml = PARTS.filter(p=>p[1]!=null).map(([l,v,max])=>
+    `<div class="partrow"><span>${l}</span><div class="pw"><div class="pv" style="width:${Math.min(100,v/max*100)}%;background:${riskCSS(Math.max(3,z.score))}"></div></div><b class="mono">${(+v).toFixed(1)}</b></div>`).join('');
+  const whyHtml = (z.why&&z.why.length)?`<ul class="why">${z.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'';
+  const hlHtml = (z.hl&&z.hl.length)?`<div class="hl"><b style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)">Dans la presse</b>${
+    z.hl.map(h=>`<a href="${esc(h.u)}" target="_blank" rel="noopener">${esc(h.t)}<small>${esc(h.s)}${h.d?' · '+esc(String(h.d).slice(6,8))+'/'+esc(String(h.d).slice(4,6)):''}</small></a>`).join('')}</div>`:'';
   detail.style.display='block';
   detail.innerHTML=`<button class="x" aria-label="Fermer">✕</button>
     <h2><span style="color:${riskCSS(z.score)}">●</span> ${esc(z.name)}</h2>
-    <div class="sub">Score de risque <b class="mono" style="color:${riskCSS(z.score)}">${z.score.toFixed(1)}/10</b> · tendance ${z.trend}</div>
+    <div class="sub">Score de risque <b class="mono" style="color:${riskCSS(z.score)}">${z.score.toFixed(1)}/10</b> · tendance 7 j ${z.trend} · <span style="font-size:11px">${esc(riskFreshness())}</span></div>
+    ${partsHtml}
+    ${whyHtml}
     <div class="ctx">${esc(z.ctx)}</div>
     <div class="chips">${z.f.map(f=>`<span class="chip">${esc(f)}</span>`).join('')}</div>
+    ${hlHtml}
     <dl class="kv" style="margin-top:10px">
-      <dt>Navires en zone</dt><dd>${inside.length? inside.map(s=>esc(s.name)).join(', '):'aucun actuellement'}</dd>
+      <dt>Navires en zone</dt><dd>${inside.length? inside.map(s=>esc(s.name||('MMSI '+s.mmsi))).join(', '):'aucun actuellement'}</dd>
       <dt>Rayon surveillé</dt><dd class="mono">${z.r} km</dd>
     </dl>`;
   detail.querySelector('.x').onclick=()=>{detail.style.display='none'; selZone=null;};
@@ -1329,6 +1390,15 @@ document.getElementById('tgR').onclick=()=>{document.getElementById('pr').classL
 addEventListener('keydown',e=>{if(e.key==='Escape'){modal.style.display='none'; aismodal.style.display='none'; detail.style.display='none'; selShip=selZone=null;}});
 
 /* ================= Démarrage ================= */
+applyRisk(RISK_SNAPSHOT && RISK_SNAPSHOT.zones && RISK_SNAPSHOT.zones.length
+  ? RISK_SNAPSHOT : {zones:ZONES_LEGACY.map(z=>({...z, parts:{}, why:[], hl:[], inc:[]})), updatedAt:null});
+// puis tentative de chargement des scores en direct (Pages envoie CORS *)
+fetch(RISK_URL, {cache:'no-store'})
+  .then(r=>{ if(!r.ok) throw 0; return r.json(); })
+  .then(d=>{ riskLive=true; applyRisk(d); console.log('[VIGIE] scores de risque en direct chargés'); })
+  .catch(()=>console.log('[VIGIE] risk.json inaccessible — instantané embarqué conservé'));
+setInterval(()=>{ const el=document.getElementById('riskFresh'); if(el) el.textContent=riskFreshness(); }, 30000);
+
 stepShips(0); assessRisk();
 // on purge les alertes générées à l'initialisation (les navires démarrent déjà placés)
 feedItems=[]; toastsEl.innerHTML=''; renderFeed();
