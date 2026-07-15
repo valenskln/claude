@@ -1208,7 +1208,7 @@ function selectZone(z, center){
   const inside=activeShips().filter(s=>s.zoneState[z.id]===2);
   const P=z.parts||{};
   const PARTS=[['Fond structurel',P.base,4],['Incidents maritimes',P.mar,3.5],
-    ['Conflit (presse géoloc.)',P.con,2.5],['Catastrophes',P.nat,3],['Tension médiatique',P.ten,1.5]];
+    ['Conflit (presse)',P.con,2.5],['Catastrophes',P.nat,3],['Attention médiatique',P.ten,1.5]];
   const partsHtml = PARTS.filter(p=>p[1]!=null).map(([l,v,max])=>
     `<div class="partrow"><span>${l}</span><div class="pw"><div class="pv" style="width:${Math.min(100,v/max*100)}%;background:${riskCSS(Math.max(3,z.score))}"></div></div><b class="mono">${(+v).toFixed(1)}</b></div>`).join('');
   const whyHtml = (z.why&&z.why.length)?`<ul class="why">${z.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'';
@@ -1392,11 +1392,21 @@ addEventListener('keydown',e=>{if(e.key==='Escape'){modal.style.display='none'; 
 /* ================= Démarrage ================= */
 applyRisk(RISK_SNAPSHOT && RISK_SNAPSHOT.zones && RISK_SNAPSHOT.zones.length
   ? RISK_SNAPSHOT : {zones:ZONES_LEGACY.map(z=>({...z, parts:{}, why:[], hl:[], inc:[]})), updatedAt:null});
-// puis tentative de chargement des scores en direct (Pages envoie CORS *)
-fetch(RISK_URL, {cache:'no-store'})
-  .then(r=>{ if(!r.ok) throw 0; return r.json(); })
-  .then(d=>{ riskLive=true; applyRisk(d); console.log('[VIGIE] scores de risque en direct chargés'); })
-  .catch(()=>console.log('[VIGIE] risk.json inaccessible — instantané embarqué conservé'));
+// chargement des scores en direct (Pages envoie CORS *), puis rafraîchissement
+// automatique toutes les 30 min tant que la page est ouverte
+function loadRisk(){
+  fetch(RISK_URL, {cache:'no-store'})
+    .then(r=>{ if(!r.ok) throw 0; return r.json(); })
+    .then(d=>{
+      const fresh = Date.parse(d.updatedAt)||0;
+      if(riskLive && riskUpdatedAt && fresh<=riskUpdatedAt) return;   // rien de neuf
+      riskLive=true; applyRisk(d);
+      console.log('[VIGIE] scores de risque actualisés —', d.updatedAt);
+    })
+    .catch(()=>console.log('[VIGIE] risk.json inaccessible — données actuelles conservées'));
+}
+loadRisk();
+setInterval(loadRisk, 30*60*1000);
 setInterval(()=>{ const el=document.getElementById('riskFresh'); if(el) el.textContent=riskFreshness(); }, 30000);
 
 stepShips(0); assessRisk();

@@ -93,22 +93,24 @@ for (const z of ZONES) {
     parts.nat = r1(Math.min(3, nat));
   } else { parts.nat = (p.parts && p.parts.nat) || 0; }
 
-  // — presse mondiale (GDELT) : volume conflit géolocalisé + tonalité + titres —
+  // — presse mondiale (GDELT) : un appel par zone, analyse des titres —
   if (!OFFLINE) {
     const g = await fetchZoneSignals(z);
-    if (g.ok.geo) {
-      parts.con = r1(Math.min(2.5, 2.5 * Math.log10(1 + g.conflictHits) / Math.log10(1 + 80)));
+    if (g.ok) {
       srcOk.gdelt++;
-      if (g.conflictHits >= 12)
-        why.push(`actualité conflictuelle dense : ${g.conflictHits} mentions géolocalisées en 7 j`);
-    } else parts.con = (p.parts && p.parts.con) || 0;
-    if (g.ok.tone) {
-      const neg = clamp(-g.tone / 10, 0, 1);
-      parts.ten = r1(1.5 * neg);
-      if (g.tone <= -7) why.push('ton médiatique très négatif sur la zone');
-      else if (g.tone <= -4.5) why.push('ton médiatique négatif sur la zone');
-    } else parts.ten = (p.parts && p.parts.ten) || 0;
-    hl = g.headlines.length ? g.headlines : (p.hl || []);
+      parts.con = r1(Math.min(2.5, 2.5 * g.conflict / 10));   // titres "conflit" sur 3 j
+      parts.ten = r1(Math.min(1.5, 1.5 * g.count / 35));      // attention médiatique
+      if (g.conflict >= 5)
+        why.push(`actualité conflictuelle : ${g.conflict} titres évoquant attaques ou tensions en 3 j`);
+      else if (g.conflict >= 2)
+        why.push(`signaux conflictuels dans la presse (${g.conflict} titres en 3 j)`);
+      if (g.count >= 30) why.push('très forte attention médiatique sur la zone');
+      hl = g.headlines.length ? g.headlines : (p.hl || []);
+    } else {
+      parts.con = (p.parts && p.parts.con) || 0;
+      parts.ten = (p.parts && p.parts.ten) || 0;
+      hl = p.hl || [];
+    }
   } else { parts.con = 0; parts.ten = 0; hl = []; }
 
   if (z.jwc) why.push('zone listée par les assureurs de guerre (Joint War Committee)');
@@ -132,7 +134,7 @@ for (const z of ZONES) {
   if (parts.mar >= 0.5) f.push('Incidents maritimes');
   if (parts.con >= 0.8) f.push('Conflit armé');
   if (parts.nat >= 1) f.push('Catastrophe naturelle');
-  if (parts.ten >= 0.7) f.push('Tension médiatique');
+  if (parts.ten >= 0.7) f.push('Attention médiatique');
   if (z.jwc) f.push('Zone JWC');
   if (!f.length) f.push(z.type === 'détroit' ? 'Passage stratégique' : 'Veille de fond');
 

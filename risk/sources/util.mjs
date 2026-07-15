@@ -2,7 +2,7 @@
 
 const UA = 'Mozilla/5.0 (compatible; VIGIE-risk/1.0; +https://valenskln.github.io/claude/)';
 
-export async function getJSON(url, { tries = 3, timeout = 25000 } = {}) {
+export async function getJSON(url, { tries = 3, timeout = 25000, wait429 = 0 } = {}) {
   let lastErr;
   for (let i = 0; i < tries; i++) {
     try {
@@ -10,13 +10,18 @@ export async function getJSON(url, { tries = 3, timeout = 25000 } = {}) {
       const t = setTimeout(() => ctrl.abort(), timeout);
       const res = await fetch(url, { headers: { 'User-Agent': UA, 'Accept': 'application/json' }, signal: ctrl.signal });
       clearTimeout(t);
+      if (res.status === 429 && wait429 && i < tries - 1) {
+        // trop de requêtes : longue pause avant de retenter
+        await sleep(wait429);
+        throw new Error('HTTP 429 (retenté après pause)');
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       if (!text.trim()) throw new Error('réponse vide');
       return JSON.parse(text);
     } catch (e) {
       lastErr = e;
-      await sleep(1500 * (i + 1));
+      if (!String(e.message).includes('429')) await sleep(1500 * (i + 1));
     }
   }
   throw new Error(`${url.split('?')[0]} : ${lastErr.message}`);
