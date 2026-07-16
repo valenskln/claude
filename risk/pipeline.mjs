@@ -10,7 +10,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { ZONES } from './zones.mjs';
-import { fetchZoneSignals } from './sources/gdelt.mjs';
+import { fetchGlobalNews, zoneTerms, matchZone } from './sources/gdelt.mjs';
 import { fetchAsam } from './sources/asam.mjs';
 import { fetchGdacs } from './sources/gdacs.mjs';
 import { fetchUsgs } from './sources/usgs.mjs';
@@ -55,6 +55,12 @@ if (!OFFLINE) {
   catch (e) { console.warn(`NHC   : ÉCHEC — ${e.message}`); }
   try { waves = await fetchWaves(ZONES); srcOk.meteo = true; console.log(`MÉTÉO : vagues max ${Math.max(...waves, 0)} m`); }
   catch (e) { console.warn(`MÉTÉO : ÉCHEC — ${e.message}`); }
+}
+// presse mondiale : UNE requête, puis tri local par zone
+let news = null;
+if (!OFFLINE) {
+  try { news = await fetchGlobalNews(); srcOk.gdelt = true; }
+  catch (e) { console.warn(`GDELT : ÉCHEC — ${e.message}`); }
 }
 
 // ---------- date FR courte ----------
@@ -114,21 +120,18 @@ for (let zi = 0; zi < ZONES.length; zi++) {
     else if (w >= 5) why.push(`mer forte prévue : vagues jusqu'à ${w} m sous 36 h`);
   } else { parts.met = (p.parts && (p.parts.met ?? p.parts.ten)) || 0; }
 
-  // — presse mondiale (GDELT) : un appel par zone, analyse des titres —
-  if (!OFFLINE) {
-    const g = await fetchZoneSignals(z);
-    if (g.ok) {
-      srcOk.gdelt++;
-      parts.con = r1(Math.min(2.5, 2.5 * g.conflict / 10));   // titres "conflit" sur 3 j
-      if (g.conflict >= 5)
-        why.push(`actualité conflictuelle : ${g.conflict} titres évoquant attaques ou tensions en 3 j`);
-      else if (g.conflict >= 2)
-        why.push(`signaux conflictuels dans la presse (${g.conflict} titres en 3 j)`);
-      hl = g.headlines.length ? g.headlines : (p.hl || []);
-    } else {
-      parts.con = (p.parts && p.parts.con) || 0;
-      hl = p.hl || [];
-    }
+  // — presse mondiale (GDELT) : correspondance locale zone ↔ articles —
+  if (news) {
+    const g = matchZone(news, zoneTerms(z));
+    parts.con = r1(Math.min(2.5, 2.5 * g.conflict / 6));      // titres "conflit" sur 24 h
+    if (g.conflict >= 4)
+      why.push(`actualité conflictuelle : ${g.conflict} titres évoquant attaques ou tensions en 24 h`);
+    else if (g.conflict >= 2)
+      why.push(`signaux conflictuels dans la presse (${g.conflict} titres en 24 h)`);
+    hl = g.headlines.length ? g.headlines : (p.hl || []);
+  } else if (!OFFLINE) {
+    parts.con = (p.parts && p.parts.con) || 0;
+    hl = p.hl || [];
   } else { parts.con = 0; hl = []; }
 
   if (z.jwc) why.push('zone listée par les assureurs de guerre (Joint War Committee)');
