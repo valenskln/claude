@@ -115,6 +115,18 @@
     font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--ink2);
     margin-bottom:9px; display:flex; justify-content:space-between; align-items:center;
   }
+  .fresh{font-size:9px; letter-spacing:.04em; color:var(--ink3); text-transform:none; text-align:right}
+  .why{margin:8px 0 2px; padding-left:16px; font-size:12px; line-height:1.5; color:var(--ink)}
+  .why li{margin-bottom:3px}
+  .hl{margin-top:10px; display:flex; flex-direction:column; gap:6px}
+  .hl a{color:var(--accent); text-decoration:none; font-size:12px; line-height:1.35; display:block}
+  .hl a:hover{text-decoration:underline}
+  .hl small{color:var(--ink3); display:block; font-size:10.5px}
+  .partrow{display:flex; align-items:center; gap:8px; font-size:10.5px; color:var(--ink2); margin-top:3px}
+  .partrow span:first-child{width:112px; flex:none}
+  .partrow .pw{flex:1; height:5px; background:var(--panel2); border-radius:3px; overflow:hidden}
+  .partrow .pv{height:100%; border-radius:3px}
+  .partrow b{width:24px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600}
   .zrow{display:flex; align-items:center; gap:9px; padding:6px 4px; border-radius:6px; cursor:pointer}
   .zrow:hover{background:var(--panel2)}
   .zscore{
@@ -293,7 +305,7 @@
       <small style="color:var(--ink3)">MSC · Maersk · CMA CGM · COSCO · Hapag-Lloyd</small></label>
   </div>
   <div class="card">
-    <h3>Zones à risque · classement</h3>
+    <h3>Zones à risque · classement <span id="riskFresh" class="fresh"></span></h3>
     <div id="zlist"></div>
   </div>
 </aside>
@@ -395,8 +407,45 @@ const RIVERS=[[928,296,929,297,930,298,932,298,933,296,935,291],[964,897,959,898
 </script>
 <script>
 'use strict';
-/* ================= Données : zones à risque (réelles, éditoriales) ================= */
-const ZONES = [
+/* ================= Zones à risque : scores dynamiques =================
+   Les scores sont calculés toutes les heures par le pipeline GitHub Actions
+   (sources : GDELT, NGA ASAM, GDACS, USGS) et publiés dans risk.json.
+   Un instantané est embarqué en secours pour l'usage hors-ligne. */
+const RISK_URL = 'https://valenskln.github.io/claude/risk.json';
+const RISK_SNAPSHOT = {"v":1,"updatedAt":"2026-07-16T12:58:34.470Z","sources":{"asam":false,"gdacs":true,"usgs":true,"meteo":true,"nhc":true,"gdelt":true},"zones":[{"id":"hormuz","name":"Détroit d’Ormuz","c":[26.4,56.4],"r":300,"type":"détroit","jwc":true,"score":5.5,"trend":"▶","parts":{"base":3,"mar":0,"con":2.5,"nat":0,"met":0},"why":["actualité conflictuelle : 6 titres évoquant attaques ou tensions en 24 h","zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"Trump Walks Back Threat Of Hormuz Transit Fee ; US Strikes Iran As Tehran Targets Gulf Shipping","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260714-rferl02.htm","s":"globalsecurity.org","d":"20260716T123000Z"},{"t":"U . S ., Iran exchange fresh attacks after Hormuz blockade resumes","u":"https://www.globalsecurity.org/wmd/library/news/iran/2026/07/iran-260715-pdo01.htm","s":"globalsecurity.org","d":"20260716T123000Z"},{"t":"Hormuz Crossings Decline as US Renews Iran Blockade","u":"https://www.oedigital.com/news/541268-hormuz-crossings-decline-as-us-renews-iran-blockade","s":"oedigital.com","d":"20260716T123000Z"}],"inc":[],"ctx":"Un cinquième du pétrole mondial dans un goulet de 40 km. Saisies de navires par les Gardiens de la révolution, brouillage GPS récurrent, menace de fermeture brandie à chaque escalade avec l’Iran.","f":["Conflit armé","Zone JWC"]},{"id":"sulu","name":"Mers de Sulu · Célèbes","c":[6,120.5],"r":500,"type":"piraterie","jwc":false,"score":4.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":3,"met":0},"why":["alerte séisme GDACS niveau orange (Earthquake in Philippines)","alerte séisme GDACS niveau orange (Earthquake in Philippines)","alerte séisme GDACS niveau orange (Earthquake in Philippines)","alerte séisme GDACS niveau orange (Earthquake in Philippines)"],"hl":[],"inc":[],"ctx":"Historique d’enlèvements d’équipages par Abu Sayyaf (2016-2020), fortement réduit par les patrouilles trilatérales Indonésie–Malaisie–Philippines. Vigilance maintenue.","f":["Catastrophe naturelle"]},{"id":"venezuela","name":"Caraïbes sud · Venezuela","c":[11.5,-65],"r":500,"type":"conflit","jwc":false,"score":4.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":3,"met":0},"why":["alerte séisme GDACS niveau rouge (Earthquake in Venezuela)","alerte séisme GDACS niveau rouge (Earthquake in Venezuela)","alerte séisme GDACS niveau orange (Earthquake in Venezuela)","alerte séisme GDACS niveau orange (Earthquake in Venezuela)"],"hl":[],"inc":[],"ctx":"Contentieux Venezuela–Guyana sur l’Essequibo (pétrole offshore), sanctions sur le brut vénézuélien, opérations navales américaines anti-narcotiques : cocktail volatil.","f":["Catastrophe naturelle"]},{"id":"bab-el-mandeb","name":"Bab el-Mandeb","c":[12.6,43.4],"r":300,"type":"détroit","jwc":true,"score":4.3,"trend":"▶","parts":{"base":3.5,"mar":0,"con":0.8,"nat":0,"met":0},"why":["signaux conflictuels dans la presse (2 titres en 24 h)","zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"Security Council Extends Secretary - General Reporting Mandate on Houthi Attacks in Red Sea for Six Months , Adopting Resolution 2826 ( 2026","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260714-unsc02.htm","s":"globalsecurity.org","d":"20260716T123000Z"},{"t":"Irã ordenou que houthis fechem estreito do Mar Vermelho caso EUA ataquem rede elétrica do país , diz agência","u":"https://g1.globo.com/mundo/noticia/2026/07/16/ira-houthis-estreito-mar-vermelho-eua-ataquem-rede-eletrica.ghtml","s":"g1.globo.com","d":"20260716T123000Z"}],"inc":[],"ctx":"Verrou sud de la mer Rouge (30 km de large), passage obligé Europe–Asie. Depuis fin 2023, cible régulière d’attaques houthies (missiles, drones navals) qui ont provoqué le plus grand déroutement du commerce maritime depuis des décennies.","f":["Conflit armé","Zone JWC"]},{"id":"blacksea-nw","name":"Mer Noire nord-ouest","c":[45.3,30.8],"r":400,"type":"conflit","jwc":true,"score":4.3,"trend":"▶","parts":{"base":3.5,"mar":0,"con":0.8,"nat":0,"met":0},"why":["signaux conflictuels dans la presse (2 titres en 24 h)","zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"Russia strikes Ukrainian drone industry and Black Sea ports MOD","u":"http://www.philippinetimes.com/news/279191132/russia-strikes-ukrainian-drone-industry-and-black-sea-ports-mod","s":"philippinetimes.com","d":"20260716T121500Z"},{"t":"Russia strikes Ukrainian drone industry and Black Sea ports","u":"http://www.russiaherald.com/news/279191133/russia-strikes-ukrainian-drone-industry-and-black-sea-ports-mod","s":"russiaherald.com","d":"20260716T120000Z"}],"inc":[],"ctx":"Guerre Russie–Ukraine : corridor céréalier ukrainien sous menace permanente, frappes sur les ports d’Odesa, mines dérivantes. Zone d’exclusion assurantielle majeure.","f":["Conflit armé","Zone JWC"]},{"id":"azov-kerch","name":"Mer d’Azov · Kerch","c":[45.9,36.4],"r":300,"type":"conflit","jwc":true,"score":3.5,"trend":"▶","parts":{"base":3.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Mer fermée contrôlée par la Russie depuis 2022, pont de Kerch régulièrement ciblé. Navigation commerciale internationale quasi inexistante.","f":["Zone JWC"]},{"id":"aden","name":"Golfe d’Aden","c":[12.8,48.5],"r":450,"type":"mixte","jwc":true,"score":3,"trend":"▶","parts":{"base":3,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Zone de transit sous escorte internationale (opérations Atalanta, Prosperity Guardian). Cumul historique piraterie somalienne + attaques houthies côté yéménite.","f":["Zone JWC"]},{"id":"scs","name":"Mer de Chine méridionale","c":[11,114],"r":800,"type":"conflit","jwc":false,"score":3,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":1.5,"met":0},"why":["alerte séisme GDACS niveau orange (Earthquake in Philippines)"],"hl":[],"inc":[],"ctx":"Revendications chinoises contestées (ligne en neuf traits), îlots militarisés, incidents répétés entre garde-côtes chinois et navires philippins ou vietnamiens. Un tiers du commerce mondial y transite.","f":["Catastrophe naturelle"]},{"id":"gog","name":"Golfe de Guinée","c":[3.2,3.5],"r":550,"type":"piraterie","jwc":true,"score":3,"trend":"▶","parts":{"base":3,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Longtemps zone la plus dangereuse du monde pour les équipages (enlèvements contre rançon). Net recul depuis 2021 grâce aux patrouilles régionales, mais capacité criminelle intacte au large du Nigeria.","f":["Zone JWC"]},{"id":"niger-delta","name":"Delta du Niger","c":[4.3,6.5],"r":250,"type":"piraterie","jwc":true,"score":3,"trend":"▶","parts":{"base":3,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Cœur pétrolier nigérian : sabotages d’oléoducs, vol de brut à échelle industrielle, groupes armés fluviaux. Source historique de la piraterie du golfe de Guinée.","f":["Zone JWC"]},{"id":"redsea-n","name":"Mer Rouge nord","c":[24,36.5],"r":500,"type":"conflit","jwc":true,"score":2.9,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0.4,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"Security Council Extends Secretary - General Reporting Mandate on Houthi Attacks in Red Sea for Six Months , Adopting Resolution 2826 ( 2026","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260714-unsc02.htm","s":"globalsecurity.org","d":"20260716T123000Z"}],"inc":[],"ctx":"Corridor d’approche du canal de Suez. Exposée par contagion aux tensions du sud de la mer Rouge ; mines et embarcations piégées y ont été signalées par le passé.","f":["Zone JWC"]},{"id":"somalia","name":"Bassin somalien","c":[4,51],"r":700,"type":"piraterie","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Épicentre mondial de la piraterie 2008-2012 (plus de 200 attaques/an au pic). Fortement réduite par les patrouilles internationales, avec des résurgences opportunistes lors des relâchements de vigilance.","f":["Zone JWC"]},{"id":"persian-gulf","name":"Golfe Persique","c":[27,51.5],"r":500,"type":"conflit","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"U . S . Forces Disable Non - Compliant Vessel in Arabian Gulf","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260715-centcom01.htm","s":"globalsecurity.org","d":"20260716T123000Z"}],"inc":[],"ctx":"Concentration mondiale d’infrastructures pétrolières et de bases militaires. Théâtre direct de toute confrontation Iran / États du Golfe / marines occidentales.","f":["Zone JWC"]},{"id":"oman-gulf","name":"Golfe d’Oman","c":[24.8,58.5],"r":350,"type":"mixte","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Antichambre d’Ormuz. Attaques de tankers en 2019 (mines-ventouses), saisies et abordages par drones : premier signal des escalades avec l’Iran.","f":["Zone JWC"]},{"id":"levant","name":"Méditerranée orientale","c":[33.8,34.5],"r":400,"type":"conflit","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Façade maritime des conflits du Levant (Gaza, Liban, Syrie). Ports frappés ou bloqués par phases, gisements gaziers offshore disputés, forte présence navale internationale.","f":["Zone JWC"]},{"id":"libya","name":"Côte libyenne","c":[32.8,15],"r":450,"type":"conflit","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Pays fracturé entre gouvernements rivaux ; terminaux pétroliers régulièrement bloqués au gré des rapports de force. Zone d’opérations migratoires et navales denses.","f":["Zone JWC"]},{"id":"taiwan","name":"Détroit de Taïwan","c":[24.2,119.6],"r":350,"type":"détroit","jwc":false,"score":2,"trend":"▶","parts":{"base":2,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[{"t":"PLA activities in the waters and airspace around Taiwan","u":"https://www.globalsecurity.org/wmd/library/news/taiwan/2026/taiwan-260714-roc-mnd01.htm","s":"globalsecurity.org","d":"20260716T123000Z"}],"inc":[],"ctx":"Point de friction majeur Chine–Taïwan–États-Unis. Exercices militaires d’encerclement récurrents ; un blocus paralyserait ~50 % de la flotte mondiale de porte-conteneurs qui croise à proximité.","f":["Passage stratégique"]},{"id":"baltic","name":"Mer Baltique","c":[58.5,20],"r":600,"type":"conflit","jwc":false,"score":1.9,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0.4,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[{"t":"Budrys in Brussels emphasized continued support for Ukraine , pressure on Russia , and countering hybrid threats in the Baltic Sea","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260714-lithuania-mfa01.htm","s":"globalsecurity.org","d":"20260716T123000Z"}],"inc":[],"ctx":"Nouvelle ligne de front hybride : sabotages de câbles et gazoducs sous-marins, « flotte fantôme » russe sous sanctions, brouillage GNSS massif signalé par les équipages depuis 2023.","f":["Veille de fond"]},{"id":"suez","name":"Canal de Suez","c":[30.8,32.35],"r":200,"type":"détroit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"12 % du commerce mondial. Point de fragilité logistique extrême : l’échouement de l’Ever Given (2021) a coûté ~10 Md$/jour au commerce mondial. Les revenus du canal chutent fortement à chaque crise en mer Rouge.","f":["Passage stratégique"]},{"id":"bosphorus","name":"Bosphore · Dardanelles","c":[40.6,28.2],"r":250,"type":"détroit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Seule sortie de la mer Noire, régie par la convention de Montreux (la Turquie peut fermer aux navires de guerre). Trafic dense, incidents de navigation fréquents, enjeu direct de la guerre en Ukraine.","f":["Passage stratégique"]},{"id":"malacca","name":"Malacca · Singapour","c":[2.8,100.8],"r":400,"type":"détroit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Passage le plus fréquenté du monde (~90 000 navires/an). Vols à main armée opportunistes sur navires au mouillage, risque de collision élevé ; suivi ReCAAP permanent.","f":["Passage stratégique"]},{"id":"haiti","name":"Haïti · passage du Vent","c":[19,-73],"r":300,"type":"conflit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Effondrement sécuritaire : gangs contrôlant le port de Port-au-Prince, pillages de navires à quai, approvisionnement du pays sous escorte.","f":["Veille de fond"]},{"id":"mozambique","name":"Canal du Mozambique","c":[-12.5,41.5],"r":500,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Route alternative du Cap et bassin gazier majeur (projets GNL). Insurrection jihadiste au Cabo Delgado depuis 2017, avec incursions côtières épisodiques.","f":["Veille de fond"]},{"id":"gibraltar","name":"Détroit de Gibraltar","c":[35.95,-5.6],"r":200,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Porte Atlantique–Méditerranée (~300 navires/jour). Risque surtout opérationnel (densité, orques attaquant les safrans depuis 2020) ; épisodes de tensions autour des eaux de Gibraltar.","f":["Passage stratégique"]},{"id":"ecs","name":"Mer de Chine orientale","c":[26.5,124],"r":450,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Contentieux sino-japonais autour des Senkaku/Diaoyu ; incursions quasi quotidiennes de garde-côtes chinois. Corridor d’accès aux grands ports chinois, japonais et coréens.","f":["Veille de fond"]},{"id":"korea","name":"Mer Jaune · Corée","c":[37.5,124.5],"r":400,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Tirs de missiles nord-coréens au-dessus des routes maritimes, frontière maritime contestée (ligne de limite nord), incidents navals intercoréens historiques.","f":["Veille de fond"]},{"id":"sunda","name":"Détroit de la Sonde","c":[-6,105.5],"r":200,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Alternative à Malacca entre Java et Sumatra. Risque avant tout naturel : volcan Anak Krakatau actif (tsunami meurtrier en 2018), forte sismicité.","f":["Passage stratégique"]},{"id":"luzon","name":"Détroit de Luzon","c":[20.8,121],"r":300,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Porte du Pacifique entre Taïwan et les Philippines, sur-fréquentée par les marines militaires ; couloir de typhons une bonne partie de l’année.","f":["Passage stratégique"]},{"id":"bengal","name":"Golfe du Bengale","c":[16.5,92.5],"r":500,"type":"mixte","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Cyclones parmi les plus meurtriers du monde ; guerre civile birmane débordant sur la façade maritime (Rakhine), trafics et flux de réfugiés rohingyas.","f":["Veille de fond"]},{"id":"dover","name":"Manche · Pas de Calais","c":[50.5,0.5],"r":300,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Détroit le plus fréquenté du monde avec Malacca. Risque essentiellement opérationnel : densité extrême, météo, traversées migratoires créant des situations SAR quotidiennes.","f":["Passage stratégique"]},{"id":"danish","name":"Détroits danois","c":[55.5,11.5],"r":250,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Verrou d’entrée-sortie de la Baltique, transit du pétrole russe sous sanctions (inspections renforcées, navires de la flotte fantôme non assurés).","f":["Passage stratégique"]},{"id":"barents","name":"Mer de Barents","c":[70.5,35],"r":500,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Bastion de la Flotte du Nord russe (sous-marins nucléaires). Militarisation croissante de l’Arctique et ouverture progressive de la route maritime du Nord.","f":["Veille de fond"]},{"id":"panama","name":"Canal de Panama","c":[9.1,-79.6],"r":250,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"5 % du commerce mondial. Vulnérabilité climatique structurelle : les sécheresses réduisent les transits (files d’attente, enchères de créneaux). Regain de tensions politiques autour de son statut.","f":["Passage stratégique"]},{"id":"guayaquil","name":"Golfe de Guayaquil","c":[-2.8,-80.8],"r":250,"type":"piraterie","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Premier port bananier mondial devenu plaque tournante de la cocaïne vers l’Europe : contaminations de conteneurs, violences portuaires, abordages de navires au mouillage.","f":["Veille de fond"]},{"id":"lombok","name":"Lombok · Makassar","c":[-7,116.5],"r":350,"type":"détroit","jwc":false,"score":0.5,"trend":"▶","parts":{"base":0.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Route de contournement en eaux profondes pour les plus gros navires. Faible risque politique ; sismicité et trafic croissant.","f":["Passage stratégique"]},{"id":"capegoodhope","name":"Cap de Bonne-Espérance","c":[-35.2,19],"r":350,"type":"détroit","jwc":false,"score":0.5,"trend":"▶","parts":{"base":0.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Route de déroutement quand Suez/mer Rouge se ferment (+10 à 14 jours). Mer parmi les plus dures du monde (vagues scélérates) ; surcharge portuaire sud-africaine chronique.","f":["Passage stratégique"]}]};
+
+let ZONES = [];
+let riskUpdatedAt = null, riskLive = false;
+
+function applyRisk(data){
+  if(!data || !Array.isArray(data.zones) || !data.zones.length) return;
+  ZONES = data.zones.map(z=>({
+    id:z.id, name:z.name, c:z.c, r:z.r, type:z.type, jwc:!!z.jwc,
+    score:+z.score||0, trend:z.trend||'▶',
+    parts:z.parts||{}, why:z.why||[], hl:z.hl||[], inc:z.inc||[],
+    ctx:z.ctx||'', f:z.f||[],
+  }));
+  riskUpdatedAt = Date.parse(data.updatedAt)||null;
+  // re-baseline silencieuse des états navire↔zone (évite une rafale d'alertes)
+  const all = (typeof SHIPS!=='undefined'?SHIPS:[]).concat(
+    (typeof live!=='undefined' && live.vessels)?[...live.vessels.values()]:[]);
+  for(const s of all){ s.zoneState={}; s.seen=false; }
+  if(typeof selZone!=='undefined' && selZone){
+    const again = ZONES.find(q=>q.id===selZone.id);
+    if(again) selectZone(again,false); else { selZone=null; detail.style.display='none'; }
+  }
+  if(typeof renderZones==='function'){ renderZones(); assessRisk(); renderRanks(); }
+}
+function riskFreshness(){
+  if(!riskUpdatedAt) return 'données embarquées';
+  const m = Math.max(0, Math.round((Date.now()-riskUpdatedAt)/60000));
+  const when = m<60 ? `il y a ${m} min` : `il y a ${Math.round(m/60)} h`;
+  return (riskLive?'en direct · MAJ ':'instantané · ')+when;
+}
+
+/* ---- anciennes zones éditoriales conservées ci-dessous comme référence de
+       secours ultime si le snapshot injecté était vide (ne devrait pas arriver) */
+const ZONES_LEGACY = [
   {id:'redsea', name:'Mer Rouge · Bab el-Mandeb', c:[14,42.8], r:750, score:9.1, trend:'▲',
    ctx:'Depuis fin 2023, les Houthis ciblent les navires marchands au missile balistique et au drone naval. La plupart des grands armateurs ont suspendu le transit et déroutent leurs services Asie–Europe par le cap de Bonne-Espérance (+10 à 14 jours de mer). Les primes d’assurance « risque de guerre » ont été multipliées pour les navires qui passent encore.',
    f:['Conflit armé','Attaques anti-navires','Assurance majorée','Déroutements massifs']},
@@ -631,7 +680,7 @@ function assessRisk(){
       // transitions d'état -> alertes
       const prev = s.zoneState[z.id]||0;              // 0 dehors, 1 approche, 2 dedans
       const cur = d<=z.r ? 2 : (d<near ? 1 : 0);
-      if(cur>prev && s.seen){                          // pas d'alerte à la 1re évaluation
+      if(cur>prev && s.seen && z.score>=4){            // pas d'alerte à la 1re évaluation, ni pour les zones calmes
         if(cur===1) pushAlert(s,z,'approche',d);
         if(cur===2) pushAlert(s,z,'entrée',d);
       }
@@ -763,7 +812,7 @@ function draw(){
     ctx.setLineDash([5,5]); ctx.lineWidth=selZone===z?2:1.2;
     ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,7); ctx.stroke();
     ctx.restore();
-    if(view.scale>2.2){
+    if(z.score>=5 || view.scale>7 || z===selZone){
       ctx.font='10.5px ui-monospace,Consolas,monospace';
       ctx.textAlign='center';
       const label=`${z.score.toFixed(1)}`;
@@ -1001,6 +1050,7 @@ function frame(t){
 /* ================= Panneaux ================= */
 const zlist=document.getElementById('zlist'), slist=document.getElementById('slist');
 function renderZones(){
+  const fr=document.getElementById('riskFresh'); if(fr) fr.textContent=riskFreshness();
   zlist.innerHTML = [...ZONES].sort((a,b)=>b.score-a.score).map(z=>`
     <div class="zrow" data-z="${z.id}">
       <div class="zscore" style="background:${riskCSS(z.score)}">${z.score.toFixed(1)}</div>
@@ -1164,15 +1214,26 @@ function renderLiveCard(v){
 function selectZone(z, center){
   selZone=z; selShip=null;
   if(center){ view.clat=z.c[0]; view.clon=z.c[1]; view.scale=Math.max(5.5, view.scale); viewDirty=true; }
-  const inside=SHIPS.filter(s=>s.zoneState[z.id]===2);
+  const inside=activeShips().filter(s=>s.zoneState[z.id]===2);
+  const P=z.parts||{};
+  const PARTS=[['Fond structurel',P.base,4],['Incidents maritimes',P.mar,3.5],
+    ['Conflit (presse)',P.con,2.5],['Catastrophes',P.nat,3],['Météo marine',P.met??P.ten,1.5]];
+  const partsHtml = PARTS.filter(p=>p[1]!=null).map(([l,v,max])=>
+    `<div class="partrow"><span>${l}</span><div class="pw"><div class="pv" style="width:${Math.min(100,v/max*100)}%;background:${riskCSS(Math.max(3,z.score))}"></div></div><b class="mono">${(+v).toFixed(1)}</b></div>`).join('');
+  const whyHtml = (z.why&&z.why.length)?`<ul class="why">${z.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'';
+  const hlHtml = (z.hl&&z.hl.length)?`<div class="hl"><b style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)">Dans la presse</b>${
+    z.hl.map(h=>`<a href="${esc(h.u)}" target="_blank" rel="noopener">${esc(h.t)}<small>${esc(h.s)}${h.d?' · '+esc(String(h.d).slice(6,8))+'/'+esc(String(h.d).slice(4,6)):''}</small></a>`).join('')}</div>`:'';
   detail.style.display='block';
   detail.innerHTML=`<button class="x" aria-label="Fermer">✕</button>
     <h2><span style="color:${riskCSS(z.score)}">●</span> ${esc(z.name)}</h2>
-    <div class="sub">Score de risque <b class="mono" style="color:${riskCSS(z.score)}">${z.score.toFixed(1)}/10</b> · tendance ${z.trend}</div>
+    <div class="sub">Score de risque <b class="mono" style="color:${riskCSS(z.score)}">${z.score.toFixed(1)}/10</b> · tendance 7 j ${z.trend} · <span style="font-size:11px">${esc(riskFreshness())}</span></div>
+    ${partsHtml}
+    ${whyHtml}
     <div class="ctx">${esc(z.ctx)}</div>
     <div class="chips">${z.f.map(f=>`<span class="chip">${esc(f)}</span>`).join('')}</div>
+    ${hlHtml}
     <dl class="kv" style="margin-top:10px">
-      <dt>Navires en zone</dt><dd>${inside.length? inside.map(s=>esc(s.name)).join(', '):'aucun actuellement'}</dd>
+      <dt>Navires en zone</dt><dd>${inside.length? inside.map(s=>esc(s.name||('MMSI '+s.mmsi))).join(', '):'aucun actuellement'}</dd>
       <dt>Rayon surveillé</dt><dd class="mono">${z.r} km</dd>
     </dl>`;
   detail.querySelector('.x').onclick=()=>{detail.style.display='none'; selZone=null;};
@@ -1338,6 +1399,25 @@ document.getElementById('tgR').onclick=()=>{document.getElementById('pr').classL
 addEventListener('keydown',e=>{if(e.key==='Escape'){modal.style.display='none'; aismodal.style.display='none'; detail.style.display='none'; selShip=selZone=null;}});
 
 /* ================= Démarrage ================= */
+applyRisk(RISK_SNAPSHOT && RISK_SNAPSHOT.zones && RISK_SNAPSHOT.zones.length
+  ? RISK_SNAPSHOT : {zones:ZONES_LEGACY.map(z=>({...z, parts:{}, why:[], hl:[], inc:[]})), updatedAt:null});
+// chargement des scores en direct (Pages envoie CORS *), puis rafraîchissement
+// automatique toutes les 30 min tant que la page est ouverte
+function loadRisk(){
+  fetch(RISK_URL, {cache:'no-store'})
+    .then(r=>{ if(!r.ok) throw 0; return r.json(); })
+    .then(d=>{
+      const fresh = Date.parse(d.updatedAt)||0;
+      if(riskLive && riskUpdatedAt && fresh<=riskUpdatedAt) return;   // rien de neuf
+      riskLive=true; applyRisk(d);
+      console.log('[VIGIE] scores de risque actualisés —', d.updatedAt);
+    })
+    .catch(()=>console.log('[VIGIE] risk.json inaccessible — données actuelles conservées'));
+}
+loadRisk();
+setInterval(loadRisk, 30*60*1000);
+setInterval(()=>{ const el=document.getElementById('riskFresh'); if(el) el.textContent=riskFreshness(); }, 30000);
+
 stepShips(0); assessRisk();
 // on purge les alertes générées à l'initialisation (les navires démarrent déjà placés)
 feedItems=[]; toastsEl.innerHTML=''; renderFeed();
