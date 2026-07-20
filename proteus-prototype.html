@@ -54,12 +54,6 @@
   button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
   button.on{border-color:var(--accent); color:var(--accent)}
   button.small{padding:3px 8px; font-size:12px}
-  a.btnlink{
-    font:inherit; font-weight:600; color:var(--ink); background:var(--panel); border:1px solid var(--line);
-    border-radius:20px; padding:6px 14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center;
-  }
-  a.btnlink:hover{background:var(--panel2)}
-  a.btnlink:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
 
   /* ===== Map ===== */
   #map{position:fixed; inset:0; cursor:grab}
@@ -257,7 +251,6 @@
     <button id="bHeat" class="on" title="Afficher / masquer la heatmap">Heatmap</button>
     <button id="bMode" title="Basculer entre simulation et flux AIS réel">🛰️ AIS direct</button>
     <button id="bLang" title="Switch language / Changer de langue">EN</button>
-    <a id="bNotes" class="btnlink" href="pense-bete.html" target="_blank" rel="noopener" title="Ouvrir le pense-bête du projet">📝</a>
     <button id="bInfo" title="À propos du prototype">?</button>
   </div>
 </header>
@@ -1318,7 +1311,6 @@ function applyLang(){
   document.getElementById('bMode').title = tr('Basculer entre simulation et flux AIS réel','Switch between simulation and live AIS feed');
   bLang.textContent = LANG==='fr' ? 'EN' : 'FR';
   document.getElementById('bInfo').title = tr('À propos du prototype','About this prototype');
-  document.getElementById('bNotes').title = tr('Ouvrir le pense-bête du projet','Open the project notepad');
   document.getElementById('shipsearch').placeholder = tr('🔍 Rechercher un navire (nom, MMSI)…','🔍 Search a vessel (name, MMSI)…');
   document.getElementById('hFilter').textContent = tr('Filtre flotte','Fleet filter');
   document.getElementById('lTop5').textContent = tr('Top 5 armateurs uniquement','Top 5 carriers only');
