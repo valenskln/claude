@@ -1,6 +1,6 @@
-# VIGIE — actualisation horaire des scores de risque.
+# Proteus.AI — actualisation horaire des scores de risque.
 # Ce fichier doit vivre sur la branche PAR DÉFAUT du dépôt pour que le cron démarre.
-name: VIGIE — actualisation du risque
+name: Proteus.AI — actualisation du risque
 
 on:
   schedule:
@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: vigie-risk
+  group: proteus-risk
   cancel-in-progress: false
 
 jobs:
@@ -40,8 +40,8 @@ jobs:
       - name: Publier risk.json sur le site
         run: |
           cd site
-          git config user.name "vigie-bot"
-          git config user.email "vigie-bot@users.noreply.github.com"
+          git config user.name "proteus-bot"
+          git config user.email "proteus-bot@users.noreply.github.com"
           git add risk.json history.json
           git diff --cached --quiet || git commit -m "risk: actualisation $(date -u +'%Y-%m-%dT%H:%MZ')"
           git push
