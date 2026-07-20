@@ -8,25 +8,28 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Trouver le vrai endpoint JSON depuis le bundle JS de /Piracy
+      - name: Contexte autour de "asam" dans le bundle, puis test des candidats
         run: |
           set +e
           UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
-          echo "--- HTML complet de /Piracy ---"
-          curl -sS -m 15 -A "$UA" "https://msi.nga.mil/Piracy" -o /tmp/piracy.html
-          cat /tmp/piracy.html
+          curl -sS -m 20 -A "$UA" "https://msi.nga.mil/static/js/main.aed59dd5.js" -o /tmp/bundle.js
+          wc -c /tmp/bundle.js
+          echo "--- contexte (80 avant/apres) autour de chaque occurrence de asam ---"
+          grep -oE '.{80}asam.{80}' /tmp/bundle.js | head -60
           echo
-          echo "--- scripts référencés ---"
-          grep -oE '(src|href)="[^"]*\.(js|json)[^"]*"' /tmp/piracy.html | sort -u
+          echo "--- toutes les occurrences de /api/publications ---"
+          grep -oE '"[^"]*publications[^"]*"' /tmp/bundle.js | sort -u
           echo
-          echo "--- tentative main bundle (static/js) ---"
-          for js in $(grep -oE 'src="[^"]*main[^"]*\.js"' /tmp/piracy.html | sed 's/src="//;s/"$//'); do
-            url="$js"
-            case "$js" in
-              /*) url="https://msi.nga.mil$js" ;;
-            esac
-            echo "=== $url ==="
-            curl -sS -m 20 -A "$UA" "$url" -o /tmp/bundle.js
-            wc -c /tmp/bundle.js
-            grep -oE '"[a-zA-Z0-9_/.-]*asam[a-zA-Z0-9_/.-]*"' /tmp/bundle.js | sort -u | head -40
+          echo "--- test endpoints potentiels ---"
+          for u in \
+            "https://msi.nga.mil/api/publications/asam/areas" \
+            "https://msi.nga.mil/api/publications/asam/search?output=json" \
+            "https://msi.nga.mil/api/publications/asam?minOccurDate=2026-06-01&maxOccurDate=2026-07-21" \
+            "https://msi.nga.mil/api/publications/asam-descrip"
+          do
+            echo "=== $u ==="
+            code=$(curl -sS -m 15 -A "$UA" -o /tmp/out.txt -w "%{http_code}" "$u")
+            echo "HTTP $code"
+            head -c 300 /tmp/out.txt
+            echo
           done
