@@ -1,4 +1,4 @@
-<title>VIGIE · Tracker maritime & risque géopolitique</title>
+<title>Proteus.AI · Tracker maritime & risque géopolitique</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   @font-face{
@@ -260,7 +260,7 @@
 
 <header id="hdr">
   <div id="brand">
-    <b>VIGIE<em>.</em></b>
+    <b>PROTEUS<em>.AI</em></b>
     <span>Flux maritime × risque géopolitique</span>
   </div>
   <span class="badge" id="modeBadge">Prototype · données simulées</span>
@@ -329,7 +329,7 @@
 <div id="modal" role="dialog" aria-modal="true" aria-label="À propos">
   <div>
     <button class="x" id="mx" aria-label="Fermer">✕</button>
-    <h2>VIGIE — prototype de faisabilité</h2>
+    <h2>Proteus.AI — prototype de faisabilité</h2>
     <p class="sub">Croiser le tracking des porte-conteneurs avec l’analyse du risque géopolitique.</p>
     <h4>Ce qui est réel dans ce prototype</h4>
     <ul>
@@ -387,7 +387,7 @@
     <div id="aisstatus"></div>
     <p class="sub" style="color:var(--ink3);font-size:11.5px;margin-top:14px">
       ⚠️ Dans l’aperçu Claude (artifact), les connexions externes sont bloquées par sécurité :
-      pour le direct, télécharge <b>vigie-prototype.html</b> et ouvre-le sur ton ordinateur.
+      pour le direct, télécharge <b>proteus-prototype.html</b> et ouvre-le sur ton ordinateur.
       Couverture : antennes côtières (les océans lointains ont des trous — c’est normal).
       Ta clé reste dans ton navigateur, elle n’est envoyée qu’à aisstream.io.</p>
   </div>
@@ -880,7 +880,7 @@ function nearAnyZone(lat,lon){
   return ZONES.some(z=>havKm(lat,lon,z.c[0],z.c[1]) < z.r*2.2);
 }
 // Méthode prouvée par le testeur : abonnement monde entier, une seule boîte,
-// aucun filtre serveur. Le tri (zones, cargos) est fait localement par VIGIE.
+// aucun filtre serveur. Le tri (zones, cargos) est fait localement par Proteus.AI.
 function startLive(key, scope){
   stopLive(true);
   live.key=key; live.scope=scope;
@@ -894,7 +894,7 @@ function startLive(key, scope){
   ws.binaryType='arraybuffer';   // aisstream envoie des trames BINAIRES contenant du JSON
   const sub={APIKey:live.key, BoundingBoxes:[[[-90,-180],[90,180]]]};
   ws.onopen=()=>{
-    console.log('[VIGIE] abonnement (monde entier, filtrage local) envoyé');
+    console.log('[Proteus.AI] abonnement (monde entier, filtrage local) envoyé');
     ws.send(JSON.stringify(sub));
     live.status='waiting'; live.t0=Date.now();
     live.watch=setInterval(()=>{
@@ -916,13 +916,13 @@ function startLive(key, scope){
     try{
       const txt = typeof ev.data==='string' ? ev.data : new TextDecoder().decode(ev.data);
       m=JSON.parse(txt);
-    }catch(e){ console.warn('[VIGIE] message illisible :', e.message); return; }
+    }catch(e){ console.warn('[Proteus.AI] message illisible :', e.message); return; }
     if(m.error){
-      console.warn('[VIGIE] erreur serveur :', m.error);
+      console.warn('[Proteus.AI] erreur serveur :', m.error);
       setAisStatus('Réponse du serveur : '+m.error,'err'); return;
     }
     live.msg++;
-    if(live.msg<=3) console.log('[VIGIE] message reçu :', m.MessageType, m.MetaData && m.MetaData.ShipName);
+    if(live.msg<=3) console.log('[Proteus.AI] message reçu :', m.MessageType, m.MetaData && m.MetaData.ShipName);
     if(live.status!=='on'){
       live.status='on'; clearInterval(live.watch);
       MODE='live'; onModeChange();
@@ -931,7 +931,7 @@ function startLive(key, scope){
     handleAis(m);
   };
   ws.onclose=ev=>{
-    console.log('[VIGIE] connexion fermée, code', ev && ev.code);
+    console.log('[Proteus.AI] connexion fermée, code', ev && ev.code);
     clearInterval(live.watch);
     if(live.status==='on'){ stopLive(); setAisStatus('Connexion interrompue.','err'); }
     else if(live.status!=='off'){
@@ -1340,7 +1340,7 @@ document.getElementById('bMode').onclick=()=>{
   if(MODE==='live'){ stopLive(); }
   else{
     setAisStatus('');
-    try{ document.getElementById('aiskey').value=localStorage.getItem('vigie_aiskey')||''; }catch(e){}
+    try{ document.getElementById('aiskey').value=localStorage.getItem('proteus_aiskey')||''; }catch(e){}
     aismodal.style.display='flex';
     document.getElementById('aiskey').focus();
   }
@@ -1350,7 +1350,7 @@ document.getElementById('aisconnect').onclick=()=>{
   const key=document.getElementById('aiskey').value.replace(/[\s\u200B-\u200D\u2060\uFEFF]/g,'');
   document.getElementById('aiskey').value=key;
   if(!key){ setAisStatus('Colle d’abord ta clé API aisstream.io.','err'); return; }
-  try{ localStorage.setItem('vigie_aiskey',key); }catch(e){}
+  try{ localStorage.setItem('proteus_aiskey',key); }catch(e){}
   cargoOnly=document.getElementById('aiscargo').checked;
   startLive(key, document.getElementById('aisscope').value);
 };
@@ -1359,7 +1359,7 @@ document.getElementById('aiseye').onclick=()=>{
   f.type = f.type==='password' ? 'text' : 'password';
 };
 document.getElementById('aisforget').onclick=()=>{
-  try{ localStorage.removeItem('vigie_aiskey'); }catch(e){}
+  try{ localStorage.removeItem('proteus_aiskey'); }catch(e){}
   document.getElementById('aiskey').value='';
   setAisStatus('Clé mémorisée effacée — recolle ta clé depuis aisstream.io (page API Keys).','ok');
 };
@@ -1383,9 +1383,9 @@ function loadRisk(){
       const fresh = Date.parse(d.updatedAt)||0;
       if(riskLive && riskUpdatedAt && fresh<=riskUpdatedAt) return;   // rien de neuf
       riskLive=true; applyRisk(d);
-      console.log('[VIGIE] scores de risque actualisés —', d.updatedAt);
+      console.log('[Proteus.AI] scores de risque actualisés —', d.updatedAt);
     })
-    .catch(()=>console.log('[VIGIE] risk.json inaccessible — données actuelles conservées'));
+    .catch(()=>console.log('[Proteus.AI] risk.json inaccessible — données actuelles conservées'));
 }
 loadRisk();
 setInterval(loadRisk, 30*60*1000);

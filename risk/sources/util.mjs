@@ -1,6 +1,6 @@
 // Outils communs des connecteurs : fetch avec réessais, pause, distance.
 
-const UA = 'Mozilla/5.0 (compatible; VIGIE-risk/1.0; +https://valenskln.github.io/claude/)';
+const UA = 'Mozilla/5.0 (compatible; ProteusAI-risk/1.0; +https://valenskln.github.io/claude/)';
 
 export async function getJSON(url, { tries = 3, timeout = 25000, wait429 = 0 } = {}) {
   let lastErr;

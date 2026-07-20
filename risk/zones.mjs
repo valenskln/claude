@@ -1,4 +1,4 @@
-// Catalogue VIGIE des zones maritimes à risque.
+// Catalogue Proteus.AI des zones maritimes à risque.
 // Chaque zone : géométrie (centre + rayon km), type, risque structurel de base (0-3),
 // drapeau JWC (zone listée par le Joint War Committee des assureurs de Londres),
 // mots-clés GDELT (presse mondiale, anglais) et contexte historique (français).

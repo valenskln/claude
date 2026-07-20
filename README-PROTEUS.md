@@ -1,9 +1,9 @@
-# VIGIE — Tracker maritime × risque géopolitique
+# Proteus.AI — Tracker maritime × risque géopolitique
 
 Prototype de faisabilité d'un SaaS croisant le **tracking des porte-conteneurs** avec
 l'**analyse du risque géopolitique** des zones traversées.
 
-## Le prototype (`vigie-prototype.html`)
+## Le prototype (`proteus-prototype.html`)
 
 Fichier HTML 100 % autonome : double-cliquer dessus l'ouvre dans n'importe quel navigateur,
 sans installation ni connexion à un serveur.
@@ -23,13 +23,13 @@ sans installation ni connexion à un serveur.
 
 ## Le dossier `proto/` (sources de fabrication)
 
-- `vigie-proto.html` — le code source du prototype (avec les marqueurs `//WORLD_DATA` et `__MANROPE_B64__`)
+- `proteus-proto.html` — le code source du prototype (avec les marqueurs `//WORLD_DATA` et `__MANROPE_B64__`)
 - `world_compact.js` — le fond de carte mondial compacté (généré par `compact.js`)
 - `manrope.b64` — la police Manrope encodée en base64
-- `build.js` — assemble le tout : `node build.js` produit le fichier final `vigie.html`
+- `build.js` — assemble le tout : `node build.js` produit le fichier final `proteus.html`
 - `check.mjs` — test automatique dans un navigateur (captures d'écran, erreurs JS)
 
-Pour reconstruire le prototype après une modification de `vigie-proto.html` :
+Pour reconstruire le prototype après une modification de `proteus-proto.html` :
 ```bash
 cd proto && node build.js
 ```

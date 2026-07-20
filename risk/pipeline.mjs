@@ -1,4 +1,4 @@
-// VIGIE — pipeline de scoring des zones à risque.
+// Proteus.AI — pipeline de scoring des zones à risque.
 // Usage : node risk/pipeline.mjs [--out chemin/risk.json] [--history chemin/history.json] [--offline]
 //
 // Toutes les heures (GitHub Actions) :
@@ -41,7 +41,7 @@ let history = { entries: [] };
 try { if (existsSync(HIST)) history = JSON.parse(readFileSync(HIST, 'utf8')); } catch { }
 
 // ---------- collecte des sources mondiales ----------
-console.log(`VIGIE pipeline — ${ZONES.length} zones — ${OFFLINE ? 'HORS-LIGNE (scores de base)' : 'en ligne'}`);
+console.log(`Proteus.AI pipeline — ${ZONES.length} zones — ${OFFLINE ? 'HORS-LIGNE (scores de base)' : 'en ligne'}`);
 let asam = [], gdacs = [], usgs = [], storms = [], waves = [];
 const srcOk = { asam: false, gdacs: false, usgs: false, meteo: false, nhc: false, gdelt: 0 };
 if (!OFFLINE) {

@@ -7,7 +7,7 @@ page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE: ' + m.text()); });
 // wrap like the artifact host does
 import fs from 'fs';
-const body = fs.readFileSync(dir + '/vigie.html', 'utf8');
+const body = fs.readFileSync(dir + '/proteus.html', 'utf8');
 fs.writeFileSync(dir + '/wrapped.html', '<!doctype html><html><head><meta charset="utf-8"></head><body>' + body + '</body></html>');
 await page.goto('file://' + dir + '/wrapped.html');
 await page.waitForTimeout(4000);
