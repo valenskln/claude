@@ -8,29 +8,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Sonder plusieurs URL candidates de l'API NGA MSI ASAM
+      - name: Trouver le vrai endpoint JSON depuis le bundle JS de /Piracy
         run: |
           set +e
-          UA="Mozilla/5.0 (compatible; ProteusAI-risk/1.0; +https://valenskln.github.io/claude/)"
-          urls=(
-            "https://msi.nga.mil/api/publications/asam?output=json"
-            "https://msi.nga.mil/api/publications/asam?sort=date&output=json"
-            "https://msi.nga.mil/api/publications/asam?minOccurDate=2026-06-01&maxOccurDate=2026-07-21&sort=date&output=json"
-            "https://msi.nga.mil/api/publications-asam?output=json"
-            "https://msi.nga.mil/api/publications/asam-notices?output=json"
-            "https://msi.nga.mil/api/publications/asam/search?output=json"
-            "https://msi.nga.mil/api/v1/publications/asam?output=json"
-            "https://msi.nga.mil/api/publications/asam.json"
-            "https://msi.nga.mil/Publications/ASAM"
-            "https://msi.nga.mil/Piracy"
-            "https://msi.nga.mil/api/swagger-ui.html"
-            "https://msi.nga.mil/api"
-          )
-          for u in "${urls[@]}"; do
-            echo "=== $u ==="
-            code=$(curl -sS -m 15 -A "$UA" -o /tmp/out.txt -w "%{http_code}" "$u")
-            echo "HTTP $code"
-            head -c 300 /tmp/out.txt
-            echo
-            echo
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+          echo "--- HTML complet de /Piracy ---"
+          curl -sS -m 15 -A "$UA" "https://msi.nga.mil/Piracy" -o /tmp/piracy.html
+          cat /tmp/piracy.html
+          echo
+          echo "--- scripts référencés ---"
+          grep -oE '(src|href)="[^"]*\.(js|json)[^"]*"' /tmp/piracy.html | sort -u
+          echo
+          echo "--- tentative main bundle (static/js) ---"
+          for js in $(grep -oE 'src="[^"]*main[^"]*\.js"' /tmp/piracy.html | sed 's/src="//;s/"$//'); do
+            url="$js"
+            case "$js" in
+              /*) url="https://msi.nga.mil$js" ;;
+            esac
+            echo "=== $url ==="
+            curl -sS -m 20 -A "$UA" "$url" -o /tmp/bundle.js
+            wc -c /tmp/bundle.js
+            grep -oE '"[a-zA-Z0-9_/.-]*asam[a-zA-Z0-9_/.-]*"' /tmp/bundle.js | sort -u | head -40
           done
