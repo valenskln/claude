@@ -63,8 +63,9 @@ if (!OFFLINE) {
   catch (e) { console.warn(`GDELT : ÉCHEC — ${e.message}`); }
 }
 
-// ---------- date FR courte ----------
+// ---------- dates courtes FR / EN ----------
 const frDate = ms => new Date(ms).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+const enDate = ms => new Date(ms).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 
 // ---------- calcul zone par zone ----------
 const zonesOut = [];
@@ -72,7 +73,7 @@ for (let zi = 0; zi < ZONES.length; zi++) {
   const z = ZONES[zi];
   const p = prev[z.id] || {};
   const parts = { base: r1(clamp(z.base + (z.jwc ? 1 : 0), 0, 4)), mar: 0, con: 0, nat: 0, met: 0 };
-  const why = [];
+  const why = [], why_en = [];
   let hl = [], inc = [];
 
   // — incidents maritimes (ASAM), décroissance demi-vie 14 j —
@@ -85,6 +86,7 @@ for (let zi = 0; zi < ZONES.length; zi++) {
     if (near.length) {
       const last = near.sort((a, b) => b.date - a.date)[0];
       why.push(`${near.length} incident${near.length > 1 ? 's' : ''} maritime${near.length > 1 ? 's' : ''} recensé${near.length > 1 ? 's' : ''} en 90 j (dernier : ${frDate(last.date)} — ${last.type.toLowerCase()})`);
+      why_en.push(`${near.length} maritime incident${near.length > 1 ? 's' : ''} recorded in the last 90 days (latest: ${enDate(last.date)} — ${last.type.toLowerCase()})`);
     }
   } else { parts.mar = (p.parts && p.parts.mar) || 0; inc = p.inc || []; }
 
@@ -95,18 +97,21 @@ for (let zi = 0; zi < ZONES.length; zi++) {
       if (havKm(g.lat, g.lon, z.c[0], z.c[1]) <= z.r * 1.5) {
         nat += g.level === 'red' ? 3 : 1.5;
         why.push(`alerte ${g.type} GDACS niveau ${g.level === 'red' ? 'rouge' : 'orange'}${g.name ? ` (${g.name})` : ''}`);
+        why_en.push(`GDACS ${g.type_en} alert, ${g.level === 'red' ? 'red' : 'orange'} level${g.name ? ` (${g.name})` : ''}`);
       }
     }
     for (const q of usgs) {
       if (q.mag >= 6 && havKm(q.lat, q.lon, z.c[0], z.c[1]) <= z.r * 1.2) {
         nat += Math.min(2, q.mag - 5.5) + (q.tsunami ? 2 : 0);
         why.push(`séisme M${q.mag.toFixed(1)}${q.tsunami ? ' avec alerte tsunami' : ''} — ${q.place}`);
+        why_en.push(`M${q.mag.toFixed(1)} earthquake${q.tsunami ? ' with tsunami alert' : ''} — ${q.place}`);
       }
     }
     for (const s of storms) {
       if (havKm(s.lat, s.lon, z.c[0], z.c[1]) <= z.r * 1.5) {
         nat += s.major ? 2 : 1;
         why.push(`${s.kind} ${s.name} en activité à proximité (NOAA)`);
+        why_en.push(`${s.kind_en} ${s.name} active nearby (NOAA)`);
       }
     }
     parts.nat = r1(Math.min(3, nat));
@@ -116,26 +121,29 @@ for (let zi = 0; zi < ZONES.length; zi++) {
   if (srcOk.meteo) {
     const w = waves[zi] || 0;
     parts.met = r1(w >= 9 ? 1.5 : w >= 7 ? 1.1 : w >= 5 ? 0.7 : w >= 4 ? 0.4 : 0);
-    if (w >= 7) why.push(`mer très dangereuse prévue : vagues jusqu'à ${w} m sous 36 h`);
-    else if (w >= 5) why.push(`mer forte prévue : vagues jusqu'à ${w} m sous 36 h`);
+    if (w >= 7) { why.push(`mer très dangereuse prévue : vagues jusqu'à ${w} m sous 36 h`); why_en.push(`very dangerous seas forecast: waves up to ${w} m within 36 h`); }
+    else if (w >= 5) { why.push(`mer forte prévue : vagues jusqu'à ${w} m sous 36 h`); why_en.push(`rough seas forecast: waves up to ${w} m within 36 h`); }
   } else { parts.met = (p.parts && (p.parts.met ?? p.parts.ten)) || 0; }
 
   // — presse mondiale (GDELT) : correspondance locale zone ↔ articles —
   if (news) {
     const g = matchZone(news, zoneTerms(z));
     parts.con = r1(Math.min(2.5, 2.5 * g.conflict / 6));      // titres "conflit" sur 24 h
-    if (g.conflict >= 4)
+    if (g.conflict >= 4) {
       why.push(`actualité conflictuelle : ${g.conflict} titres évoquant attaques ou tensions en 24 h`);
-    else if (g.conflict >= 2)
+      why_en.push(`conflict-related news: ${g.conflict} headlines mentioning attacks or tensions in 24 h`);
+    } else if (g.conflict >= 2) {
       why.push(`signaux conflictuels dans la presse (${g.conflict} titres en 24 h)`);
+      why_en.push(`conflict signals in the press (${g.conflict} headlines in 24 h)`);
+    }
     hl = g.headlines.length ? g.headlines : (p.hl || []);
   } else if (!OFFLINE) {
     parts.con = (p.parts && p.parts.con) || 0;
     hl = p.hl || [];
   } else { parts.con = 0; hl = []; }
 
-  if (z.jwc) why.push('zone listée par les assureurs de guerre (Joint War Committee)');
-  if (why.length === 0) why.push('aucun signal dynamique notable — risque structurel de fond');
+  if (z.jwc) { why.push('zone listée par les assureurs de guerre (Joint War Committee)'); why_en.push('zone listed by war risk underwriters (Joint War Committee)'); }
+  if (why.length === 0) { why.push('aucun signal dynamique notable — risque structurel de fond'); why_en.push('no notable dynamic signal — baseline structural risk'); }
 
   const score = r1(clamp(parts.base + parts.mar + parts.con + parts.nat + parts.met, 0, 10));
 
@@ -151,16 +159,19 @@ for (let zi = 0; zi < ZONES.length; zi++) {
   }
 
   // — familles actives (puces de la fiche) —
-  const f = [];
-  if (parts.mar >= 0.5) f.push('Incidents maritimes');
-  if (parts.con >= 0.8) f.push('Conflit armé');
-  if (parts.nat >= 1) f.push('Catastrophe naturelle');
-  if (parts.met >= 0.7) f.push('Météo dangereuse');
-  if (z.jwc) f.push('Zone JWC');
-  if (!f.length) f.push(z.type === 'détroit' ? 'Passage stratégique' : 'Veille de fond');
+  const f = [], f_en = [];
+  if (parts.mar >= 0.5) { f.push('Incidents maritimes'); f_en.push('Maritime incidents'); }
+  if (parts.con >= 0.8) { f.push('Conflit armé'); f_en.push('Armed conflict'); }
+  if (parts.nat >= 1) { f.push('Catastrophe naturelle'); f_en.push('Natural disaster'); }
+  if (parts.met >= 0.7) { f.push('Météo dangereuse'); f_en.push('Hazardous weather'); }
+  if (z.jwc) { f.push('Zone JWC'); f_en.push('JWC-listed zone'); }
+  if (!f.length) {
+    f.push(z.type === 'détroit' ? 'Passage stratégique' : 'Veille de fond');
+    f_en.push(z.type === 'détroit' ? 'Strategic chokepoint' : 'Baseline watch');
+  }
 
-  zonesOut.push({ id: z.id, name: z.name, c: z.c, r: z.r, type: z.type, jwc: z.jwc,
-    score, trend, parts, why, hl, inc, ctx: z.ctx, f });
+  zonesOut.push({ id: z.id, name: z.name, name_en: z.name_en, c: z.c, r: z.r, type: z.type, jwc: z.jwc,
+    score, trend, parts, why, why_en, hl, inc, ctx: z.ctx, ctx_en: z.ctx_en, f, f_en });
   console.log(`  ${z.id.padEnd(14)} score ${score}  [base ${parts.base} mar ${parts.mar} con ${parts.con} nat ${parts.nat} met ${parts.met}] ${trend}`);
 }
 

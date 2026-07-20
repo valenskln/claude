@@ -14,35 +14,6 @@
     --ovl:rgba(3,8,14,.7); --scoreInk:#07111C; --other:#8FA3B5;
     color-scheme: dark;
   }
-  @media (prefers-color-scheme: light){
-    :root{
-      --ocean:#E4E8F2; --panel:#FFFFFF; --panel2:#EDF0F8; --line:#D4DAE8;
-      --ink:#141C30; --ink2:#57637C; --ink3:#8A94AB;
-      --accent:#1470C2; --amber:#B07908; --orange:#C25218; --red:#BE352A;
-      --ok:#1F8A5D;
-      --panelT:rgba(255,255,255,.93); --hdr1:rgba(238,241,248,.97); --hdr2:rgba(238,241,248,.86);
-      --ovl:rgba(28,38,60,.42); --scoreInk:#FFFFFF; --other:#7A87A0;
-      color-scheme: light;
-    }
-  }
-  :root[data-theme="dark"]{
-    --ocean:#07111C; --panel:#0C1926; --panel2:#102030; --line:#1C3247;
-    --ink:#E8EEF4; --ink2:#8FA3B5; --ink3:#5C7285;
-    --accent:#4FC3E8; --amber:#E8B84B; --orange:#E8792E; --red:#E0402F;
-    --ok:#4FC38B;
-    --panelT:rgba(12,25,38,.93); --hdr1:rgba(7,17,28,.96); --hdr2:rgba(7,17,28,.82);
-    --ovl:rgba(3,8,14,.7); --scoreInk:#07111C; --other:#8FA3B5;
-    color-scheme: dark;
-  }
-  :root[data-theme="light"]{
-    --ocean:#E4E8F2; --panel:#FFFFFF; --panel2:#EDF0F8; --line:#D4DAE8;
-    --ink:#141C30; --ink2:#57637C; --ink3:#8A94AB;
-    --accent:#1470C2; --amber:#B07908; --orange:#C25218; --red:#BE352A;
-    --ok:#1F8A5D;
-    --panelT:rgba(255,255,255,.93); --hdr1:rgba(238,241,248,.97); --hdr2:rgba(238,241,248,.86);
-    --ovl:rgba(28,38,60,.42); --scoreInk:#FFFFFF; --other:#7A87A0;
-    color-scheme: light;
-  }
   *{box-sizing:border-box; margin:0; padding:0}
   html,body{height:100%}
   body{
@@ -261,13 +232,13 @@
 <header id="hdr">
   <div id="brand">
     <b>PROTEUS<em>.AI</em></b>
-    <span>Flux maritime × risque géopolitique</span>
+    <span id="brandTag">Flux maritime × risque géopolitique</span>
   </div>
   <span class="badge" id="modeBadge">Prototype · données simulées</span>
   <div id="kpis">
-    <div class="kpi"><div class="v" id="kShips">–</div><div class="l">Navires</div></div>
-    <div class="kpi"><div class="v" id="kZones">–</div><div class="l">Zones suivies</div></div>
-    <div class="kpi"><div class="v warn" id="kAlerts">–</div><div class="l">En zone à risque</div></div>
+    <div class="kpi"><div class="v" id="kShips">–</div><div class="l" id="lShips">Navires</div></div>
+    <div class="kpi"><div class="v" id="kZones">–</div><div class="l" id="lZones">Zones suivies</div></div>
+    <div class="kpi"><div class="v warn" id="kAlerts">–</div><div class="l" id="lAlerts">En zone à risque</div></div>
     <div class="kpi"><div class="v mono" id="kClock" style="font-size:13.5px">–</div><div class="l" id="kClockL">Heure simulée</div></div>
   </div>
   <div id="ptoggles">
@@ -279,7 +250,7 @@
     <button id="bSpeed" class="mono" title="Vitesse de simulation">1 s = 1 h</button>
     <button id="bHeat" class="on" title="Afficher / masquer la heatmap">Heatmap</button>
     <button id="bMode" title="Basculer entre simulation et flux AIS réel">🛰️ AIS direct</button>
-    <button id="bTheme" title="Basculer jour / nuit">☀️ Jour</button>
+    <button id="bLang" title="Switch language / Changer de langue">EN</button>
     <button id="bInfo" title="À propos du prototype">?</button>
   </div>
 </header>
@@ -294,23 +265,23 @@
 
 <aside class="panel" id="pl">
   <div class="card">
-    <h3>Filtre flotte</h3>
-    <label class="checkrow pad"><input type="checkbox" id="ftop"> Top 5 armateurs uniquement<br>
+    <h3 id="hFilter">Filtre flotte</h3>
+    <label class="checkrow pad"><input type="checkbox" id="ftop"> <span id="lTop5">Top 5 armateurs uniquement</span><br>
       <small style="color:var(--ink3)">MSC · Maersk · CMA CGM · COSCO · Hapag-Lloyd</small></label>
   </div>
   <div class="card">
-    <h3>Zones à risque · classement <span id="riskFresh" class="fresh"></span></h3>
+    <h3><span id="hZonesRank">Zones à risque · classement</span> <span id="riskFresh" class="fresh"></span></h3>
     <div id="zlist"></div>
   </div>
 </aside>
 
 <aside class="panel" id="pr">
   <div class="card">
-    <h3>Navires les plus exposés</h3>
-    <div id="slist"><div class="empty">Calcul en cours…</div></div>
+    <h3 id="hTopShips">Navires les plus exposés</h3>
+    <div id="slist"><div class="empty" id="slistEmpty">Calcul en cours…</div></div>
   </div>
   <div class="card">
-    <h3>Journal des alertes</h3>
+    <h3 id="hAlertLog">Journal des alertes</h3>
     <div id="feed"><div class="empty">Aucune alerte pour l’instant.</div></div>
   </div>
 </aside>
@@ -321,71 +292,47 @@
 <div id="legend">
   <span id="legops"></span>
   <span class="lsep"></span>
-  <span><span class="grad"></span>Risque de zone</span>
-  <span><span class="ring a"></span>Approche</span>
-  <span><span class="ring r"></span>En zone</span>
+  <span><span class="grad"></span><span id="legRisk">Risque de zone</span></span>
+  <span><span class="ring a"></span><span id="legApproach">Approche</span></span>
+  <span><span class="ring r"></span><span id="legInZone">En zone</span></span>
 </div>
 
 <div id="modal" role="dialog" aria-modal="true" aria-label="À propos">
   <div>
     <button class="x" id="mx" aria-label="Fermer">✕</button>
-    <h2>Proteus.AI — prototype de faisabilité</h2>
-    <p class="sub">Croiser le tracking des porte-conteneurs avec l’analyse du risque géopolitique.</p>
-    <h4>Ce qui est réel dans ce prototype</h4>
-    <ul>
-      <li>Les <b>8 zones à risque</b>, leurs scores et le contexte : basés sur la situation géopolitique réelle (zones listées par le Joint War Committee, attaques en mer Rouge, guerre en mer Noire, piraterie dans le golfe de Guinée…).</li>
-      <li>Les <b>routes maritimes</b> : corridors réels du commerce conteneurisé, y compris le déroutement par le cap de Bonne-Espérance.</li>
-      <li>Les <b>armateurs</b> : les 9 premiers opérateurs mondiaux.</li>
-      <li>Le <b>moteur d’alerte</b> : détection de proximité et d’entrée en zone, classement d’exposition — c’est la vraie logique du produit final.</li>
-    </ul>
-    <h4>Ce qui est simulé</h4>
-    <ul>
-      <li>Les <b>positions des navires</b> : flotte fictive animée le long des corridors. En production, elles viendraient d’un flux AIS temps réel (aisstream.io, Spire Maritime, MarineTraffic…).</li>
-      <li>Le temps est accéléré (réglable en haut à droite) pour rendre les mouvements visibles.</li>
-    </ul>
-    <h4>Le temps réel est intégré 🛰️</h4>
-    <ul>
-      <li>Clique sur <b>« AIS direct »</b> dans l'en-tête et colle ta clé gratuite aisstream.io : les vrais navires remplacent la simulation, et tout le moteur (heatmap, alertes, classement) s'applique à leurs positions réelles.</li>
-      <li>⚠️ Fonctionne en ouvrant le fichier sur ton ordinateur — l'aperçu Claude bloque les connexions externes par sécurité.</li>
-    </ul>
-    <h4>Prochaines étapes</h4>
-    <ul>
-      <li><b>Scoring dynamique</b> : alimenter les scores avec GDELT / ACLED / UKMTO / IMB au lieu de valeurs fixées à la main.</li>
-      <li><b>Backend</b> : stockage des trajectoires, calculs de proximité côté serveur, notifications push / e-mail, comptes utilisateurs.</li>
-    </ul>
-    <p class="sub" style="margin-top:16px">Astuce : cliquez sur un navire ou une zone sur la carte, ou dans les classements. Molette pour zoomer, cliquer-glisser pour déplacer.</p>
+    <div id="aboutBody"></div>
   </div>
 </div>
 
 <div id="aismodal" class="aismodal" role="dialog" aria-modal="true" aria-label="Connexion AIS" style="position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:var(--ovl)">
   <div style="position:relative;width:min(520px,92vw);max-height:84vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px 28px">
     <button class="x" id="ax" aria-label="Fermer">✕</button>
-    <h2 style="font-size:17px;margin-bottom:4px">🛰️ Passer aux positions réelles</h2>
-    <p class="sub" style="color:var(--ink2);font-size:12.5px;margin-bottom:12px">
+    <h2 id="aisH2" style="font-size:17px;margin-bottom:4px">🛰️ Passer aux positions réelles</h2>
+    <p id="aisSub" class="sub" style="color:var(--ink2);font-size:12.5px;margin-bottom:12px">
       Flux AIS en direct fourni par <b>aisstream.io</b> (gratuit).</p>
-    <p style="font-size:13px;line-height:1.6">
+    <p id="aisSteps" style="font-size:13px;line-height:1.6">
       1. Crée un compte gratuit sur <b>aisstream.io</b> (connexion via ton compte GitHub)<br>
       2. Menu « API Keys » → génère une clé<br>
       3. Colle-la ci-dessous
     </p>
-    <label class="fld" for="aiskey">Clé API aisstream.io</label>
+    <label class="fld" for="aiskey" id="aisKeyLabel">Clé API aisstream.io</label>
     <div style="display:flex;gap:6px">
       <input type="password" id="aiskey" autocomplete="off" placeholder="ex. 2f7c1a…" style="flex:1">
       <button id="aiseye" title="Afficher / masquer la clé" style="flex:none">👁</button>
     </div>
-    <label class="fld" for="aisscope">Couverture</label>
+    <label class="fld" for="aisscope" id="aisScopeLabel">Couverture</label>
     <select id="aisscope">
       <option value="zones" selected>Zones à risque uniquement (recommandé)</option>
       <option value="world">Monde entier (très gros volume — tests courts)</option>
     </select>
-    <label class="checkrow"><input type="checkbox" id="aiscargo"> Cargos uniquement (type AIS 70–79 — peut mettre quelques minutes à se remplir)</label>
+    <label class="checkrow"><input type="checkbox" id="aiscargo"> <span id="aisCargoLabel">Cargos uniquement (type AIS 70–79 — peut mettre quelques minutes à se remplir)</span></label>
     <div style="display:flex;gap:8px;margin-top:16px">
       <button class="btn-primary" id="aisconnect">Se connecter</button>
       <button id="aiscancel">Annuler</button>
       <button id="aisforget" title="Effacer la clé mémorisée dans ce navigateur" style="margin-left:auto">Oublier la clé</button>
     </div>
     <div id="aisstatus"></div>
-    <p class="sub" style="color:var(--ink3);font-size:11.5px;margin-top:14px">
+    <p id="aisBottomWarn" class="sub" style="color:var(--ink3);font-size:11.5px;margin-top:14px">
       ⚠️ Dans l’aperçu Claude (artifact), les connexions externes sont bloquées par sécurité :
       pour le direct, télécharge <b>proteus-prototype.html</b> et ouvre-le sur ton ordinateur.
       Couverture : antennes côtières (les océans lointains ont des trous — c’est normal).
@@ -406,7 +353,76 @@ const RIVERS=[[928,296,929,297,930,298,932,298,933,296,935,291],[964,897,959,898
    (sources : GDELT, NGA ASAM, GDACS, USGS) et publiés dans risk.json.
    Un instantané est embarqué en secours pour l'usage hors-ligne. */
 const RISK_URL = 'https://valenskln.github.io/claude/risk.json';
-const RISK_SNAPSHOT = {"v":1,"updatedAt":"2026-07-17T09:14:25.218Z","sources":{"asam":false,"gdacs":true,"usgs":true,"meteo":true,"nhc":true,"gdelt":true},"zones":[{"id":"sulu","name":"Mers de Sulu · Célèbes","c":[6,120.5],"r":500,"type":"piraterie","jwc":false,"score":4.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":3,"met":0},"why":["alerte séisme GDACS niveau orange (Earthquake in Philippines)","alerte séisme GDACS niveau orange (Earthquake in Philippines)","alerte séisme GDACS niveau orange (Earthquake in Philippines)","alerte séisme GDACS niveau orange (Earthquake in Philippines)"],"hl":[],"inc":[],"ctx":"Historique d’enlèvements d’équipages par Abu Sayyaf (2016-2020), fortement réduit par les patrouilles trilatérales Indonésie–Malaisie–Philippines. Vigilance maintenue.","f":["Catastrophe naturelle"]},{"id":"venezuela","name":"Caraïbes sud · Venezuela","c":[11.5,-65],"r":500,"type":"conflit","jwc":false,"score":4.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":3,"met":0},"why":["alerte séisme GDACS niveau rouge (Earthquake in Venezuela)","alerte séisme GDACS niveau rouge (Earthquake in Venezuela)","alerte séisme GDACS niveau orange (Earthquake in Venezuela)","alerte séisme GDACS niveau orange (Earthquake in Venezuela)"],"hl":[],"inc":[],"ctx":"Contentieux Venezuela–Guyana sur l’Essequibo (pétrole offshore), sanctions sur le brut vénézuélien, opérations navales américaines anti-narcotiques : cocktail volatil.","f":["Catastrophe naturelle"]},{"id":"bab-el-mandeb","name":"Bab el-Mandeb","c":[12.6,43.4],"r":300,"type":"détroit","jwc":true,"score":4.3,"trend":"▶","parts":{"base":3.5,"mar":0,"con":0.8,"nat":0,"met":0},"why":["signaux conflictuels dans la presse (2 titres en 24 h)","zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"Telegraph says Houthis preparing to block Bab al - Mandab Strait","u":"https://www.khaama.com/telegraph-says-houthis-preparing-to-block-bab-al-mandab-strait/","s":"khaama.com","d":"20260717T083000Z"},{"t":"Iran Perintahkan Houthi Blokade Laut Merah Jika AS Bom Pembangkit Listrik","u":"https://jambi.tribunnews.com/news/1200477/iran-perintahkan-houthi-blokade-laut-merah-jika-as-bom-pembangkit-listrik","s":"jambi.tribunnews.com","d":"20260717T071500Z"}],"inc":[],"ctx":"Verrou sud de la mer Rouge (30 km de large), passage obligé Europe–Asie. Depuis fin 2023, cible régulière d’attaques houthies (missiles, drones navals) qui ont provoqué le plus grand déroutement du commerce maritime depuis des décennies.","f":["Conflit armé","Zone JWC"]},{"id":"azov-kerch","name":"Mer d’Azov · Kerch","c":[45.9,36.4],"r":300,"type":"conflit","jwc":true,"score":3.9,"trend":"▶","parts":{"base":3.5,"mar":0,"con":0.4,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"Ukraine Strikes Kerch Rail Hub , Russian Vessels as Moscow Rushes to Protect Tankers","u":"https://www.kyivpost.com/post/80455","s":"kyivpost.com","d":"20260717T084500Z"}],"inc":[],"ctx":"Mer fermée contrôlée par la Russie depuis 2022, pont de Kerch régulièrement ciblé. Navigation commerciale internationale quasi inexistante.","f":["Zone JWC"]},{"id":"blacksea-nw","name":"Mer Noire nord-ouest","c":[45.3,30.8],"r":400,"type":"conflit","jwc":true,"score":3.5,"trend":"▼","parts":{"base":3.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"At least 2 killed , 8 injured in Russian missile strike on Ukraine Odesa","u":"https://news.az/news/at-least-2-killed-8-injured-in-russian-missile-strike-on-ukraine-s-odesa","s":"news.az","d":"20260717T054500Z"},{"t":"Dy të vdekur dhe tetë të plagosur nga sulmet ruse në Odesa , dëmtohet një bllok banimi","u":"https://albeu.com/lajme/bota/dy-te-vdekur-dhe-tete-te-plagosur-nga-sulmet-ruse-ne-odesa-demtohet-nje-bllok-banimi/930361/","s":"albeu.com","d":"20260717T054500Z"}],"inc":[],"ctx":"Guerre Russie–Ukraine : corridor céréalier ukrainien sous menace permanente, frappes sur les ports d’Odesa, mines dérivantes. Zone d’exclusion assurantielle majeure.","f":["Zone JWC"]},{"id":"hormuz","name":"Détroit d’Ormuz","c":[26.4,56.4],"r":300,"type":"détroit","jwc":true,"score":3.4,"trend":"▼","parts":{"base":3,"mar":0,"con":0.4,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"USA bomber iranske broer ved Hormuz – olieprisen stiger på eskalering","u":"https://npinvestor.dk/nyheder/usa-bomber-iranske-broer-ved-hormuz-olieprisen-stiger-paa-eskalering/","s":"npinvestor.dk","d":"20260717T081500Z"},{"t":"Nigerians Want Cheaper Petrol , but Renewed Hormuz Battle Wont Make That Happen","u":"https://allafrica.com/stories/202607170070.html","s":"allafrica.com","d":"20260717T084500Z"},{"t":"Shipping through Strait of Hormuz slows as US - Iran conflict intensifies","u":"https://dailypost.ng/2026/07/17/shipping-through-strait-of-hormuz-slows-as-us-iran-conflict-intensifies/","s":"dailypost.ng","d":"20260717T084500Z"}],"inc":[],"ctx":"Un cinquième du pétrole mondial dans un goulet de 40 km. Saisies de navires par les Gardiens de la révolution, brouillage GPS récurrent, menace de fermeture brandie à chaque escalade avec l’Iran.","f":["Zone JWC"]},{"id":"aden","name":"Golfe d’Aden","c":[12.8,48.5],"r":450,"type":"mixte","jwc":true,"score":3,"trend":"▶","parts":{"base":3,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Zone de transit sous escorte internationale (opérations Atalanta, Prosperity Guardian). Cumul historique piraterie somalienne + attaques houthies côté yéménite.","f":["Zone JWC"]},{"id":"scs","name":"Mer de Chine méridionale","c":[11,114],"r":800,"type":"conflit","jwc":false,"score":3,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":1.5,"met":0},"why":["alerte séisme GDACS niveau orange (Earthquake in Philippines)"],"hl":[],"inc":[],"ctx":"Revendications chinoises contestées (ligne en neuf traits), îlots militarisés, incidents répétés entre garde-côtes chinois et navires philippins ou vietnamiens. Un tiers du commerce mondial y transite.","f":["Catastrophe naturelle"]},{"id":"gog","name":"Golfe de Guinée","c":[3.2,3.5],"r":550,"type":"piraterie","jwc":true,"score":3,"trend":"▶","parts":{"base":3,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Longtemps zone la plus dangereuse du monde pour les équipages (enlèvements contre rançon). Net recul depuis 2021 grâce aux patrouilles régionales, mais capacité criminelle intacte au large du Nigeria.","f":["Zone JWC"]},{"id":"niger-delta","name":"Delta du Niger","c":[4.3,6.5],"r":250,"type":"piraterie","jwc":true,"score":3,"trend":"▶","parts":{"base":3,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Cœur pétrolier nigérian : sabotages d’oléoducs, vol de brut à échelle industrielle, groupes armés fluviaux. Source historique de la piraterie du golfe de Guinée.","f":["Zone JWC"]},{"id":"oman-gulf","name":"Golfe d’Oman","c":[24.8,58.5],"r":350,"type":"mixte","jwc":true,"score":2.9,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0.4,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"CENTCOM says US Marines boarded vessel in Gulf of Oman , redirects 3 others enforcing blockade","u":"http://www.asiabulletin.com/news/279192803/centcom-says-us-marines-boarded-vessel-in-gulf-of-oman-redirects-3-others-enforcing-blockade","s":"asiabulletin.com","d":"20260717T083000Z"}],"inc":[],"ctx":"Antichambre d’Ormuz. Attaques de tankers en 2019 (mines-ventouses), saisies et abordages par drones : premier signal des escalades avec l’Iran.","f":["Zone JWC"]},{"id":"redsea-n","name":"Mer Rouge nord","c":[24,36.5],"r":500,"type":"conflit","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"Iran tells Houthis to close Red Sea if US hits power network","u":"https://arynews.tv/iran-tells-houthis-to-close-red-sea-if-us-hits-power-network","s":"arynews.tv","d":"20260717T053000Z"}],"inc":[],"ctx":"Corridor d’approche du canal de Suez. Exposée par contagion aux tensions du sud de la mer Rouge ; mines et embarcations piégées y ont été signalées par le passé.","f":["Zone JWC"]},{"id":"somalia","name":"Bassin somalien","c":[4,51],"r":700,"type":"piraterie","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"US Bombs Somalia for 75th Time This Year","u":"https://news.antiwar.com/2026/07/16/us-bombs-somalia-for-75th-time-this-year-2/","s":"news.antiwar.com","d":"20260716T201500Z"}],"inc":[],"ctx":"Épicentre mondial de la piraterie 2008-2012 (plus de 200 attaques/an au pic). Fortement réduite par les patrouilles internationales, avec des résurgences opportunistes lors des relâchements de vigilance.","f":["Zone JWC"]},{"id":"persian-gulf","name":"Golfe Persique","c":[27,51.5],"r":500,"type":"conflit","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"U . S . Forces Disable Non - Compliant Vessel in Arabian Gulf","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260715-centcom01.htm","s":"globalsecurity.org","d":"20260716T123000Z"}],"inc":[],"ctx":"Concentration mondiale d’infrastructures pétrolières et de bases militaires. Théâtre direct de toute confrontation Iran / États du Golfe / marines occidentales.","f":["Zone JWC"]},{"id":"levant","name":"Méditerranée orientale","c":[33.8,34.5],"r":400,"type":"conflit","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"A former prime minister who led Israel out of Lebanon fears mistakes are being repeated","u":"http://www.bozemandailychronicle.com/ap_news/international/a-former-prime-minister-who-led-israel-out-of-lebanon-fears-mistakes-are-being-repeated/article_eb0d1bc9-93c0-5850-b8ac-b3b8d82c96be.html","s":"bozemandailychronicle.com","d":"20260717T084500Z"},{"t":"Tras denunciar que fue violada durante una detención de cinco días en Israel , una activista alemana de la flotilla para Gaza presentó una d","u":"https://www.elimparcial.com/mundo/2026/07/17/tras-denunciar-que-fue-violada-durante-una-detencion-de-cinco-dias-en-israel-una-activista-alemana-de-la-flotilla-para-gaza-presento-una-denuncia-penal-para-que-investiguen-a-las-guardias-senaladas/","s":"elimparcial.com","d":"20260717T071500Z"}],"inc":[],"ctx":"Façade maritime des conflits du Levant (Gaza, Liban, Syrie). Ports frappés ou bloqués par phases, gisements gaziers offshore disputés, forte présence navale internationale.","f":["Zone JWC"]},{"id":"libya","name":"Côte libyenne","c":[32.8,15],"r":450,"type":"conflit","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Pays fracturé entre gouvernements rivaux ; terminaux pétroliers régulièrement bloqués au gré des rapports de force. Zone d’opérations migratoires et navales denses.","f":["Zone JWC"]},{"id":"taiwan","name":"Détroit de Taïwan","c":[24.2,119.6],"r":350,"type":"détroit","jwc":false,"score":2,"trend":"▶","parts":{"base":2,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[{"t":"PNG ousts Taiwanese officials , seeks to  reassure  China after Australian treaty - 17 - Jul - 2026","u":"https://home.nzcity.co.nz/news/article.aspx?id=450127&fm=psp,tst","s":"home.nzcity.co.nz","d":"20260717T074500Z"}],"inc":[],"ctx":"Point de friction majeur Chine–Taïwan–États-Unis. Exercices militaires d’encerclement récurrents ; un blocus paralyserait ~50 % de la flotte mondiale de porte-conteneurs qui croise à proximité.","f":["Passage stratégique"]},{"id":"suez","name":"Canal de Suez","c":[30.8,32.35],"r":200,"type":"détroit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"12 % du commerce mondial. Point de fragilité logistique extrême : l’échouement de l’Ever Given (2021) a coûté ~10 Md$/jour au commerce mondial. Les revenus du canal chutent fortement à chaque crise en mer Rouge.","f":["Passage stratégique"]},{"id":"bosphorus","name":"Bosphore · Dardanelles","c":[40.6,28.2],"r":250,"type":"détroit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Seule sortie de la mer Noire, régie par la convention de Montreux (la Turquie peut fermer aux navires de guerre). Trafic dense, incidents de navigation fréquents, enjeu direct de la guerre en Ukraine.","f":["Passage stratégique"]},{"id":"malacca","name":"Malacca · Singapour","c":[2.8,100.8],"r":400,"type":"détroit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Passage le plus fréquenté du monde (~90 000 navires/an). Vols à main armée opportunistes sur navires au mouillage, risque de collision élevé ; suivi ReCAAP permanent.","f":["Passage stratégique"]},{"id":"baltic","name":"Mer Baltique","c":[58.5,20],"r":600,"type":"conflit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[{"t":"Budrys in Brussels emphasized continued support for Ukraine , pressure on Russia , and countering hybrid threats in the Baltic Sea","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260714-lithuania-mfa01.htm","s":"globalsecurity.org","d":"20260716T123000Z"}],"inc":[],"ctx":"Nouvelle ligne de front hybride : sabotages de câbles et gazoducs sous-marins, « flotte fantôme » russe sous sanctions, brouillage GNSS massif signalé par les équipages depuis 2023.","f":["Veille de fond"]},{"id":"haiti","name":"Haïti · passage du Vent","c":[19,-73],"r":300,"type":"conflit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Effondrement sécuritaire : gangs contrôlant le port de Port-au-Prince, pillages de navires à quai, approvisionnement du pays sous escorte.","f":["Veille de fond"]},{"id":"mozambique","name":"Canal du Mozambique","c":[-12.5,41.5],"r":500,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Route alternative du Cap et bassin gazier majeur (projets GNL). Insurrection jihadiste au Cabo Delgado depuis 2017, avec incursions côtières épisodiques.","f":["Veille de fond"]},{"id":"gibraltar","name":"Détroit de Gibraltar","c":[35.95,-5.6],"r":200,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Porte Atlantique–Méditerranée (~300 navires/jour). Risque surtout opérationnel (densité, orques attaquant les safrans depuis 2020) ; épisodes de tensions autour des eaux de Gibraltar.","f":["Passage stratégique"]},{"id":"ecs","name":"Mer de Chine orientale","c":[26.5,124],"r":450,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Contentieux sino-japonais autour des Senkaku/Diaoyu ; incursions quasi quotidiennes de garde-côtes chinois. Corridor d’accès aux grands ports chinois, japonais et coréens.","f":["Veille de fond"]},{"id":"korea","name":"Mer Jaune · Corée","c":[37.5,124.5],"r":400,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[{"t":"North Korea calls Seoul a  puppet  for its role in US maritime exercise","u":"https://www.freemalaysiatoday.com/category/world/2026/07/17/north-korea-calls-seoul-a-puppet-for-its-role-in-us-maritime-exercise","s":"freemalaysiatoday.com","d":"20260717T070000Z"}],"inc":[],"ctx":"Tirs de missiles nord-coréens au-dessus des routes maritimes, frontière maritime contestée (ligne de limite nord), incidents navals intercoréens historiques.","f":["Veille de fond"]},{"id":"sunda","name":"Détroit de la Sonde","c":[-6,105.5],"r":200,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Alternative à Malacca entre Java et Sumatra. Risque avant tout naturel : volcan Anak Krakatau actif (tsunami meurtrier en 2018), forte sismicité.","f":["Passage stratégique"]},{"id":"luzon","name":"Détroit de Luzon","c":[20.8,121],"r":300,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Porte du Pacifique entre Taïwan et les Philippines, sur-fréquentée par les marines militaires ; couloir de typhons une bonne partie de l’année.","f":["Passage stratégique"]},{"id":"bengal","name":"Golfe du Bengale","c":[16.5,92.5],"r":500,"type":"mixte","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Cyclones parmi les plus meurtriers du monde ; guerre civile birmane débordant sur la façade maritime (Rakhine), trafics et flux de réfugiés rohingyas.","f":["Veille de fond"]},{"id":"dover","name":"Manche · Pas de Calais","c":[50.5,0.5],"r":300,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Détroit le plus fréquenté du monde avec Malacca. Risque essentiellement opérationnel : densité extrême, météo, traversées migratoires créant des situations SAR quotidiennes.","f":["Passage stratégique"]},{"id":"danish","name":"Détroits danois","c":[55.5,11.5],"r":250,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Verrou d’entrée-sortie de la Baltique, transit du pétrole russe sous sanctions (inspections renforcées, navires de la flotte fantôme non assurés).","f":["Passage stratégique"]},{"id":"barents","name":"Mer de Barents","c":[70.5,35],"r":500,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Bastion de la Flotte du Nord russe (sous-marins nucléaires). Militarisation croissante de l’Arctique et ouverture progressive de la route maritime du Nord.","f":["Veille de fond"]},{"id":"panama","name":"Canal de Panama","c":[9.1,-79.6],"r":250,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"5 % du commerce mondial. Vulnérabilité climatique structurelle : les sécheresses réduisent les transits (files d’attente, enchères de créneaux). Regain de tensions politiques autour de son statut.","f":["Passage stratégique"]},{"id":"guayaquil","name":"Golfe de Guayaquil","c":[-2.8,-80.8],"r":250,"type":"piraterie","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Premier port bananier mondial devenu plaque tournante de la cocaïne vers l’Europe : contaminations de conteneurs, violences portuaires, abordages de navires au mouillage.","f":["Veille de fond"]},{"id":"lombok","name":"Lombok · Makassar","c":[-7,116.5],"r":350,"type":"détroit","jwc":false,"score":0.5,"trend":"▶","parts":{"base":0.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Route de contournement en eaux profondes pour les plus gros navires. Faible risque politique ; sismicité et trafic croissant.","f":["Passage stratégique"]},{"id":"capegoodhope","name":"Cap de Bonne-Espérance","c":[-35.2,19],"r":350,"type":"détroit","jwc":false,"score":0.5,"trend":"▶","parts":{"base":0.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Route de déroutement quand Suez/mer Rouge se ferment (+10 à 14 jours). Mer parmi les plus dures du monde (vagues scélérates) ; surcharge portuaire sud-africaine chronique.","f":["Passage stratégique"]}]};
+const RISK_SNAPSHOT = {"v":1,"updatedAt":"2026-07-16T12:58:34.470Z","sources":{"asam":false,"gdacs":true,"usgs":true,"meteo":true,"nhc":true,"gdelt":true},"zones":[{"id":"hormuz","name":"Détroit d’Ormuz","c":[26.4,56.4],"r":300,"type":"détroit","jwc":true,"score":5.5,"trend":"▶","parts":{"base":3,"mar":0,"con":2.5,"nat":0,"met":0},"why":["actualité conflictuelle : 6 titres évoquant attaques ou tensions en 24 h","zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"Trump Walks Back Threat Of Hormuz Transit Fee ; US Strikes Iran As Tehran Targets Gulf Shipping","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260714-rferl02.htm","s":"globalsecurity.org","d":"20260716T123000Z"},{"t":"U . S ., Iran exchange fresh attacks after Hormuz blockade resumes","u":"https://www.globalsecurity.org/wmd/library/news/iran/2026/07/iran-260715-pdo01.htm","s":"globalsecurity.org","d":"20260716T123000Z"},{"t":"Hormuz Crossings Decline as US Renews Iran Blockade","u":"https://www.oedigital.com/news/541268-hormuz-crossings-decline-as-us-renews-iran-blockade","s":"oedigital.com","d":"20260716T123000Z"}],"inc":[],"ctx":"Un cinquième du pétrole mondial dans un goulet de 40 km. Saisies de navires par les Gardiens de la révolution, brouillage GPS récurrent, menace de fermeture brandie à chaque escalade avec l’Iran.","f":["Conflit armé","Zone JWC"],"name_en":"Strait of Hormuz","ctx_en":"A fifth of the world’s oil passes through this 40 km chokepoint. Vessel seizures by the Revolutionary Guards, recurring GPS jamming, and threats of closure raised at every escalation with Iran.","f_en":["Armed conflict","JWC-listed zone"]},{"id":"sulu","name":"Mers de Sulu · Célèbes","c":[6,120.5],"r":500,"type":"piraterie","jwc":false,"score":4.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":3,"met":0},"why":["alerte séisme GDACS niveau orange (Earthquake in Philippines)","alerte séisme GDACS niveau orange (Earthquake in Philippines)","alerte séisme GDACS niveau orange (Earthquake in Philippines)","alerte séisme GDACS niveau orange (Earthquake in Philippines)"],"hl":[],"inc":[],"ctx":"Historique d’enlèvements d’équipages par Abu Sayyaf (2016-2020), fortement réduit par les patrouilles trilatérales Indonésie–Malaisie–Philippines. Vigilance maintenue.","f":["Catastrophe naturelle"],"name_en":"Sulu · Celebes Seas","ctx_en":"A history of crew kidnappings by Abu Sayyaf (2016–2020), sharply reduced by trilateral Indonesia–Malaysia–Philippines patrols. Vigilance maintained.","f_en":["Natural disaster"]},{"id":"venezuela","name":"Caraïbes sud · Venezuela","c":[11.5,-65],"r":500,"type":"conflit","jwc":false,"score":4.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":3,"met":0},"why":["alerte séisme GDACS niveau rouge (Earthquake in Venezuela)","alerte séisme GDACS niveau rouge (Earthquake in Venezuela)","alerte séisme GDACS niveau orange (Earthquake in Venezuela)","alerte séisme GDACS niveau orange (Earthquake in Venezuela)"],"hl":[],"inc":[],"ctx":"Contentieux Venezuela–Guyana sur l’Essequibo (pétrole offshore), sanctions sur le brut vénézuélien, opérations navales américaines anti-narcotiques : cocktail volatil.","f":["Catastrophe naturelle"],"name_en":"Southern Caribbean · Venezuela","ctx_en":"Venezuela–Guyana dispute over the Essequibo (offshore oil), sanctions on Venezuelan crude, US anti-narcotics naval operations: a volatile mix.","f_en":["Natural disaster"]},{"id":"bab-el-mandeb","name":"Bab el-Mandeb","c":[12.6,43.4],"r":300,"type":"détroit","jwc":true,"score":4.3,"trend":"▶","parts":{"base":3.5,"mar":0,"con":0.8,"nat":0,"met":0},"why":["signaux conflictuels dans la presse (2 titres en 24 h)","zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"Security Council Extends Secretary - General Reporting Mandate on Houthi Attacks in Red Sea for Six Months , Adopting Resolution 2826 ( 2026","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260714-unsc02.htm","s":"globalsecurity.org","d":"20260716T123000Z"},{"t":"Irã ordenou que houthis fechem estreito do Mar Vermelho caso EUA ataquem rede elétrica do país , diz agência","u":"https://g1.globo.com/mundo/noticia/2026/07/16/ira-houthis-estreito-mar-vermelho-eua-ataquem-rede-eletrica.ghtml","s":"g1.globo.com","d":"20260716T123000Z"}],"inc":[],"ctx":"Verrou sud de la mer Rouge (30 km de large), passage obligé Europe–Asie. Depuis fin 2023, cible régulière d’attaques houthies (missiles, drones navals) qui ont provoqué le plus grand déroutement du commerce maritime depuis des décennies.","f":["Conflit armé","Zone JWC"],"name_en":"Bab el-Mandeb","ctx_en":"Southern chokepoint of the Red Sea (30 km wide), a mandatory Europe–Asia passage. Since late 2023, a regular target of Houthi attacks (missiles, naval drones) that triggered the largest rerouting of maritime trade in decades.","f_en":["Armed conflict","JWC-listed zone"]},{"id":"blacksea-nw","name":"Mer Noire nord-ouest","c":[45.3,30.8],"r":400,"type":"conflit","jwc":true,"score":4.3,"trend":"▶","parts":{"base":3.5,"mar":0,"con":0.8,"nat":0,"met":0},"why":["signaux conflictuels dans la presse (2 titres en 24 h)","zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"Russia strikes Ukrainian drone industry and Black Sea ports MOD","u":"http://www.philippinetimes.com/news/279191132/russia-strikes-ukrainian-drone-industry-and-black-sea-ports-mod","s":"philippinetimes.com","d":"20260716T121500Z"},{"t":"Russia strikes Ukrainian drone industry and Black Sea ports","u":"http://www.russiaherald.com/news/279191133/russia-strikes-ukrainian-drone-industry-and-black-sea-ports-mod","s":"russiaherald.com","d":"20260716T120000Z"}],"inc":[],"ctx":"Guerre Russie–Ukraine : corridor céréalier ukrainien sous menace permanente, frappes sur les ports d’Odesa, mines dérivantes. Zone d’exclusion assurantielle majeure.","f":["Conflit armé","Zone JWC"],"name_en":"Northwestern Black Sea","ctx_en":"Russia–Ukraine war: Ukraine’s grain export corridor under constant threat, strikes on Odesa’s ports, drifting mines. A major insurance exclusion zone.","f_en":["Armed conflict","JWC-listed zone"]},{"id":"azov-kerch","name":"Mer d’Azov · Kerch","c":[45.9,36.4],"r":300,"type":"conflit","jwc":true,"score":3.5,"trend":"▶","parts":{"base":3.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Mer fermée contrôlée par la Russie depuis 2022, pont de Kerch régulièrement ciblé. Navigation commerciale internationale quasi inexistante.","f":["Zone JWC"],"name_en":"Sea of Azov · Kerch","ctx_en":"A closed sea controlled by Russia since 2022, with the Kerch bridge a recurring target. International commercial shipping is nearly nonexistent.","f_en":["JWC-listed zone"]},{"id":"aden","name":"Golfe d’Aden","c":[12.8,48.5],"r":450,"type":"mixte","jwc":true,"score":3,"trend":"▶","parts":{"base":3,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Zone de transit sous escorte internationale (opérations Atalanta, Prosperity Guardian). Cumul historique piraterie somalienne + attaques houthies côté yéménite.","f":["Zone JWC"],"name_en":"Gulf of Aden","ctx_en":"Transit zone under international escort (Operations Atalanta, Prosperity Guardian). A historical overlap of Somali piracy and Houthi attacks on the Yemeni side.","f_en":["JWC-listed zone"]},{"id":"scs","name":"Mer de Chine méridionale","c":[11,114],"r":800,"type":"conflit","jwc":false,"score":3,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":1.5,"met":0},"why":["alerte séisme GDACS niveau orange (Earthquake in Philippines)"],"hl":[],"inc":[],"ctx":"Revendications chinoises contestées (ligne en neuf traits), îlots militarisés, incidents répétés entre garde-côtes chinois et navires philippins ou vietnamiens. Un tiers du commerce mondial y transite.","f":["Catastrophe naturelle"],"name_en":"South China Sea","ctx_en":"Contested Chinese claims (nine-dash line), militarized islets, repeated incidents between Chinese coast guard and Philippine or Vietnamese vessels. A third of world trade transits here.","f_en":["Natural disaster"]},{"id":"gog","name":"Golfe de Guinée","c":[3.2,3.5],"r":550,"type":"piraterie","jwc":true,"score":3,"trend":"▶","parts":{"base":3,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Longtemps zone la plus dangereuse du monde pour les équipages (enlèvements contre rançon). Net recul depuis 2021 grâce aux patrouilles régionales, mais capacité criminelle intacte au large du Nigeria.","f":["Zone JWC"],"name_en":"Gulf of Guinea","ctx_en":"Long the world’s most dangerous waters for crews (kidnap-for-ransom). Sharply down since 2021 thanks to regional patrols, but criminal capacity remains intact off Nigeria.","f_en":["JWC-listed zone"]},{"id":"niger-delta","name":"Delta du Niger","c":[4.3,6.5],"r":250,"type":"piraterie","jwc":true,"score":3,"trend":"▶","parts":{"base":3,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Cœur pétrolier nigérian : sabotages d’oléoducs, vol de brut à échelle industrielle, groupes armés fluviaux. Source historique de la piraterie du golfe de Guinée.","f":["Zone JWC"],"name_en":"Niger Delta","ctx_en":"Nigeria’s oil heartland: pipeline sabotage, industrial-scale crude theft, armed river gangs. The historical source of Gulf of Guinea piracy.","f_en":["JWC-listed zone"]},{"id":"redsea-n","name":"Mer Rouge nord","c":[24,36.5],"r":500,"type":"conflit","jwc":true,"score":2.9,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0.4,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"Security Council Extends Secretary - General Reporting Mandate on Houthi Attacks in Red Sea for Six Months , Adopting Resolution 2826 ( 2026","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260714-unsc02.htm","s":"globalsecurity.org","d":"20260716T123000Z"}],"inc":[],"ctx":"Corridor d’approche du canal de Suez. Exposée par contagion aux tensions du sud de la mer Rouge ; mines et embarcations piégées y ont été signalées par le passé.","f":["Zone JWC"],"name_en":"Northern Red Sea","ctx_en":"Approach corridor to the Suez Canal. Exposed by spillover from tensions in the southern Red Sea; mines and booby-trapped boats have been reported here in the past.","f_en":["JWC-listed zone"]},{"id":"somalia","name":"Bassin somalien","c":[4,51],"r":700,"type":"piraterie","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Épicentre mondial de la piraterie 2008-2012 (plus de 200 attaques/an au pic). Fortement réduite par les patrouilles internationales, avec des résurgences opportunistes lors des relâchements de vigilance.","f":["Zone JWC"],"name_en":"Somali Basin","ctx_en":"The world’s piracy epicenter in 2008–2012 (over 200 attacks a year at its peak). Sharply reduced by international patrols, with opportunistic resurgences whenever vigilance eases.","f_en":["JWC-listed zone"]},{"id":"persian-gulf","name":"Golfe Persique","c":[27,51.5],"r":500,"type":"conflit","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[{"t":"U . S . Forces Disable Non - Compliant Vessel in Arabian Gulf","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260715-centcom01.htm","s":"globalsecurity.org","d":"20260716T123000Z"}],"inc":[],"ctx":"Concentration mondiale d’infrastructures pétrolières et de bases militaires. Théâtre direct de toute confrontation Iran / États du Golfe / marines occidentales.","f":["Zone JWC"],"name_en":"Persian Gulf","ctx_en":"World’s densest concentration of oil infrastructure and military bases. Direct theater for any Iran / Gulf states / Western navies confrontation.","f_en":["JWC-listed zone"]},{"id":"oman-gulf","name":"Golfe d’Oman","c":[24.8,58.5],"r":350,"type":"mixte","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Antichambre d’Ormuz. Attaques de tankers en 2019 (mines-ventouses), saisies et abordages par drones : premier signal des escalades avec l’Iran.","f":["Zone JWC"],"name_en":"Gulf of Oman","ctx_en":"Hormuz’s antechamber. Tanker attacks in 2019 (limpet mines), drone seizures and boardings: the first warning signs of escalation with Iran.","f_en":["JWC-listed zone"]},{"id":"levant","name":"Méditerranée orientale","c":[33.8,34.5],"r":400,"type":"conflit","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Façade maritime des conflits du Levant (Gaza, Liban, Syrie). Ports frappés ou bloqués par phases, gisements gaziers offshore disputés, forte présence navale internationale.","f":["Zone JWC"],"name_en":"Eastern Mediterranean","ctx_en":"Maritime front of the Levant conflicts (Gaza, Lebanon, Syria). Ports struck or blockaded in phases, disputed offshore gas fields, heavy international naval presence.","f_en":["JWC-listed zone"]},{"id":"libya","name":"Côte libyenne","c":[32.8,15],"r":450,"type":"conflit","jwc":true,"score":2.5,"trend":"▶","parts":{"base":2.5,"mar":0,"con":0,"nat":0,"met":0},"why":["zone listée par les assureurs de guerre (Joint War Committee)"],"hl":[],"inc":[],"ctx":"Pays fracturé entre gouvernements rivaux ; terminaux pétroliers régulièrement bloqués au gré des rapports de force. Zone d’opérations migratoires et navales denses.","f":["Zone JWC"],"name_en":"Libyan Coast","ctx_en":"A country split between rival governments; oil terminals regularly blocked depending on the balance of power. A dense migration and naval-operations zone.","f_en":["JWC-listed zone"]},{"id":"taiwan","name":"Détroit de Taïwan","c":[24.2,119.6],"r":350,"type":"détroit","jwc":false,"score":2,"trend":"▶","parts":{"base":2,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[{"t":"PLA activities in the waters and airspace around Taiwan","u":"https://www.globalsecurity.org/wmd/library/news/taiwan/2026/taiwan-260714-roc-mnd01.htm","s":"globalsecurity.org","d":"20260716T123000Z"}],"inc":[],"ctx":"Point de friction majeur Chine–Taïwan–États-Unis. Exercices militaires d’encerclement récurrents ; un blocus paralyserait ~50 % de la flotte mondiale de porte-conteneurs qui croise à proximité.","f":["Passage stratégique"],"name_en":"Taiwan Strait","ctx_en":"Major China–Taiwan–US friction point. Recurring encirclement military exercises; a blockade would paralyze roughly 50% of the world’s container fleet, which passes nearby.","f_en":["Strategic chokepoint"]},{"id":"baltic","name":"Mer Baltique","c":[58.5,20],"r":600,"type":"conflit","jwc":false,"score":1.9,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0.4,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[{"t":"Budrys in Brussels emphasized continued support for Ukraine , pressure on Russia , and countering hybrid threats in the Baltic Sea","u":"https://www.globalsecurity.org/military/library/news/2026/07/mil-260714-lithuania-mfa01.htm","s":"globalsecurity.org","d":"20260716T123000Z"}],"inc":[],"ctx":"Nouvelle ligne de front hybride : sabotages de câbles et gazoducs sous-marins, « flotte fantôme » russe sous sanctions, brouillage GNSS massif signalé par les équipages depuis 2023.","f":["Veille de fond"],"name_en":"Baltic Sea","ctx_en":"A new hybrid front line: sabotage of undersea cables and pipelines, Russia’s sanctioned “shadow fleet”, and massive GNSS jamming reported by crews since 2023.","f_en":["Baseline watch"]},{"id":"suez","name":"Canal de Suez","c":[30.8,32.35],"r":200,"type":"détroit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"12 % du commerce mondial. Point de fragilité logistique extrême : l’échouement de l’Ever Given (2021) a coûté ~10 Md$/jour au commerce mondial. Les revenus du canal chutent fortement à chaque crise en mer Rouge.","f":["Passage stratégique"],"name_en":"Suez Canal","ctx_en":"12% of global trade. An extreme logistics choke point: the grounding of the Ever Given (2021) cost world trade roughly $10bn a day. Canal revenue drops sharply with every Red Sea crisis.","f_en":["Strategic chokepoint"]},{"id":"bosphorus","name":"Bosphore · Dardanelles","c":[40.6,28.2],"r":250,"type":"détroit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Seule sortie de la mer Noire, régie par la convention de Montreux (la Turquie peut fermer aux navires de guerre). Trafic dense, incidents de navigation fréquents, enjeu direct de la guerre en Ukraine.","f":["Passage stratégique"],"name_en":"Bosphorus · Dardanelles","ctx_en":"The Black Sea’s only exit, governed by the Montreux Convention (Turkey can close it to warships). Dense traffic, frequent navigation incidents, a direct stake in the Ukraine war.","f_en":["Strategic chokepoint"]},{"id":"malacca","name":"Malacca · Singapour","c":[2.8,100.8],"r":400,"type":"détroit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Passage le plus fréquenté du monde (~90 000 navires/an). Vols à main armée opportunistes sur navires au mouillage, risque de collision élevé ; suivi ReCAAP permanent.","f":["Passage stratégique"],"name_en":"Malacca · Singapore","ctx_en":"The world’s busiest shipping lane (~90,000 vessels/year). Opportunistic armed robbery against anchored vessels, high collision risk; under permanent ReCAAP monitoring.","f_en":["Strategic chokepoint"]},{"id":"haiti","name":"Haïti · passage du Vent","c":[19,-73],"r":300,"type":"conflit","jwc":false,"score":1.5,"trend":"▶","parts":{"base":1.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Effondrement sécuritaire : gangs contrôlant le port de Port-au-Prince, pillages de navires à quai, approvisionnement du pays sous escorte.","f":["Veille de fond"],"name_en":"Haiti · Windward Passage","ctx_en":"Security collapse: gangs controlling the port of Port-au-Prince, looting of docked vessels, the country’s supply convoys under armed escort.","f_en":["Baseline watch"]},{"id":"mozambique","name":"Canal du Mozambique","c":[-12.5,41.5],"r":500,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Route alternative du Cap et bassin gazier majeur (projets GNL). Insurrection jihadiste au Cabo Delgado depuis 2017, avec incursions côtières épisodiques.","f":["Veille de fond"],"name_en":"Mozambique Channel","ctx_en":"Alternative Cape route and a major gas basin (LNG projects). Jihadist insurgency in Cabo Delgado since 2017, with episodic coastal incursions.","f_en":["Baseline watch"]},{"id":"gibraltar","name":"Détroit de Gibraltar","c":[35.95,-5.6],"r":200,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Porte Atlantique–Méditerranée (~300 navires/jour). Risque surtout opérationnel (densité, orques attaquant les safrans depuis 2020) ; épisodes de tensions autour des eaux de Gibraltar.","f":["Passage stratégique"],"name_en":"Strait of Gibraltar","ctx_en":"Atlantic–Mediterranean gateway (~300 ships/day). Mostly operational risk (density, orcas attacking rudders since 2020); occasional tensions around Gibraltar’s waters.","f_en":["Strategic chokepoint"]},{"id":"ecs","name":"Mer de Chine orientale","c":[26.5,124],"r":450,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Contentieux sino-japonais autour des Senkaku/Diaoyu ; incursions quasi quotidiennes de garde-côtes chinois. Corridor d’accès aux grands ports chinois, japonais et coréens.","f":["Veille de fond"],"name_en":"East China Sea","ctx_en":"Sino-Japanese dispute over the Senkaku/Diaoyu islands; near-daily Chinese coast guard incursions. Access corridor to major Chinese, Japanese and Korean ports.","f_en":["Baseline watch"]},{"id":"korea","name":"Mer Jaune · Corée","c":[37.5,124.5],"r":400,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Tirs de missiles nord-coréens au-dessus des routes maritimes, frontière maritime contestée (ligne de limite nord), incidents navals intercoréens historiques.","f":["Veille de fond"],"name_en":"Yellow Sea · Korea","ctx_en":"North Korean missile launches over shipping lanes, a disputed maritime border (Northern Limit Line), and a history of inter-Korean naval incidents.","f_en":["Baseline watch"]},{"id":"sunda","name":"Détroit de la Sonde","c":[-6,105.5],"r":200,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Alternative à Malacca entre Java et Sumatra. Risque avant tout naturel : volcan Anak Krakatau actif (tsunami meurtrier en 2018), forte sismicité.","f":["Passage stratégique"],"name_en":"Sunda Strait","ctx_en":"Alternative to Malacca between Java and Sumatra. Mostly a natural hazard: the active Anak Krakatau volcano (deadly tsunami in 2018), high seismicity.","f_en":["Strategic chokepoint"]},{"id":"luzon","name":"Détroit de Luzon","c":[20.8,121],"r":300,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Porte du Pacifique entre Taïwan et les Philippines, sur-fréquentée par les marines militaires ; couloir de typhons une bonne partie de l’année.","f":["Passage stratégique"],"name_en":"Luzon Strait","ctx_en":"Pacific gateway between Taiwan and the Philippines, heavily used by military navies; a typhoon corridor for much of the year.","f_en":["Strategic chokepoint"]},{"id":"bengal","name":"Golfe du Bengale","c":[16.5,92.5],"r":500,"type":"mixte","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Cyclones parmi les plus meurtriers du monde ; guerre civile birmane débordant sur la façade maritime (Rakhine), trafics et flux de réfugiés rohingyas.","f":["Veille de fond"],"name_en":"Bay of Bengal","ctx_en":"Home to some of the world’s deadliest cyclones; Myanmar’s civil war spilling onto the coast (Rakhine), trafficking and Rohingya refugee flows.","f_en":["Baseline watch"]},{"id":"dover","name":"Manche · Pas de Calais","c":[50.5,0.5],"r":300,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Détroit le plus fréquenté du monde avec Malacca. Risque essentiellement opérationnel : densité extrême, météo, traversées migratoires créant des situations SAR quotidiennes.","f":["Passage stratégique"],"name_en":"English Channel · Dover Strait","ctx_en":"The world’s busiest strait alongside Malacca. Mostly operational risk: extreme density, weather, and migrant crossings creating daily SAR situations.","f_en":["Strategic chokepoint"]},{"id":"danish","name":"Détroits danois","c":[55.5,11.5],"r":250,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Verrou d’entrée-sortie de la Baltique, transit du pétrole russe sous sanctions (inspections renforcées, navires de la flotte fantôme non assurés).","f":["Passage stratégique"],"name_en":"Danish Straits","ctx_en":"The Baltic’s entry/exit chokepoint, transit route for sanctioned Russian oil (stepped-up inspections, uninsured shadow-fleet vessels).","f_en":["Strategic chokepoint"]},{"id":"barents","name":"Mer de Barents","c":[70.5,35],"r":500,"type":"conflit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Bastion de la Flotte du Nord russe (sous-marins nucléaires). Militarisation croissante de l’Arctique et ouverture progressive de la route maritime du Nord.","f":["Veille de fond"],"name_en":"Barents Sea","ctx_en":"Stronghold of Russia’s Northern Fleet (nuclear submarines). Growing militarization of the Arctic and gradual opening of the Northern Sea Route.","f_en":["Baseline watch"]},{"id":"panama","name":"Canal de Panama","c":[9.1,-79.6],"r":250,"type":"détroit","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"5 % du commerce mondial. Vulnérabilité climatique structurelle : les sécheresses réduisent les transits (files d’attente, enchères de créneaux). Regain de tensions politiques autour de son statut.","f":["Passage stratégique"],"name_en":"Panama Canal","ctx_en":"5% of global trade. Structural climate vulnerability: droughts reduce transits (queues, slot auctions). Renewed political tension around its status.","f_en":["Strategic chokepoint"]},{"id":"guayaquil","name":"Golfe de Guayaquil","c":[-2.8,-80.8],"r":250,"type":"piraterie","jwc":false,"score":1,"trend":"▶","parts":{"base":1,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Premier port bananier mondial devenu plaque tournante de la cocaïne vers l’Europe : contaminations de conteneurs, violences portuaires, abordages de navires au mouillage.","f":["Veille de fond"],"name_en":"Gulf of Guayaquil","ctx_en":"The world’s top banana port turned cocaine hub to Europe: container contamination, port violence, boarding of anchored vessels.","f_en":["Baseline watch"]},{"id":"lombok","name":"Lombok · Makassar","c":[-7,116.5],"r":350,"type":"détroit","jwc":false,"score":0.5,"trend":"▶","parts":{"base":0.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Route de contournement en eaux profondes pour les plus gros navires. Faible risque politique ; sismicité et trafic croissant.","f":["Passage stratégique"],"name_en":"Lombok · Makassar","ctx_en":"Deep-water bypass route for the largest vessels. Low political risk; seismicity and growing traffic.","f_en":["Strategic chokepoint"]},{"id":"capegoodhope","name":"Cap de Bonne-Espérance","c":[-35.2,19],"r":350,"type":"détroit","jwc":false,"score":0.5,"trend":"▶","parts":{"base":0.5,"mar":0,"con":0,"nat":0,"met":0},"why":["aucun signal dynamique notable — risque structurel de fond"],"hl":[],"inc":[],"ctx":"Route de déroutement quand Suez/mer Rouge se ferment (+10 à 14 jours). Mer parmi les plus dures du monde (vagues scélérates) ; surcharge portuaire sud-africaine chronique.","f":["Passage stratégique"],"name_en":"Cape of Good Hope","ctx_en":"The reroute when Suez/Red Sea close (+10 to 14 days). Among the roughest seas in the world (rogue waves); chronic South African port congestion.","f_en":["Strategic chokepoint"]}]};
+
+/* ================= Langue (FR/EN) ================= */
+let LANG = (function(){
+  try{ const saved=localStorage.getItem('proteus_lang'); if(saved==='fr'||saved==='en') return saved; }catch(e){}
+  return (navigator.language||'').toLowerCase().startsWith('en') ? 'en' : 'fr';
+})();
+function tr(fr,en){ return LANG==='en' ? en : fr; }
+function setLang(l){ LANG=l; try{ localStorage.setItem('proteus_lang', l); }catch(e){} }
+// zone/route : anglais si disponible (champ _en fourni par le pipeline), repli français sinon
+function zName(z){ return LANG==='en' ? (z.name_en||z.name) : z.name; }
+function zCtx(z){ return LANG==='en' ? (z.ctx_en||z.ctx) : z.ctx; }
+function zWhy(z){ return LANG==='en' ? (z.why_en&&z.why_en.length?z.why_en:z.why) : z.why; }
+function zTags(z){ return LANG==='en' ? (z.f_en&&z.f_en.length?z.f_en:z.f) : z.f; }
+function rName(route){ const r=ROUTES[route]; return LANG==='en' ? (r.name_en||r.name) : r.name; }
+function rNote(route){ const r=ROUTES[route]; return LANG==='en' ? (r.note_en||r.note) : r.note; }
+function locale(){ return LANG==='en' ? 'en-US' : 'fr-FR'; }
+
+const ABOUT_FR = `
+  <h2>Proteus.AI — prototype de faisabilité</h2>
+  <p class="sub">Croiser le tracking des porte-conteneurs avec l’analyse du risque géopolitique.</p>
+  <h4>Ce qui est réel dans ce prototype</h4>
+  <ul>
+    <li>Les <b>36 zones à risque</b> suivies, leurs scores et leur contexte : basés sur la situation géopolitique réelle et recalculés chaque heure (zones listées par le Joint War Committee, attaques en mer Rouge, guerre en mer Noire, piraterie dans le golfe de Guinée…).</li>
+    <li>Les <b>routes maritimes</b> : corridors réels du commerce conteneurisé, y compris le déroutement par le cap de Bonne-Espérance.</li>
+    <li>Les <b>armateurs</b> : les 9 premiers opérateurs mondiaux.</li>
+    <li>Le <b>moteur d’alerte</b> : détection de proximité et d’entrée en zone, classement d’exposition — c’est la vraie logique du produit final.</li>
+  </ul>
+  <h4>Ce qui est simulé</h4>
+  <ul>
+    <li>Les <b>positions des navires</b> : flotte fictive animée le long des corridors. En production, elles viendraient d’un flux AIS temps réel (aisstream.io, Spire Maritime, MarineTraffic…).</li>
+    <li>Le temps est accéléré (réglable en haut à droite) pour rendre les mouvements visibles.</li>
+  </ul>
+  <h4>Le temps réel est intégré 🛰️</h4>
+  <ul>
+    <li>Clique sur <b>« AIS direct »</b> dans l'en-tête et colle ta clé gratuite aisstream.io : les vrais navires remplacent la simulation, et tout le moteur (heatmap, alertes, classement) s'applique à leurs positions réelles.</li>
+    <li>⚠️ Fonctionne en ouvrant le fichier sur ton ordinateur — l'aperçu Claude bloque les connexions externes par sécurité.</li>
+  </ul>
+  <h4>Prochaines étapes</h4>
+  <ul>
+    <li><b>Scoring enrichi</b> : ajouter ACLED (conflits détaillés) et UKMTO en complément des sources déjà actives (GDELT, NGA ASAM, GDACS, USGS, NOAA, Open-Meteo).</li>
+    <li><b>Backend</b> : stockage des trajectoires, calculs de proximité côté serveur, notifications push / e-mail, comptes utilisateurs.</li>
+  </ul>
+  <p class="sub" style="margin-top:16px">Astuce : cliquez sur un navire ou une zone sur la carte, ou dans les classements. Molette pour zoomer, cliquer-glisser pour déplacer.</p>`;
+const ABOUT_EN = `
+  <h2>Proteus.AI — feasibility prototype</h2>
+  <p class="sub">Crossing container-ship tracking with geopolitical risk analysis.</p>
+  <h4>What's real in this prototype</h4>
+  <ul>
+    <li>The <b>36 tracked risk zones</b>, their scores and context: based on the real geopolitical situation and recalculated every hour (zones listed by the Joint War Committee, Red Sea attacks, war in the Black Sea, piracy in the Gulf of Guinea…).</li>
+    <li>The <b>shipping routes</b>: real containerized-trade corridors, including the reroute via the Cape of Good Hope.</li>
+    <li>The <b>carriers</b>: the world's top 9 operators.</li>
+    <li>The <b>alert engine</b>: proximity and zone-entry detection, exposure ranking — this is the real logic behind the final product.</li>
+  </ul>
+  <h4>What's simulated</h4>
+  <ul>
+    <li>The <b>vessel positions</b>: a fictional fleet animated along the corridors. In production these would come from a real-time AIS feed (aisstream.io, Spire Maritime, MarineTraffic…).</li>
+    <li>Time is sped up (adjustable top right) to make movement visible.</li>
+  </ul>
+  <h4>Real-time tracking is already built in 🛰️</h4>
+  <ul>
+    <li>Click <b>"AIS direct"</b> in the header and paste your free aisstream.io key: real vessels replace the simulation, and the whole engine (heatmap, alerts, ranking) applies to their actual positions.</li>
+    <li>⚠️ Works when you open the file on your own computer — the Claude preview blocks external connections for security.</li>
+  </ul>
+  <h4>Next steps</h4>
+  <ul>
+    <li><b>Richer scoring</b>: add ACLED (detailed conflict data) and UKMTO on top of the sources already live (GDELT, NGA ASAM, GDACS, USGS, NOAA, Open-Meteo).</li>
+    <li><b>Backend</b>: trajectory storage, server-side proximity calculations, push / email notifications, user accounts.</li>
+  </ul>
+  <p class="sub" style="margin-top:16px">Tip: click a vessel or a zone on the map, or in the rankings. Scroll to zoom, click-and-drag to pan.</p>`;
 
 let ZONES = [];
 let riskUpdatedAt = null, riskLive = false;
@@ -414,10 +430,10 @@ let riskUpdatedAt = null, riskLive = false;
 function applyRisk(data){
   if(!data || !Array.isArray(data.zones) || !data.zones.length) return;
   ZONES = data.zones.map(z=>({
-    id:z.id, name:z.name, c:z.c, r:z.r, type:z.type, jwc:!!z.jwc,
+    id:z.id, name:z.name, name_en:z.name_en||'', c:z.c, r:z.r, type:z.type, jwc:!!z.jwc,
     score:+z.score||0, trend:z.trend||'▶',
-    parts:z.parts||{}, why:z.why||[], hl:z.hl||[], inc:z.inc||[],
-    ctx:z.ctx||'', f:z.f||[],
+    parts:z.parts||{}, why:z.why||[], why_en:z.why_en||[], hl:z.hl||[], inc:z.inc||[],
+    ctx:z.ctx||'', ctx_en:z.ctx_en||'', f:z.f||[], f_en:z.f_en||[],
   }));
   riskUpdatedAt = Date.parse(data.updatedAt)||null;
   // re-baseline silencieuse des états navire↔zone (évite une rafale d'alertes)
@@ -431,10 +447,10 @@ function applyRisk(data){
   if(typeof renderZones==='function'){ renderZones(); assessRisk(); renderRanks(); }
 }
 function riskFreshness(){
-  if(!riskUpdatedAt) return 'données embarquées';
+  if(!riskUpdatedAt) return tr('données embarquées','embedded data');
   const m = Math.max(0, Math.round((Date.now()-riskUpdatedAt)/60000));
-  const when = m<60 ? `il y a ${m} min` : `il y a ${Math.round(m/60)} h`;
-  return (riskLive?'en direct · MAJ ':'instantané · ')+when;
+  const when = m<60 ? tr(`il y a ${m} min`,`${m} min ago`) : tr(`il y a ${Math.round(m/60)} h`,`${Math.round(m/60)}h ago`);
+  return tr(riskLive?'en direct · MAJ ':'instantané · ', riskLive?'live · updated ':'snapshot · ')+when;
 }
 
 /* ---- anciennes zones éditoriales conservées ci-dessous comme référence de
@@ -468,28 +484,28 @@ const ZONES_LEGACY = [
 
 /* ================= Routes (corridors réels, points [lat, lon]) ================= */
 const ROUTES = {
-  suez: {name:'Asie–Europe via Suez', note:'maintient le transit mer Rouge', pts:[
+  suez: {name:'Asie–Europe via Suez', name_en:'Asia–Europe via Suez', note:'maintient le transit mer Rouge', note_en:'maintains Red Sea transit', pts:[
     [51.95,3.6],[50.1,-1.5],[48.4,-5.8],[43.3,-9.8],[36.9,-9.6],[35.95,-5.6],[37.2,3],[36.4,14.5],
     [34.3,24],[31.9,31.4],[29.8,32.6],[27.2,34.4],[24,36.2],[19.5,39.5],[15.5,41.8],[12.6,43.3],
     [12.9,47.5],[12.5,54.5],[9.5,64],[6.5,74],[5.7,80.6],[5.2,88],[5.6,95.2],[4.2,98.6],[2.4,101.4],
     [1.2,103.9],[3,105.8],[7,109],[12,111.8],[17,114],[21,116.8],[23.2,118.6],[24.7,119.9],[27.5,122.3],[30.8,122.8]]},
-  cap: {name:'Asie–Europe via le Cap', note:'dérouté pour éviter la mer Rouge', pts:[
+  cap: {name:'Asie–Europe via le Cap', name_en:'Asia–Europe via the Cape', note:'dérouté pour éviter la mer Rouge', note_en:'rerouted to avoid the Red Sea', pts:[
     [51.95,3.6],[50.1,-1.5],[48.4,-5.8],[43.3,-9.8],[33,-13],[27.5,-15.8],[20,-18.2],[14.2,-18.5],
     [8,-15.5],[3.5,-10],[-2,-6],[-9,0],[-16,6],[-24,11.5],[-31,15.5],[-35.4,18.4],[-35.6,22],[-35,27],
     [-32.5,31.5],[-27.5,42],[-25.5,47.5],[-18,57],[-8,68],[0,76],[5.7,80.6],[5.2,88],[5.6,95.2],
     [4.2,98.6],[2.4,101.4],[1.2,103.9],[3,105.8],[7,109],[12,111.8],[17,114],[21,116.8],[23.2,118.6],
     [24.7,119.9],[27.5,122.3],[30.8,122.8]]},
-  transpac: {name:'Transpacifique', note:'Chine → côte ouest US', pts:[
+  transpac: {name:'Transpacifique', name_en:'Transpacific', note:'Chine → côte ouest US', note_en:'China → US West Coast', pts:[
     [30.8,122.8],[29.5,127],[30.5,131.5],[32.2,135.5],[34.4,140.2],[38,147],[43,158],[46.5,170],
     [48.5,182],[48.5,196],[45,212],[40,227],[35.5,236.5],[33.6,241.4]]},
-  transat: {name:'Transatlantique', note:'Europe ↔ côte est US', pts:[
+  transat: {name:'Transatlantique', name_en:'Transatlantic', note:'Europe ↔ côte est US', note_en:'Europe ↔ US East Coast', pts:[
     [51.95,3.6],[50.1,-1.5],[49.2,-7],[48.5,-15],[46.5,-28],[43.5,-42],[41.2,-58],[40.3,-71],[40.4,-73.6]]},
-  gulf: {name:'Asie–Golfe (Jebel Ali)', note:'transit détroit d’Ormuz', pts:[
+  gulf: {name:'Asie–Golfe (Jebel Ali)', name_en:'Asia–Gulf (Jebel Ali)', note:'transit détroit d’Ormuz', note_en:'transits the Strait of Hormuz', pts:[
     [1.2,103.9],[2.4,101.4],[4.2,98.6],[5.6,95.2],[5.9,88],[5.7,80.6],[8.5,73],[13,66.5],[18,62],
     [23,60],[25.2,57.8],[26.35,56.6],[25.9,55.9],[25.3,55.3]]},
-  blacksea: {name:'Corridor mer Noire', note:'exports céréaliers ukrainiens', pts:[
+  blacksea: {name:'Corridor mer Noire', name_en:'Black Sea corridor', note:'exports céréaliers ukrainiens', note_en:'Ukrainian grain exports', pts:[
     [40.9,28.5],[41.25,29.12],[41.9,29.6],[43.4,30.2],[45,30.6],[46,30.85]]},
-  guinee: {name:'Europe–Afrique de l’Ouest', note:'dessertes golfe de Guinée', pts:[
+  guinee: {name:'Europe–Afrique de l’Ouest', name_en:'Europe–West Africa', note:'dessertes golfe de Guinée', note_en:'Gulf of Guinea calls', pts:[
     [51.95,3.6],[50.1,-1.5],[48.4,-5.8],[43.3,-9.8],[33,-13],[27.5,-15.8],[20,-18.2],[14.2,-18.3],
     [9,-15.2],[5.2,-8],[4.6,-4.2],[4.4,-0.5],[5.4,3.2],[6,4.5]]},
 };
@@ -581,18 +597,11 @@ function unprj(x,y){
   return [view.clat + (H/2 - y)/view.scale, lon];
 }
 
-/* ================= Thèmes (couleurs du canvas) ================= */
-const THEMES = {
-  dark:{ land:'#17293A', landStroke:'rgba(66,105,140,.35)', grat:'rgba(30,53,75,.45)',
-    water:'#07111C', river:'rgba(38,78,118,.75)', other:'#8FA3B5',
-    label:'rgba(143,163,181,.9)', ship:'#4FC3E8', near:'#E8B84B', inZ:'#E0402F',
-    route:'rgba(79,195,232,.45)', AMB:[232,184,75], ORA:[232,121,46], RED:[224,64,47] },
-  light:{ land:'#FAFBFE', landStroke:'rgba(122,138,168,.55)', grat:'rgba(150,162,190,.35)',
-    water:'#E4E8F2', river:'rgba(160,178,210,.9)', other:'#7A87A0',
-    label:'rgba(70,84,110,.95)', ship:'#1470C2', near:'#B07908', inZ:'#BE352A',
-    route:'rgba(20,112,194,.5)', AMB:[176,121,8], ORA:[194,82,24], RED:[190,53,42] },
-};
-let T = THEMES.dark;
+/* ================= Thème (couleurs du canvas — sombre uniquement) ================= */
+const T = { land:'#17293A', landStroke:'rgba(66,105,140,.35)', grat:'rgba(30,53,75,.45)',
+  water:'#07111C', river:'rgba(38,78,118,.75)', other:'#8FA3B5',
+  label:'rgba(143,163,181,.9)', ship:'#4FC3E8', near:'#E8B84B', inZ:'#E0402F',
+  route:'rgba(79,195,232,.45)', AMB:[232,184,75], ORA:[232,121,46], RED:[224,64,47] };
 
 /* ================= Couleurs de risque ================= */
 function lerp(a,b,t){return a+(b-a)*t}
@@ -674,19 +683,20 @@ function shipState(s){
 /* ================= Alertes ================= */
 const feedEl = document.getElementById('feed'), toastsEl = document.getElementById('toasts');
 let feedItems = [], alertsSincePause=0;
-function fmtT(ms){ return new Date(ms).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
+function fmtT(ms){ return new Date(ms).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}); }
 function pushAlert(s,z,kind,d){
   const red = kind==='entrée';
   const label = s.name || ('MMSI '+s.mmsi);
-  feedItems.unshift({t:MODE==='live'?Date.now():simTime, txt:`${label} — ${kind==='entrée'?'est entré dans':'approche de'} ${z.name}`, red});
+  const zn = zName(z);
+  feedItems.unshift({t:MODE==='live'?Date.now():simTime, txt:`${label} — ${tr(kind==='entrée'?'est entré dans':'approche de', kind==='entrée'?'entered':'is approaching')} ${zn}`, red});
   feedItems = feedItems.slice(0,30);
   renderFeed();
   if(toastsEl.children.length>=4) toastsEl.firstChild.remove();
   const el=document.createElement('div');
   el.className='toast'+(red?' red':'');
   el.innerHTML = `<b>${red?'🔴':'⚠️'} ${esc(label)}${s.op?' · '+esc(s.op):''}</b>
-    ${red?'Est entré dans':'S’approche de'} <b>${esc(z.name)}</b> — score ${z.score.toFixed(1)}/10
-    <small>· ${Math.round(d)} km du centre de zone</small>`;
+    ${tr(red?'Est entré dans':'S’approche de', red?'Has entered':'Is approaching')} <b>${esc(zn)}</b> — score ${z.score.toFixed(1)}/10
+    <small>· ${tr(`${Math.round(d)} km du centre de zone`,`${Math.round(d)} km from zone center`)}</small>`;
   el.onclick=()=>{selectShip(s)};
   toastsEl.appendChild(el);
   setTimeout(()=>el.remove(), 6500);
@@ -694,7 +704,7 @@ function pushAlert(s,z,kind,d){
 function renderFeed(){
   feedEl.innerHTML = feedItems.length? feedItems.map(f=>
     `<div class="ev ${f.red?'r':'a'}"><span class="t mono">${fmtT(f.t)}</span><span>${esc(f.txt)}</span></div>`).join('')
-    : '<div class="empty">Aucune alerte pour l’instant.</div>';
+    : `<div class="empty">${tr('Aucune alerte pour l’instant.','No alerts yet.')}</div>`;
 }
 function esc(x){ return String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
@@ -796,7 +806,7 @@ function draw(){
       ctx.fillText(label, x, y-ry-6);
       ctx.fillStyle=T.label;
       ctx.font='9.5px Manrope,"Segoe UI",sans-serif';
-      ctx.fillText(z.name.toUpperCase(), x, y-ry-18);
+      ctx.fillText(zName(z).toUpperCase(), x, y-ry-18);
     }
   }
   // route (simulé) ou sillage réellement parcouru (direct) du navire sélectionné
@@ -888,11 +898,11 @@ function startLive(key, scope){
   stopLive(true);
   live.key=key; live.scope=scope;
   live.zoneFilter = (scope==='zones');
-  live.msg=0;
-  setAisStatus('Connexion à aisstream.io…');
+  live.msg=0; live.serverErr=false;
+  setAisStatus(tr('Connexion à aisstream.io…','Connecting to aisstream.io…'));
   let ws;
   try{ ws=new WebSocket('wss://stream.aisstream.io/v0/stream'); }
-  catch(err){ setAisStatus('Connexion impossible : cet environnement bloque les connexions externes. Ouvre le fichier sur ton ordinateur.','err'); return; }
+  catch(err){ setAisStatus(tr('Connexion impossible : cet environnement bloque les connexions externes. Ouvre le fichier sur ton ordinateur.','Connection failed: this environment blocks external connections. Open the file on your own computer.'),'err'); return; }
   live.ws=ws; live.status='connecting';
   ws.binaryType='arraybuffer';   // aisstream envoie des trames BINAIRES contenant du JSON
   const sub={APIKey:live.key, BoundingBoxes:[[[-90,-180],[90,180]]]};
@@ -907,10 +917,10 @@ function startLive(key, scope){
         clearInterval(live.watch);
         try{ ws.onclose=null; ws.close(); }catch(e){}
         live.status='off'; live.ws=null;
-        setAisStatus('Aucune donnée reçue en 20 s. Ferme les AUTRES onglets du prototype ou du testeur (une seule connexion par clé autorisée !), attends 30 s, puis réessaie.','err');
+        setAisStatus(tr('Aucune donnée reçue en 20 s. Ferme les AUTRES onglets du prototype ou du testeur (une seule connexion par clé autorisée !), attends 30 s, puis réessaie.','No data received in 20 s. Close any OTHER tabs of the prototype or tester (only one connection per key allowed!), wait 30 s, then try again.'),'err');
       }else{
         const fp=live.key.length>8 ? live.key.slice(0,4)+'…'+live.key.slice(-4) : live.key;
-        setAisStatus(`Connecté — en attente des navires (${sec} s) · clé utilisée : ${fp} (${live.key.length} car.)`,'ok');
+        setAisStatus(tr(`Connecté — en attente des navires (${sec} s) · clé utilisée : ${fp} (${live.key.length} car.)`,`Connected — waiting for vessels (${sec}s) · key used: ${fp} (${live.key.length} chars)`),'ok');
       }
     },1000);
   };
@@ -922,7 +932,8 @@ function startLive(key, scope){
     }catch(e){ console.warn('[Proteus.AI] message illisible :', e.message); return; }
     if(m.error){
       console.warn('[Proteus.AI] erreur serveur :', m.error);
-      setAisStatus('Réponse du serveur : '+m.error,'err'); return;
+      live.serverErr=true;
+      setAisStatus(tr('Réponse du serveur : ','Server response: ')+m.error,'err'); return;
     }
     live.msg++;
     if(live.msg<=3) console.log('[Proteus.AI] message reçu :', m.MessageType, m.MetaData && m.MetaData.ShipName);
@@ -936,16 +947,16 @@ function startLive(key, scope){
   ws.onclose=ev=>{
     console.log('[Proteus.AI] connexion fermée, code', ev && ev.code);
     clearInterval(live.watch);
-    if(live.status==='on'){ stopLive(); setAisStatus('Connexion interrompue.','err'); }
+    if(live.status==='on'){ stopLive(); setAisStatus(tr('Connexion interrompue.','Connection lost.'),'err'); }
     else if(live.status!=='off'){
       live.status='off';
-      if(!aisstatus.textContent.startsWith('Réponse'))
-        setAisStatus('Connexion fermée par le serveur. Une seule connexion par clé : ferme les autres onglets du prototype/testeur et réessaie dans 30 s.','err');
+      if(!live.serverErr)
+        setAisStatus(tr('Connexion fermée par le serveur. Une seule connexion par clé : ferme les autres onglets du prototype/testeur et réessaie dans 30 s.','Connection closed by the server. Only one connection per key: close other tabs of the prototype/tester and retry in 30 s.'),'err');
     }
   };
   ws.onerror=()=>{
     if(live.status!=='on')
-      setAisStatus('Impossible de joindre aisstream.io. Dans l’aperçu Claude c’est normal (connexions externes bloquées) : télécharge le fichier et ouvre-le en local.','err');
+      setAisStatus(tr('Impossible de joindre aisstream.io. Dans l’aperçu Claude c’est normal (connexions externes bloquées) : télécharge le fichier et ouvre-le en local.','Cannot reach aisstream.io. This is expected in the Claude preview (external connections blocked): download the file and open it locally.'),'err');
   };
 }
 function stopLive(silent){
@@ -987,19 +998,8 @@ function handleAis(m){
   }
 }
 function onModeChange(){
-  const badge=document.getElementById('modeBadge'), bMode=document.getElementById('bMode');
-  const lbl=document.getElementById('kClockL');
-  if(MODE==='live'){
-    badge.textContent='Direct · flux AIS réel'; badge.classList.add('live');
-    bMode.textContent='🛰️ AIS : direct'; bMode.classList.add('on');
-    lbl.textContent='Temps réel';
-    document.getElementById('bSpeed').style.display='none';
-  }else{
-    badge.textContent='Prototype · données simulées'; badge.classList.remove('live');
-    bMode.textContent='🛰️ AIS direct'; bMode.classList.remove('on');
-    lbl.textContent='Heure simulée';
-    document.getElementById('bSpeed').style.display='';
-  }
+  refreshModeTexts();
+  document.getElementById('bSpeed').style.display = MODE==='live' ? 'none' : '';
   selShip=null; selZone=null; detail.style.display='none';
   feedItems=[]; toastsEl.innerHTML=''; renderFeed();
   assessRisk(); renderRanks();
@@ -1018,7 +1018,7 @@ function frame(t){
     if(acc>0.45){acc=0; assessRisk(); renderRanks(); if(selShip) renderShipCard(selShip); }
   }
   document.getElementById('kClock').textContent =
-    new Date(MODE==='live'?Date.now():simTime).toLocaleString('fr-FR',{weekday:'short',hour:'2-digit',minute:'2-digit'});
+    new Date(MODE==='live'?Date.now():simTime).toLocaleString(locale(),{weekday:'short',hour:'2-digit',minute:'2-digit'});
   draw();
   requestAnimationFrame(frame);
 }
@@ -1027,12 +1027,14 @@ function frame(t){
 const zlist=document.getElementById('zlist'), slist=document.getElementById('slist');
 function renderZones(){
   const fr=document.getElementById('riskFresh'); if(fr) fr.textContent=riskFreshness();
-  zlist.innerHTML = [...ZONES].sort((a,b)=>b.score-a.score).map(z=>`
+  zlist.innerHTML = [...ZONES].sort((a,b)=>b.score-a.score).map(z=>{
+    const tags=zTags(z);
+    return `
     <div class="zrow" data-z="${z.id}">
       <div class="zscore" style="background:${riskCSS(z.score)}">${z.score.toFixed(1)}</div>
-      <div class="zname">${esc(z.name)}<small>${esc(z.f[0])}${z.f[1]?' · '+esc(z.f[1]):''}</small></div>
-      <div class="ztrend" title="tendance">${z.trend}</div>
-    </div>`).join('');
+      <div class="zname">${esc(zName(z))}<small>${esc(tags[0])}${tags[1]?' · '+esc(tags[1]):''}</small></div>
+      <div class="ztrend" title="${tr('tendance','trend')}">${z.trend}</div>
+    </div>`;}).join('');
   zlist.querySelectorAll('.zrow').forEach(el=>el.onclick=()=>{
     const z=ZONES.find(q=>q.id===el.dataset.z); selectZone(z,true);
   });
@@ -1048,14 +1050,14 @@ function renderRanks(){
     const col = opColor(s.op)+ring;
     const label = s.name || ('MMSI '+s.mmsi);
     const sub = s.live
-      ? `${esc(s.op||'armateur n.c.')}${s.dest?' · → '+esc(s.dest):''}`
-      : `${esc(s.op)} · ${esc(ROUTES[s.route].name)}`;
+      ? `${esc(s.op||tr('armateur n.c.','operator n/a'))}${s.dest?' · → '+esc(s.dest):''}`
+      : `${esc(s.op)} · ${esc(rName(s.route))}`;
     return `<div class="srow" data-i="${i}">
       <span class="dot" style="background:${col}"></span>
       <span>${esc(label)}<br><small>${sub}</small></span>
       <span class="exp mono" style="color:${s.exp>0?riskCSS(Math.max(3,s.exp)):'var(--ink3)'}">${s.exp>0?s.exp.toFixed(1):'—'}</span>
     </div>`;}).join('')
-    : `<div class="empty">${MODE==='live'?'En attente des premiers signaux AIS…':'Calcul en cours…'}</div>`;
+    : `<div class="empty">${tr(MODE==='live'?'En attente des premiers signaux AIS…':'Calcul en cours…', MODE==='live'?'Waiting for the first AIS signals…':'Calculating…')}</div>`;
   slist.querySelectorAll('.srow').forEach(el=>el.onclick=()=>{
     const s=lastTop[+el.dataset.i]; if(s) selectShip(s,true);
   });
@@ -1078,7 +1080,7 @@ const HULLS={
 function shipVisual(op){
   const base=SHIP_PHOTO_BASE[op];
   if(base) return `<div class="shipart" data-op="${esc(op)}" data-base="${base}" data-ext="0">
-    <img src="${base}.${PHOTO_EXT[0]}" alt="Porte-conteneurs ${esc(op)}" loading="lazy"
+    <img src="${base}.${PHOTO_EXT[0]}" alt="${tr('Porte-conteneurs','Container ship')} ${esc(op)}" loading="lazy"
       onerror="window.artFallback(this)"></div>`;
   return `<div class="shipart">${shipArt(op)}</div>`;
 }
@@ -1112,7 +1114,7 @@ function shipArt(op){
   }
   const name = c ? `<text x="196" y="97" fill="#EDF2F7" font-size="13" font-weight="700"
       text-anchor="middle" letter-spacing="2.5" font-family="Manrope,sans-serif">${esc(op.toUpperCase())}</text>` : '';
-  return `<svg viewBox="0 0 360 130" role="img" aria-label="Porte-conteneurs ${esc(op||'inconnu')}">
+  return `<svg viewBox="0 0 360 130" role="img" aria-label="${tr('Porte-conteneurs','Container ship')} ${esc(op||tr('inconnu','unknown'))}">
     <rect width="360" height="130" fill="var(--panel2)"/>
     ${boxes}
     <rect x="58" y="36" width="34" height="42" rx="1.5" fill="#DCE5EE"/>
@@ -1137,53 +1139,56 @@ function selectShip(s, center){
   if(center){ view.clat=s.lat; view.clon=s.lon; view.scale=Math.max(view.scale,8); viewDirty=true; }
   renderShipCard(s);
 }
+function statusHtml(st){
+  return st===2?`<b style="color:var(--red)">${tr('EN ZONE À RISQUE','IN RISK ZONE')}</b>`
+    :st===1?`<b style="color:var(--amber)">${tr('EN APPROCHE','APPROACHING')}</b>`
+    :`<span style="color:var(--ok)">${tr('R.A.S.','ALL CLEAR')}</span>`;
+}
 function renderShipCard(s){
   if(s.live) return renderLiveCard(s);
   const z=s.worstZone, ends=ENDS[s.route], goingTo = s.dir>0?ends[1]:ends[0];
   const st=shipState(s);
-  const stTxt = st===2?`<b style="color:var(--red)">EN ZONE À RISQUE</b>`:st===1?`<b style="color:var(--amber)">EN APPROCHE</b>`:`<span style="color:var(--ok)">R.A.S.</span>`;
   detail.style.display='block';
-  detail.innerHTML=`<button class="x" aria-label="Fermer">✕</button>
+  detail.innerHTML=`<button class="x" aria-label="${tr('Fermer','Close')}">✕</button>
     <h2>🚢 ${esc(s.name)}</h2>
-    <div class="sub">${esc(s.op)} · porte-conteneurs ${s.teu.toLocaleString('fr-FR')} EVP</div>
+    <div class="sub">${esc(s.op)} · ${tr('porte-conteneurs','container ship')} ${s.teu.toLocaleString(locale())} ${tr('EVP','TEU')}</div>
     ${shipVisual(s.op)}
     <dl class="kv">
-      <dt>Route</dt><dd>${esc(ROUTES[s.route].name)} <small style="color:var(--ink3)">(${esc(ROUTES[s.route].note)})</small></dd>
+      <dt>${tr('Route','Route')}</dt><dd>${esc(rName(s.route))} <small style="color:var(--ink3)">(${esc(rNote(s.route))})</small></dd>
       <dt>Destination</dt><dd>${esc(goingTo)}</dd>
-      <dt>Vitesse</dt><dd class="mono">${s.kn.toFixed(1)} nds</dd>
+      <dt>${tr('Vitesse','Speed')}</dt><dd class="mono">${s.kn.toFixed(1)} ${tr('nds','kn')}</dd>
       <dt>Position</dt><dd class="mono">${s.lat.toFixed(2)}°, ${(((s.lon+540)%360)-180).toFixed(2)}°</dd>
-      <dt>Statut</dt><dd>${stTxt}</dd>
+      <dt>${tr('Statut','Status')}</dt><dd>${statusHtml(st)}</dd>
     </dl>
-    <div class="riskline"><span>Exposition</span>
+    <div class="riskline"><span>${tr('Exposition','Exposure')}</span>
       <div class="riskbarw"><div class="riskbar" style="width:${s.exp*10}%;background:${riskCSS(Math.max(3,s.exp))}"></div></div>
       <b class="mono">${s.exp.toFixed(1)}</b></div>
-    ${z && s.exp>0.3 ? `<div class="ctx"><b style="color:${riskCSS(z.score)}">${esc(z.name)}</b> — à ${Math.round(s.worstDist)} km · ${esc(z.ctx)}</div>`:''}
+    ${z && s.exp>0.3 ? `<div class="ctx"><b style="color:${riskCSS(z.score)}">${esc(zName(z))}</b> — ${tr(`à ${Math.round(s.worstDist)} km`,`at ${Math.round(s.worstDist)} km`)} · ${esc(zCtx(z))}</div>`:''}
   `;
   detail.querySelector('.x').onclick=()=>{detail.style.display='none'; selShip=null;};
 }
 function renderLiveCard(v){
   const z=v.worstZone;
   const st=shipState(v);
-  const stTxt = st===2?`<b style="color:var(--red)">EN ZONE À RISQUE</b>`:st===1?`<b style="color:var(--amber)">EN APPROCHE</b>`:`<span style="color:var(--ok)">R.A.S.</span>`;
-  const typeTxt = (v.type>=70&&v.type<80)?'cargo':(v.type>=80&&v.type<90)?'tanker':(v.type?'type AIS '+v.type:'type n.c.');
+  const typeTxt = (v.type>=70&&v.type<80)?'cargo':(v.type>=80&&v.type<90)?'tanker':(v.type?tr('type AIS ','AIS type ')+v.type:tr('type n.c.','type n/a'));
   detail.style.display='block';
-  detail.innerHTML=`<button class="x" aria-label="Fermer">✕</button>
+  detail.innerHTML=`<button class="x" aria-label="${tr('Fermer','Close')}">✕</button>
     <h2>🛰️ ${esc(v.name||('MMSI '+v.mmsi))}</h2>
-    <div class="sub">${esc(v.op||'armateur non identifié')} · ${typeTxt} · <b style="color:var(--ok)">position réelle</b></div>
+    <div class="sub">${esc(v.op||tr('armateur non identifié','unidentified operator'))} · ${typeTxt} · <b style="color:var(--ok)">${tr('position réelle','real position')}</b></div>
     ${shipVisual(v.op)}
     <dl class="kv">
       <dt>MMSI</dt><dd class="mono">${esc(v.mmsi)}</dd>
       ${v.imo?`<dt>IMO</dt><dd class="mono">${esc(v.imo)}</dd>`:''}
-      ${v.dest?`<dt>Destination</dt><dd>${esc(v.dest)} <small style="color:var(--ink3)">(déclarée)</small></dd>`:''}
-      <dt>Vitesse</dt><dd class="mono">${(v.sog||0).toFixed(1)} nds</dd>
+      ${v.dest?`<dt>Destination</dt><dd>${esc(v.dest)} <small style="color:var(--ink3)">(${tr('déclarée','declared')})</small></dd>`:''}
+      <dt>${tr('Vitesse','Speed')}</dt><dd class="mono">${(v.sog||0).toFixed(1)} ${tr('nds','kn')}</dd>
       <dt>Position</dt><dd class="mono">${v.lat.toFixed(3)}°, ${v.lon.toFixed(3)}°</dd>
-      <dt>Reçu il y a</dt><dd class="mono">${Math.round((Date.now()-v.t)/1000)} s</dd>
-      <dt>Statut</dt><dd>${stTxt}</dd>
+      <dt>${tr('Reçu il y a','Received')}</dt><dd class="mono">${Math.round((Date.now()-v.t)/1000)} s</dd>
+      <dt>${tr('Statut','Status')}</dt><dd>${statusHtml(st)}</dd>
     </dl>
-    <div class="riskline"><span>Exposition</span>
+    <div class="riskline"><span>${tr('Exposition','Exposure')}</span>
       <div class="riskbarw"><div class="riskbar" style="width:${v.exp*10}%;background:${riskCSS(Math.max(3,v.exp))}"></div></div>
       <b class="mono">${v.exp.toFixed(1)}</b></div>
-    ${z && v.exp>0.3 ? `<div class="ctx"><b style="color:${riskCSS(z.score)}">${esc(z.name)}</b> — à ${Math.round(v.worstDist)} km · ${esc(z.ctx)}</div>`:''}
+    ${z && v.exp>0.3 ? `<div class="ctx"><b style="color:${riskCSS(z.score)}">${esc(zName(z))}</b> — ${tr(`à ${Math.round(v.worstDist)} km`,`at ${Math.round(v.worstDist)} km`)} · ${esc(zCtx(z))}</div>`:''}
   `;
   detail.querySelector('.x').onclick=()=>{detail.style.display='none'; selShip=null;};
 }
@@ -1192,25 +1197,26 @@ function selectZone(z, center){
   if(center){ view.clat=z.c[0]; view.clon=z.c[1]; view.scale=Math.max(5.5, view.scale); viewDirty=true; }
   const inside=activeShips().filter(s=>s.zoneState[z.id]===2);
   const P=z.parts||{};
-  const PARTS=[['Fond structurel',P.base,4],['Incidents maritimes',P.mar,3.5],
-    ['Conflit (presse)',P.con,2.5],['Catastrophes',P.nat,3],['Météo marine',P.met??P.ten,1.5]];
+  const PARTS=[[tr('Fond structurel','Structural baseline'),P.base,4],[tr('Incidents maritimes','Maritime incidents'),P.mar,3.5],
+    [tr('Conflit (presse)','Conflict (press)'),P.con,2.5],[tr('Catastrophes','Disasters'),P.nat,3],[tr('Météo marine','Marine weather'),P.met??P.ten,1.5]];
   const partsHtml = PARTS.filter(p=>p[1]!=null).map(([l,v,max])=>
     `<div class="partrow"><span>${l}</span><div class="pw"><div class="pv" style="width:${Math.min(100,v/max*100)}%;background:${riskCSS(Math.max(3,z.score))}"></div></div><b class="mono">${(+v).toFixed(1)}</b></div>`).join('');
-  const whyHtml = (z.why&&z.why.length)?`<ul class="why">${z.why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'';
-  const hlHtml = (z.hl&&z.hl.length)?`<div class="hl"><b style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)">Dans la presse</b>${
+  const why = zWhy(z);
+  const whyHtml = (why&&why.length)?`<ul class="why">${why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'';
+  const hlHtml = (z.hl&&z.hl.length)?`<div class="hl"><b style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)">${tr('Dans la presse','In the press')}</b>${
     z.hl.map(h=>`<a href="${esc(h.u)}" target="_blank" rel="noopener">${esc(h.t)}<small>${esc(h.s)}${h.d?' · '+esc(String(h.d).slice(6,8))+'/'+esc(String(h.d).slice(4,6)):''}</small></a>`).join('')}</div>`:'';
   detail.style.display='block';
-  detail.innerHTML=`<button class="x" aria-label="Fermer">✕</button>
-    <h2><span style="color:${riskCSS(z.score)}">●</span> ${esc(z.name)}</h2>
-    <div class="sub">Score de risque <b class="mono" style="color:${riskCSS(z.score)}">${z.score.toFixed(1)}/10</b> · tendance 7 j ${z.trend} · <span style="font-size:11px">${esc(riskFreshness())}</span></div>
+  detail.innerHTML=`<button class="x" aria-label="${tr('Fermer','Close')}">✕</button>
+    <h2><span style="color:${riskCSS(z.score)}">●</span> ${esc(zName(z))}</h2>
+    <div class="sub">${tr('Score de risque','Risk score')} <b class="mono" style="color:${riskCSS(z.score)}">${z.score.toFixed(1)}/10</b> · ${tr('tendance 7 j','7-day trend')} ${z.trend} · <span style="font-size:11px">${esc(riskFreshness())}</span></div>
     ${partsHtml}
     ${whyHtml}
-    <div class="ctx">${esc(z.ctx)}</div>
-    <div class="chips">${z.f.map(f=>`<span class="chip">${esc(f)}</span>`).join('')}</div>
+    <div class="ctx">${esc(zCtx(z))}</div>
+    <div class="chips">${zTags(z).map(f=>`<span class="chip">${esc(f)}</span>`).join('')}</div>
     ${hlHtml}
     <dl class="kv" style="margin-top:10px">
-      <dt>Navires en zone</dt><dd>${inside.length? inside.map(s=>esc(s.name||('MMSI '+s.mmsi))).join(', '):'aucun actuellement'}</dd>
-      <dt>Rayon surveillé</dt><dd class="mono">${z.r} km</dd>
+      <dt>${tr('Navires en zone','Vessels in zone')}</dt><dd>${inside.length? inside.map(s=>esc(s.name||('MMSI '+s.mmsi))).join(', '):tr('aucun actuellement','none currently')}</dd>
+      <dt>${tr('Rayon surveillé','Monitored radius')}</dt><dd class="mono">${z.r} km</dd>
     </dl>`;
   detail.querySelector('.x').onclick=()=>{detail.style.display='none'; selZone=null;};
 }
@@ -1276,22 +1282,75 @@ document.getElementById('bSpeed').onclick=e=>{
 document.getElementById('bHeat').onclick=e=>{
   showHeat=!showHeat; e.currentTarget.classList.toggle('on',showHeat);
 };
-const bTheme=document.getElementById('bTheme');
-function applyTheme(name, stamp=true){
-  T = THEMES[name] || THEMES.dark;
-  if(stamp) document.documentElement.dataset.theme = name;
-  bTheme.textContent = name==='dark' ? '☀️ Jour' : '🌙 Nuit';
+const bLang=document.getElementById('bLang');
+function refreshModeTexts(){
+  const badge=document.getElementById('modeBadge'), bMode=document.getElementById('bMode');
+  const lbl=document.getElementById('kClockL');
+  if(MODE==='live'){
+    badge.textContent=tr('Direct · flux AIS réel','Live · real AIS feed'); badge.classList.add('live');
+    bMode.textContent=tr('🛰️ AIS : direct','🛰️ AIS: live'); bMode.classList.add('on');
+    lbl.textContent=tr('Temps réel','Real time');
+  }else{
+    badge.textContent=tr('Prototype · données simulées','Prototype · simulated data'); badge.classList.remove('live');
+    bMode.textContent=tr('🛰️ AIS direct','🛰️ AIS live'); bMode.classList.remove('on');
+    lbl.textContent=tr('Heure simulée','Simulated time');
+  }
+}
+function applyLang(){
+  document.title = tr('Proteus.AI · Tracker maritime & risque géopolitique','Proteus.AI · Live shipping & geopolitical risk tracker');
+  document.documentElement.lang = LANG;
+  document.getElementById('brandTag').textContent = tr('Flux maritime × risque géopolitique','Live shipping × geopolitical risk');
+  document.getElementById('lShips').textContent = tr('Navires','Vessels');
+  document.getElementById('lZones').textContent = tr('Zones suivies','Zones tracked');
+  document.getElementById('lAlerts').textContent = tr('En zone à risque','In risk zone');
+  document.getElementById('tgL').textContent = tr('Zones','Zones');
+  document.getElementById('tgR').textContent = tr('Navires','Ships');
+  document.getElementById('bPause').title = tr('Pause / lecture','Pause / play');
+  document.getElementById('bSpeed').title = tr('Vitesse de simulation','Simulation speed');
+  document.getElementById('bHeat').title = tr('Afficher / masquer la heatmap','Show / hide the heatmap');
+  document.getElementById('bMode').title = tr('Basculer entre simulation et flux AIS réel','Switch between simulation and live AIS feed');
+  bLang.textContent = LANG==='fr' ? 'EN' : 'FR';
+  document.getElementById('bInfo').title = tr('À propos du prototype','About this prototype');
+  document.getElementById('shipsearch').placeholder = tr('🔍 Rechercher un navire (nom, MMSI)…','🔍 Search a vessel (name, MMSI)…');
+  document.getElementById('hFilter').textContent = tr('Filtre flotte','Fleet filter');
+  document.getElementById('lTop5').textContent = tr('Top 5 armateurs uniquement','Top 5 carriers only');
+  document.getElementById('hZonesRank').textContent = tr('Zones à risque · classement','Risk zones · ranking');
+  document.getElementById('hTopShips').textContent = tr('Navires les plus exposés','Most exposed vessels');
+  document.getElementById('hAlertLog').textContent = tr('Journal des alertes','Alert log');
+  document.getElementById('legRisk').textContent = tr('Risque de zone','Zone risk');
+  document.getElementById('legApproach').textContent = tr('Approche','Approaching');
+  document.getElementById('legInZone').textContent = tr('En zone','In zone');
+  document.getElementById('modal').setAttribute('aria-label', tr('À propos','About'));
+  document.getElementById('mx').setAttribute('aria-label', tr('Fermer','Close'));
+  document.getElementById('aboutBody').innerHTML = tr(ABOUT_FR, ABOUT_EN);
+  document.getElementById('aismodal').setAttribute('aria-label', tr('Connexion AIS','AIS connection'));
+  document.getElementById('ax').setAttribute('aria-label', tr('Fermer','Close'));
+  document.getElementById('aisH2').textContent = tr('🛰️ Passer aux positions réelles','🛰️ Switch to real positions');
+  document.getElementById('aisSub').innerHTML = tr('Flux AIS en direct fourni par <b>aisstream.io</b> (gratuit).','Live AIS feed provided by <b>aisstream.io</b> (free).');
+  document.getElementById('aisSteps').innerHTML = tr(
+    '1. Crée un compte gratuit sur <b>aisstream.io</b> (connexion via ton compte GitHub)<br>2. Menu « API Keys » → génère une clé<br>3. Colle-la ci-dessous',
+    '1. Create a free account on <b>aisstream.io</b> (sign in with GitHub)<br>2. "API Keys" menu → generate a key<br>3. Paste it below');
+  document.getElementById('aisKeyLabel').textContent = tr('Clé API aisstream.io','aisstream.io API key');
+  document.getElementById('aiseye').title = tr('Afficher / masquer la clé','Show / hide the key');
+  document.getElementById('aisScopeLabel').textContent = tr('Couverture','Coverage');
+  const opz=document.querySelector('#aisscope option[value="zones"]'); if(opz) opz.textContent=tr('Zones à risque uniquement (recommandé)','Risk zones only (recommended)');
+  const opw=document.querySelector('#aisscope option[value="world"]'); if(opw) opw.textContent=tr('Monde entier (très gros volume — tests courts)','Whole world (very high volume — short tests only)');
+  document.getElementById('aisCargoLabel').textContent = tr('Cargos uniquement (type AIS 70–79 — peut mettre quelques minutes à se remplir)','Cargo ships only (AIS type 70–79 — may take a few minutes to fill up)');
+  document.getElementById('aisconnect').textContent = tr('Se connecter','Connect');
+  document.getElementById('aiscancel').textContent = tr('Annuler','Cancel');
+  document.getElementById('aisforget').textContent = tr('Oublier la clé','Forget the key');
+  document.getElementById('aisforget').title = tr('Effacer la clé mémorisée dans ce navigateur','Erase the key saved in this browser');
+  document.getElementById('aisBottomWarn').innerHTML = tr(
+    '⚠️ Dans l’aperçu Claude (artifact), les connexions externes sont bloquées par sécurité : pour le direct, télécharge <b>proteus-prototype.html</b> et ouvre-le sur ton ordinateur. Couverture : antennes côtières (les océans lointains ont des trous — c’est normal). Ta clé reste dans ton navigateur, elle n’est envoyée qu’à aisstream.io.',
+    '⚠️ In the Claude preview (artifact), external connections are blocked for security: for live data, download <b>proteus-prototype.html</b> and open it on your computer. Coverage: coastal antennas (open ocean has gaps — that’s normal). Your key stays in your browser; it’s only ever sent to aisstream.io.');
+  document.getElementById('detail').setAttribute('aria-label', tr('Détail','Detail'));
+  refreshModeTexts();
   viewDirty=true;
-  renderZones(); renderRanks();
+  renderZones(); renderRanks(); renderFeed(); renderLegend();
   if(selShip) renderShipCard(selShip);
   if(selZone) selectZone(selZone,false);
 }
-bTheme.onclick=()=>applyTheme((document.documentElement.dataset.theme==='light')?'dark':'light');
-// synchronise le canvas si l'hôte (visionneuse) change le thème de la page
-new MutationObserver(()=>{
-  const t=document.documentElement.dataset.theme;
-  if(t && THEMES[t] && T!==THEMES[t]) applyTheme(t,false);
-}).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+bLang.onclick=()=>{ setLang(LANG==='fr'?'en':'fr'); applyLang(); };
 
 const modal=document.getElementById('modal');
 document.getElementById('bInfo').onclick=()=>modal.style.display='flex';
@@ -1311,7 +1370,7 @@ searchIn.oninput=()=>{
     ? searchHits.map((s,i)=>`<div class="sr" data-i="${i}">
         <span style="width:9px;height:9px;border-radius:50%;background:${opColor(s.op)};flex:none"></span>
         ${esc(s.name||('MMSI '+s.mmsi))}<small>${esc(s.op||'—')}</small></div>`).join('')
-    : '<div class="sr"><small>Aucun navire trouvé</small></div>';
+    : `<div class="sr"><small>${tr('Aucun navire trouvé','No vessel found')}</small></div>`;
   searchRes.style.display='block';
   searchRes.querySelectorAll('.sr[data-i]').forEach(el=>el.onclick=()=>{
     const s=searchHits[+el.dataset.i]; if(!s) return;
@@ -1333,10 +1392,13 @@ document.getElementById('ftop').onchange=e=>{
 };
 
 // --- légende des armateurs ---
-document.getElementById('legops').innerHTML =
-  Object.entries(OP_COLORS).map(([op,c])=>
-    `<span><span class="sw" style="background:${c}"></span>${op}</span>`).join('')
-  + `<span><span class="sw" style="background:var(--other)"></span>Autres</span>`;
+function renderLegend(){
+  document.getElementById('legops').innerHTML =
+    Object.entries(OP_COLORS).map(([op,c])=>
+      `<span><span class="sw" style="background:${c}"></span>${op}</span>`).join('')
+    + `<span><span class="sw" style="background:var(--other)"></span>${tr('Autres','Other')}</span>`;
+}
+renderLegend();
 
 // --- connexion AIS ---
 document.getElementById('bMode').onclick=()=>{
@@ -1352,7 +1414,7 @@ document.getElementById('aisconnect').onclick=()=>{
   // nettoie tout caractère invisible (espaces, retours, caractères de largeur nulle)
   const key=document.getElementById('aiskey').value.replace(/[\s\u200B-\u200D\u2060\uFEFF]/g,'');
   document.getElementById('aiskey').value=key;
-  if(!key){ setAisStatus('Colle d’abord ta clé API aisstream.io.','err'); return; }
+  if(!key){ setAisStatus(tr('Colle d’abord ta clé API aisstream.io.','Paste your aisstream.io API key first.'),'err'); return; }
   try{ localStorage.setItem('proteus_aiskey',key); }catch(e){}
   cargoOnly=document.getElementById('aiscargo').checked;
   startLive(key, document.getElementById('aisscope').value);
@@ -1364,7 +1426,7 @@ document.getElementById('aiseye').onclick=()=>{
 document.getElementById('aisforget').onclick=()=>{
   try{ localStorage.removeItem('proteus_aiskey'); }catch(e){}
   document.getElementById('aiskey').value='';
-  setAisStatus('Clé mémorisée effacée — recolle ta clé depuis aisstream.io (page API Keys).','ok');
+  setAisStatus(tr('Clé mémorisée effacée — recolle ta clé depuis aisstream.io (page API Keys).','Saved key erased — paste your key again from aisstream.io (API Keys page).'),'ok');
 };
 document.getElementById('aiscargo').onchange=e=>{ cargoOnly=e.target.checked; };
 document.getElementById('aiscancel').onclick=()=>{ aismodal.style.display='none'; };
@@ -1397,7 +1459,6 @@ setInterval(()=>{ const el=document.getElementById('riskFresh'); if(el) el.textC
 stepShips(0); assessRisk();
 // on purge les alertes générées à l'initialisation (les navires démarrent déjà placés)
 feedItems=[]; toastsEl.innerHTML=''; renderFeed();
-applyTheme(document.documentElement.dataset.theme
-  || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'));
+applyLang();
 requestAnimationFrame(frame);
 </script>
