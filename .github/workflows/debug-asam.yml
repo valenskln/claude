@@ -1,0 +1,36 @@
+name: debug-asam (temporaire)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Sonder plusieurs URL candidates de l'API NGA MSI ASAM
+        run: |
+          set +e
+          UA="Mozilla/5.0 (compatible; ProteusAI-risk/1.0; +https://valenskln.github.io/claude/)"
+          urls=(
+            "https://msi.nga.mil/api/publications/asam?output=json"
+            "https://msi.nga.mil/api/publications/asam?sort=date&output=json"
+            "https://msi.nga.mil/api/publications/asam?minOccurDate=2026-06-01&maxOccurDate=2026-07-21&sort=date&output=json"
+            "https://msi.nga.mil/api/publications-asam?output=json"
+            "https://msi.nga.mil/api/publications/asam-notices?output=json"
+            "https://msi.nga.mil/api/publications/asam/search?output=json"
+            "https://msi.nga.mil/api/v1/publications/asam?output=json"
+            "https://msi.nga.mil/api/publications/asam.json"
+            "https://msi.nga.mil/Publications/ASAM"
+            "https://msi.nga.mil/Piracy"
+            "https://msi.nga.mil/api/swagger-ui.html"
+            "https://msi.nga.mil/api"
+          )
+          for u in "${urls[@]}"; do
+            echo "=== $u ==="
+            code=$(curl -sS -m 15 -A "$UA" -o /tmp/out.txt -w "%{http_code}" "$u")
+            echo "HTTP $code"
+            head -c 300 /tmp/out.txt
+            echo
+            echo
+          done
