@@ -878,15 +878,6 @@ function liveList(){
   }
   return out;
 }
-function boxesFor(scope){
-  if(scope==='world') return [[[-90,-180],[90,180]]];
-  return ZONES.map(z=>{
-    const km=z.r*1.8, dla=km/111,
-      dlo=km/(111*Math.max(.2,Math.cos(z.c[0]*Math.PI/180)));
-    return [[Math.max(-90,z.c[0]-dla), Math.max(-180,z.c[1]-dlo)],
-            [Math.min(90,z.c[0]+dla), Math.min(180,z.c[1]+dlo)]];
-  });
-}
 const aismodal=document.getElementById('aismodal'), aisstatus=document.getElementById('aisstatus');
 function setAisStatus(txt, cls){ aisstatus.textContent=txt; aisstatus.className=cls||''; }
 function nearAnyZone(lat,lon){

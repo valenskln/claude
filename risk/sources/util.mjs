@@ -15,12 +15,16 @@ export async function getJSON(url, { tries = 3, timeout = 25000, wait429 = 0 } =
         await sleep(wait429);
         throw new Error('HTTP 429 (retenté après pause)');
       }
+      // 404/410 : ressource absente, pas une panne transitoire — retenter ne
+      // sert à rien et ne fait que ralentir le pipeline à chaque run.
+      if (res.status === 404 || res.status === 410) throw new Error(`HTTP ${res.status}`, { cause: 'permanent' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const text = await res.text();
       if (!text.trim()) throw new Error('réponse vide');
       return JSON.parse(text);
     } catch (e) {
       lastErr = e;
+      if (e.cause === 'permanent') break;
       if (!String(e.message).includes('429')) await sleep(1500 * (i + 1));
     }
   }

@@ -148,10 +148,14 @@ for (let zi = 0; zi < ZONES.length; zi++) {
   const score = r1(clamp(parts.base + parts.mar + parts.con + parts.nat + parts.met, 0, 10));
 
   // — tendance vs il y a ~7 jours —
+  // On n'affiche une vraie tendance que si on a un point d'historique
+  // raisonnablement proche de 7 j (5,5 à 8,5 j) : sinon (historique encore
+  // trop jeune, ou trou de plusieurs jours) on affiche "stable" plutôt que
+  // de comparer à un point bien plus proche et fausser la tendance affichée.
   let trend = '▶';
   const target = Date.now() - 7 * 86400000;
   const past = history.entries
-    .filter(e => e.s[z.id] != null)
+    .filter(e => e.s[z.id] != null && Math.abs(e.t - target) <= 1.5 * 86400000)
     .sort((a, b) => Math.abs(a.t - target) - Math.abs(b.t - target))[0];
   if (past) {
     const d = score - past.s[z.id];
