@@ -59,6 +59,11 @@
     --carrier-hmm:#9B87E0;    --carrier-zim:#B565C9;   /* manquaient : tombaient en gris */
     --carrier-other:var(--p-slate-300);
 
+    /* — coques de l'illustration navire (teintes propres, pas les pastilles) — */
+    --hull-cmacgm:#1B2D5B; --hull-msc:#20242C;   --hull-maersk:#5CB8E4;
+    --hull-hapag:#2E3338;  --hull-one:#C94795;   --hull-evergreen:#1E7A46;
+    --hull-cosco:#27447A;  --hull-default:#2E4156;
+
     /* — typographie : c'est ici qu'on change de police — */
     --font-display:'Manrope',"Segoe UI",system-ui,-apple-system,sans-serif;
     --font-mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;
@@ -760,10 +765,62 @@ function unprj(x,y){
 }
 
 /* ================= Thème (couleurs du canvas — sombre uniquement) ================= */
-const T = { land:'#17293A', landStroke:'rgba(66,105,140,.35)', grat:'rgba(30,53,75,.45)',
-  water:'#07111C', river:'rgba(38,78,118,.75)', other:'#8FA3B5',
-  label:'rgba(143,163,181,.9)', ship:'#4FC3E8', near:'#E8B84B', inZ:'#E0402F',
-  route:'rgba(79,195,232,.45)', AMB:[232,184,75], ORA:[232,121,46], RED:[224,64,47] };
+/* Le canvas exige des chaînes de couleur littérales, mais la source de vérité
+   reste le CSS. On lit les tokens au démarrage puis à chaque changement de
+   thème : il n'y a donc plus qu'une seule définition des couleurs. */
+const T = {};          // palette du canvas
+const OP_COLORS = {};  // pastille d'identité par armateur
+const HULLS = {};      // teinte de coque de l'illustration SVG
+
+const CARRIER_TOKEN = { 'Maersk':'maersk', 'MSC':'msc', 'CMA CGM':'cmacgm',
+  'COSCO':'cosco', 'Hapag-Lloyd':'hapag', 'ONE':'one', 'Evergreen':'evergreen',
+  'HMM':'hmm', 'ZIM':'zim' };
+const HULL_TOKEN = { 'CMA CGM':'cmacgm', 'MSC':'msc', 'Maersk':'maersk',
+  'Hapag-Lloyd':'hapag', 'ONE':'one', 'Evergreen':'evergreen', 'COSCO':'cosco' };
+
+function hexToRgb(c){
+  c = (c||'').trim();
+  if(c[0] === '#'){
+    if(c.length === 4) c = '#'+c[1]+c[1]+c[2]+c[2]+c[3]+c[3];
+    return [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)];
+  }
+  const m = c.match(/-?\d+\.?\d*/g);      // rgb() / rgba()
+  return m && m.length >= 3 ? [+m[0], +m[1], +m[2]] : [128,128,128];
+}
+
+function readTokens(){
+  const cs = getComputedStyle(document.documentElement);
+  const v = n => cs.getPropertyValue(n).trim();
+  T.water = v('--surface-base');   T.land  = v('--map-land');
+  T.landStroke = v('--map-land-stroke'); T.grat = v('--map-graticule');
+  T.river = v('--map-river');      T.label = v('--map-label');
+  T.other = v('--carrier-other');
+  T.calm  = v('--risk-calm');      T.near  = v('--risk-moderate');
+  T.inZ   = v('--risk-critical');
+  // la rampe de risque alimente à la fois le canvas et les styles injectés
+  T.AMB = hexToRgb(v('--risk-moderate'));
+  T.ORA = hexToRgb(v('--risk-high'));
+  T.RED = hexToRgb(v('--risk-critical'));
+  T.fontScore = v('--fs-micro') + ' ' + v('--font-mono');
+  T.fontLabel = v('--fs-nano')  + ' ' + v('--font-display');
+  for(const op in CARRIER_TOKEN){ const c = v('--carrier-' + CARRIER_TOKEN[op]); if(c) OP_COLORS[op] = c; }
+  for(const op in HULL_TOKEN){    const c = v('--hull-'    + HULL_TOKEN[op]);    if(c) HULLS[op]     = c; }
+  T.hullDefault = v('--hull-default');
+}
+
+/* Bascule de thème : relit les tokens et force le repeint du fond de carte,
+   qui est mis en cache et ne se redessine que si viewDirty est levé. */
+function setTheme(name){
+  const root = document.documentElement;
+  if(name) root.dataset.theme = name; else delete root.dataset.theme;
+  readTokens();
+  viewDirty = true;
+  if(typeof renderZones === 'function'){ renderZones(); renderRanks(); renderLegend(); }
+  if(selShip) renderShipCard(selShip);
+  if(selZone) selectZone(selZone, false);
+}
+
+readTokens();
 
 /* ================= Couleurs de risque ================= */
 function lerp(a,b,t){return a+(b-a)*t}
@@ -788,16 +845,8 @@ function activeShips(){
   return topOnly ? list.filter(s=>TOP5.includes(s.op)) : list;
 }
 
-/* ===== Couleurs par armateur (identité) — le statut de risque passe sur l'anneau ===== */
-const OP_COLORS={
-  'Maersk':'#45B8E8',      // cyan Maersk
-  'MSC':'#F2C14E',         // or MSC
-  'CMA CGM':'#6272E8',     // bleu roi
-  'COSCO':'#3FD1B0',       // turquoise
-  'Hapag-Lloyd':'#F2814E', // orange Hapag
-  'ONE':'#E85BA0',         // magenta ONE
-  'Evergreen':'#52C466',   // vert Evergreen
-};
+/* Couleurs par armateur : voir OP_COLORS, rempli par readTokens() depuis le CSS.
+   Le statut de risque passe sur l'anneau, jamais sur la couleur d'identité. */
 function opColor(op){ return OP_COLORS[op] || T.other; }
 
 function stepShips(dtSim){ // dtSim en secondes simulées
@@ -844,7 +893,7 @@ function shipState(s){
 
 /* ================= Alertes ================= */
 const feedEl = document.getElementById('feed'), toastsEl = document.getElementById('toasts');
-let feedItems = [], alertsSincePause=0;
+let feedItems = [];
 function fmtT(ms){ return new Date(ms).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'}); }
 function pushAlert(s,z,kind,d){
   const red = kind==='entrée';
@@ -961,13 +1010,13 @@ function draw(){
     ctx.beginPath(); ctx.ellipse(x,y,rx,ry,0,0,7); ctx.stroke();
     ctx.restore();
     if(z.score>=5 || view.scale>7 || z===selZone){
-      ctx.font='10.5px ui-monospace,Consolas,monospace';
+      ctx.font = T.fontScore;
       ctx.textAlign='center';
       const label=`${z.score.toFixed(1)}`;
       ctx.fillStyle=riskCSS(z.score,.95);
       ctx.fillText(label, x, y-ry-6);
       ctx.fillStyle=T.label;
-      ctx.font='9.5px Manrope,"Segoe UI",sans-serif';
+      ctx.font = T.fontLabel;
       ctx.fillText(zName(z).toUpperCase(), x, y-ry-18);
     }
   }
@@ -1226,10 +1275,6 @@ const SHIP_PHOTO_BASE={
 };
 const PHOTO_EXT=['jpg','jpeg','png','webp','JPG','PNG'];   // on tente ces formats dans l'ordre
 // vraies livrées (couleur de coque) pour l'illustration de secours
-const HULLS={
-  'CMA CGM':'#1B2D5B', 'MSC':'#20242C', 'Maersk':'#5CB8E4',
-  'Hapag-Lloyd':'#2E3338', 'ONE':'#C94795', 'Evergreen':'#1E7A46', 'COSCO':'#27447A',
-};
 function shipVisual(op){
   const base=SHIP_PHOTO_BASE[op];
   if(base) return `<div class="shipart" data-op="${esc(op)}" data-base="${base}" data-ext="0">
@@ -1255,7 +1300,7 @@ function shade(hex, amt){
 }
 function shipArt(op){
   const c = OP_COLORS[op] || null;
-  const hullC = HULLS[op] || '#2E4156';
+  const hullC = HULLS[op] || T.hullDefault;
   const shades = c ? [c, shade(c,-32), shade(c,26), '#9AA8BA'] : ['#8A97A8','#6E7C8E','#A5B2C2','#95A2B4'];
   let boxes='';
   for(let row=0; row<3; row++){
