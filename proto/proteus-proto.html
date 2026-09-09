@@ -5,26 +5,115 @@
     font-family:'Manrope'; font-style:normal; font-weight:400 800; font-display:swap;
     src:url("data:font/woff2;base64,__MANROPE_B64__") format('woff2');
   }
+  /* ==========================================================================
+     TOKENS — trois étages.
+     1. primitives : valeurs brutes, jamais lues par un composant.
+     2. sémantique : ce que les composants lisent. SEUL étage redéfini par thème.
+     3. layout     : dimensions de la coquille, pour en finir avec les nombres
+                     magiques couplés à la main.
+     Changer une couleur, une police ou la densité = toucher l'étage 2 ou 3.
+     ========================================================================== */
   :root{
-    --ocean:#07111C; --panel:#0C1926; --panel2:#102030; --line:#1C3247;
-    --ink:#E8EEF4; --ink2:#8FA3B5; --ink3:#5C7285;
-    --accent:#4FC3E8; --amber:#E8B84B; --orange:#E8792E; --red:#E0402F;
-    --ok:#4FC38B;
-    --panelT:rgba(12,25,38,.93); --hdr1:rgba(7,17,28,.96); --hdr2:rgba(7,17,28,.82);
-    --ovl:rgba(3,8,14,.7); --scoreInk:#07111C; --other:#8FA3B5;
+    /* — 1. primitives — */
+    --p-ocean-900:#07111C; --p-ocean-800:#0C1926; --p-ocean-700:#102030;
+    --p-ocean-600:#1C3247; --p-ocean-500:#17293A;
+    --p-slate-300:#8FA3B5; --p-slate-400:#5C7285; --p-white-50:#E8EEF4;
+    --p-cyan-400:#4FC3E8;  --p-amber-400:#E8B84B; --p-orange-400:#E8792E;
+    --p-red-400:#E0402F;   --p-green-400:#4FC38B;
+
+    /* — 2. sémantique : surfaces & texte — */
+    --surface-base:var(--p-ocean-900);        /* fond de page ET eau du canvas */
+    --surface-raised:var(--p-ocean-800);      /* panneaux, boutons, modales */
+    --surface-sunken:var(--p-ocean-700);      /* champs, survol, pistes de barres */
+    --surface-translucent:rgba(12,25,38,.93); /* panneaux flottants (avec flou) */
+    --surface-header-top:rgba(7,17,28,.96);
+    --surface-header-bottom:rgba(7,17,28,.82);
+    --scrim:rgba(3,8,14,.7);                  /* voile derrière les modales */
+    --border-subtle:var(--p-ocean-600);
+    --text-primary:var(--p-white-50);
+    --text-secondary:var(--p-slate-300);
+    --text-muted:var(--p-slate-400);
+    --text-on-risk:var(--p-ocean-900);        /* texte posé sur une pastille de score */
+
+    /* — 2. sémantique : action & risque —
+       L'accent signale l'interface ; la rampe ambre→orange→rouge est RÉSERVÉE au
+       danger. Sous 4,0 le score reste neutre : pas de couleur chaude sans raison. */
+    --accent:var(--p-cyan-400);
+    --risk-calm:var(--p-slate-300);
+    --risk-moderate:var(--p-amber-400);
+    --risk-high:var(--p-orange-400);
+    --risk-critical:var(--p-red-400);
+    --status-ok:var(--p-green-400);
+
+    /* — 2. sémantique : fond de carte (lu par le canvas, cf. readTokens) — */
+    --map-land:var(--p-ocean-500);
+    --map-land-stroke:rgba(66,105,140,.35);
+    --map-graticule:rgba(30,53,75,.45);
+    --map-river:rgba(38,78,118,.75);
+    --map-label:rgba(143,163,181,.9);
+
+    /* — 2. sémantique : armateurs (identification, jamais hiérarchie) — */
+    --carrier-maersk:#45B8E8; --carrier-msc:#F2C14E; --carrier-cmacgm:#6272E8;
+    --carrier-cosco:#3FD1B0;  --carrier-hapag:#F2814E; --carrier-one:#E85BA0;
+    --carrier-evergreen:#52C466;
+    --carrier-hmm:#9B87E0;    --carrier-zim:#B565C9;   /* manquaient : tombaient en gris */
+    --carrier-other:var(--p-slate-300);
+
+    /* — typographie : c'est ici qu'on change de police — */
+    --font-display:'Manrope',"Segoe UI",system-ui,-apple-system,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;
+    --fs-h1:17px; --fs-h2:15px; --fs-h3:13px; --fs-body:14px;
+    --fs-small:12.5px; --fs-caption:12px; --fs-label:11px; --fs-micro:10.5px;
+    --fs-nano:9.5px; --fs-data:13.5px;
+    --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700; --fw-black:800;
+    --tracking-label:.12em; --tracking-wide:.14em;
+    --leading-tight:1.25; --leading-body:1.5; --leading-loose:1.6;
+
+    /* — espacement, géométrie, profondeur, mouvement — */
+    --sp-1:2px; --sp-2:4px; --sp-3:6px; --sp-4:8px;
+    --sp-5:12px; --sp-6:16px; --sp-7:24px; --sp-8:32px;
+    --radius-xs:3px; --radius-sm:4px; --radius-md:6px; --radius-lg:8px;
+    --radius-xl:12px; --radius-pill:20px; --radius-round:50%;
+    --border-width:1px;
+    --blur-panel:4px; --blur-header:6px;
+    --z-map:0; --z-legend:15; --z-rail:20; --z-search:22; --z-dock:25;
+    --z-header:30; --z-tip:40; --z-toast:50; --z-modal:60;
+    --motion-fast:120ms; --motion-base:250ms; --ease:cubic-bezier(.2,.7,.3,1);
+
+    /* — 3. layout : les dimensions de la coquille —
+       Les positions dérivées se calculent (calc) au lieu d'être recopiées :
+       élargir un rail ne peut plus décaler la recherche en silence. */
+    --h-header:58px;
+    --w-rail:295px;
+    --inset:var(--sp-5);
+    --w-dock:340px;
+    --w-toast:320px;
+
+    /* — alias de compatibilité : l'ancien nommage continue de fonctionner,
+         ce qui permet de migrer le CSS composant par composant — */
+    --ocean:var(--surface-base);      --panel:var(--surface-raised);
+    --panel2:var(--surface-sunken);   --line:var(--border-subtle);
+    --ink:var(--text-primary);        --ink2:var(--text-secondary);
+    --ink3:var(--text-muted);         --amber:var(--risk-moderate);
+    --orange:var(--risk-high);        --red:var(--risk-critical);
+    --ok:var(--status-ok);            --panelT:var(--surface-translucent);
+    --hdr1:var(--surface-header-top); --hdr2:var(--surface-header-bottom);
+    --ovl:var(--scrim);               --scoreInk:var(--text-on-risk);
+    --other:var(--carrier-other);
+
     color-scheme: dark;
   }
   *{box-sizing:border-box; margin:0; padding:0}
   html,body{height:100%}
   body{
     background:var(--ocean); color:var(--ink); overflow:hidden;
-    font:14px/1.5 'Manrope',"Segoe UI",system-ui,-apple-system,sans-serif;
+    font:var(--fs-body)/var(--leading-body) var(--font-display);
   }
-  .mono{font-family:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace}
+  .mono{font-family:var(--font-mono)}
 
   /* ===== Header ===== */
   #hdr{
-    position:fixed; inset:0 0 auto 0; height:58px; z-index:30;
+    position:fixed; inset:0 0 auto 0; height:var(--h-header); z-index:var(--z-header);
     display:flex; align-items:center; gap:16px; padding:0 16px;
     background:linear-gradient(180deg, var(--hdr1), var(--hdr2));
     border-bottom:1px solid var(--line); backdrop-filter:blur(6px);
@@ -59,7 +148,7 @@
   #map{position:fixed; inset:0; cursor:grab}
   #map.drag{cursor:grabbing}
   #tip{
-    position:fixed; z-index:40; pointer-events:none; display:none;
+    position:fixed; z-index:var(--z-tip); pointer-events:none; display:none;
     background:var(--panel); border:1px solid var(--line); border-radius:5px;
     padding:4px 9px; font-size:12px;
   }
@@ -67,11 +156,12 @@
 
   /* ===== Panels ===== */
   .panel{
-    position:fixed; top:70px; bottom:12px; width:295px; z-index:20;
+    position:fixed; top:calc(var(--h-header) + var(--inset)); bottom:var(--inset);
+    width:var(--w-rail); z-index:var(--z-rail);
     display:flex; flex-direction:column; gap:10px; overflow-y:auto;
     scrollbar-width:thin;
   }
-  #pl{left:12px} #pr{right:12px}
+  #pl{left:var(--inset)} #pr{right:var(--inset)}
   .card{
     background:var(--panelT); border:1px solid var(--line); border-radius:12px;
     padding:12px 13px; backdrop-filter:blur(4px);
@@ -115,7 +205,8 @@
 
   /* ===== Detail card ===== */
   #detail{
-    position:fixed; left:12px; bottom:12px; width:340px; z-index:25; display:none;
+    position:fixed; left:var(--inset); bottom:var(--inset); width:var(--w-dock);
+    z-index:var(--z-dock); display:none;
     background:var(--panelT); border:1px solid var(--line); border-radius:14px;
     padding:15px 16px; backdrop-filter:blur(6px);
   }
@@ -135,7 +226,7 @@
   .riskbar{height:100%; border-radius:3px}
 
   /* ===== Toasts ===== */
-  #toasts{position:fixed; right:12px; bottom:12px; z-index:50; display:flex; flex-direction:column; gap:8px; width:320px}
+  #toasts{position:fixed; right:var(--inset); bottom:var(--inset); z-index:var(--z-toast); display:flex; flex-direction:column; gap:8px; width:var(--w-toast)}
   .toast{
     background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--amber);
     border-radius:8px; padding:10px 13px; font-size:12.5px; line-height:1.4;
@@ -148,7 +239,7 @@
   @media (prefers-reduced-motion:reduce){.toast{animation:none}}
 
   /* ===== Modal ===== */
-  #modal{position:fixed; inset:0; z-index:60; display:none; align-items:center; justify-content:center; background:var(--ovl)}
+  #modal{position:fixed; inset:0; z-index:var(--z-modal); display:none; align-items:center; justify-content:center; background:var(--ovl)}
   #modal>div{
     position:relative; width:min(620px, 92vw); max-height:84vh; overflow-y:auto;
     background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:26px 28px;
@@ -177,7 +268,7 @@
 
   /* ===== Legend ===== */
   #legend{
-    position:fixed; left:50%; transform:translateX(-50%); bottom:12px; z-index:15;
+    position:fixed; left:50%; transform:translateX(-50%); bottom:var(--inset); z-index:var(--z-legend);
     display:flex; flex-wrap:wrap; justify-content:center; gap:6px 13px; align-items:center;
     font-size:11px; color:var(--ink2); max-width:min(860px,94vw);
     background:var(--panelT); border:1px solid var(--line); border-radius:16px; padding:7px 16px;
@@ -191,7 +282,9 @@
   #legops{display:contents}
 
   /* ===== Recherche navire ===== */
-  #searchbox{position:fixed; top:70px; left:319px; z-index:22; width:265px}
+  /* left = marge + rail + gouttière : calculé, plus recopié à la main */
+  #searchbox{position:fixed; top:calc(var(--h-header) + var(--inset));
+    left:calc(var(--inset) + var(--w-rail) + var(--sp-5)); z-index:var(--z-search); width:265px}
   #searchbox input{
     font:inherit; width:100%; color:var(--ink); background:var(--panelT); backdrop-filter:blur(4px);
     border:1px solid var(--line); border-radius:20px; padding:8px 15px;
@@ -201,7 +294,7 @@
   #searchres .sr{display:flex; align-items:center; gap:8px; padding:7px 12px; font-size:12.5px; cursor:pointer}
   #searchres .sr:hover{background:var(--panel2)}
   #searchres .sr small{color:var(--ink3); margin-left:auto}
-  @media (max-width:1120px){ #searchbox{left:12px; width:min(265px,60vw)} }
+  @media (max-width:1120px){ #searchbox{left:var(--inset); width:min(265px,60vw)} }
 
   /* ===== Illustration navire ===== */
   .shipart{margin:4px 0 10px; border-radius:10px; overflow:hidden; background:var(--panel2)}
@@ -304,7 +397,7 @@
   </div>
 </div>
 
-<div id="aismodal" class="aismodal" role="dialog" aria-modal="true" data-i18n-aria="aria.ais" aria-label="Connexion AIS" style="position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:var(--ovl)">
+<div id="aismodal" class="aismodal" role="dialog" aria-modal="true" data-i18n-aria="aria.ais" aria-label="Connexion AIS" style="position:fixed;inset:0;z-index:var(--z-modal);display:none;align-items:center;justify-content:center;background:var(--ovl)">
   <div style="position:relative;width:min(520px,92vw);max-height:84vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px 28px">
     <button class="x" id="ax" data-i18n-aria="aria.close" aria-label="Fermer">✕</button>
     <h2 id="aisH2" data-i18n="ais.h2" style="font-size:17px;margin-bottom:4px">🛰️ Passer aux positions réelles</h2>
