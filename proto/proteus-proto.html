@@ -88,8 +88,9 @@
     /* — 3. layout : les dimensions de la coquille —
        Les positions dérivées se calculent (calc) au lieu d'être recopiées :
        élargir un rail ne peut plus décaler la recherche en silence. */
-    --h-header:58px;
-    --w-rail:295px;
+    --h-header:52px; --h-statusbar:26px; --h-row:26px;
+    --w-rail:296px;  --w-rail-right:300px;
+    --gap-shell:1px;                     /* le fond transparaît : c'est le filet */
     --inset:var(--sp-5);
     --w-dock:340px;
     --w-toast:320px;
@@ -157,18 +158,27 @@
   }
   *{box-sizing:border-box; margin:0; padding:0}
   html,body{height:100%}
+  /* Coquille : une grille unique. Le fond de body transparaît dans les
+     gouttières de 1px et dessine les filets du terminal. */
   body{
-    background:var(--ocean); color:var(--ink); overflow:hidden;
+    background:var(--border-subtle); color:var(--text-primary); overflow:hidden;
     font:var(--fs-body)/var(--leading-body) var(--font-display);
+    display:grid; height:100dvh; gap:var(--gap-shell);
+    grid-template-columns:var(--w-rail) minmax(0,1fr) var(--w-rail-right);
+    grid-template-rows:var(--h-header) minmax(0,1fr) var(--h-statusbar);
+    grid-template-areas:
+      "header header header"
+      "railL  stage  railR"
+      "status status status";
   }
+  #stage{grid-area:stage; position:relative; overflow:hidden; background:var(--surface-base)}
   .mono{font-family:var(--font-mono)}
 
   /* ===== Header ===== */
   #hdr{
-    position:fixed; inset:0 0 auto 0; height:var(--h-header); z-index:var(--z-header);
-    display:flex; align-items:center; gap:16px; padding:0 16px;
-    background:linear-gradient(180deg, var(--hdr1), var(--hdr2));
-    border-bottom:1px solid var(--line); backdrop-filter:blur(6px);
+    grid-area:header; z-index:var(--z-header);
+    display:flex; align-items:center; gap:var(--sp-5); padding:0 var(--sp-5);
+    background:var(--surface-raised); min-width:0;
   }
   #brand{display:flex; flex-direction:column; line-height:1.15; min-width:170px}
   #brand b{font-size:17px; letter-spacing:.14em}
@@ -197,7 +207,7 @@
   button.small{padding:3px 8px; font-size:12px}
 
   /* ===== Map ===== */
-  #map{position:fixed; inset:0; cursor:grab}
+  #map{position:absolute; inset:0; display:block; cursor:grab}
   #map.drag{cursor:grabbing}
   #tip{
     position:fixed; z-index:var(--z-tip); pointer-events:none; display:none;
@@ -208,20 +218,24 @@
 
   /* ===== Panels ===== */
   .panel{
-    position:fixed; top:calc(var(--h-header) + var(--inset)); bottom:var(--inset);
-    width:var(--w-rail); z-index:var(--z-rail);
-    display:flex; flex-direction:column; gap:10px; overflow-y:auto;
-    scrollbar-width:thin;
+    display:flex; flex-direction:column; gap:var(--gap-shell);
+    min-height:0; overflow:hidden; background:var(--border-subtle);
   }
-  #pl{left:var(--inset)} #pr{right:var(--inset)}
+  #pl{grid-area:railL} #pr{grid-area:railR}
   .card{
-    background:var(--panelT); border:1px solid var(--line); border-radius:12px;
-    padding:12px 13px; backdrop-filter:blur(4px);
+    background:var(--surface-raised); padding:var(--sp-4) var(--sp-5);
+    display:flex; flex-direction:column; min-height:0;
   }
+  .card.grow{flex:1}                 /* la section prend la place restante */
+  .card.grow > div:last-child{flex:1; overflow-y:auto; scrollbar-width:thin; min-height:0}
   .card h3{
-    font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--ink2);
-    margin-bottom:9px; display:flex; justify-content:space-between; align-items:center;
+    font-size:var(--fs-label); text-transform:uppercase; letter-spacing:var(--tracking-label);
+    color:var(--text-secondary); font-weight:var(--fw-bold);
+    padding-bottom:var(--sp-3); margin-bottom:var(--sp-3);
+    border-bottom:var(--border-width) solid var(--border-subtle);
+    display:flex; justify-content:space-between; align-items:baseline; gap:var(--sp-3);
   }
+  .hint{color:var(--text-muted); font-size:var(--fs-micro)}
   .fresh{font-size:9px; letter-spacing:.04em; color:var(--ink3); text-transform:none; text-align:right}
   .why{margin:8px 0 2px; padding-left:16px; font-size:12px; line-height:1.5; color:var(--ink)}
   .why li{margin-bottom:3px}
@@ -256,11 +270,16 @@
   .empty{color:var(--ink3); font-size:12px; font-style:italic}
 
   /* ===== Detail card ===== */
+  /* Dock : ancré en bas à gauche de la scène, il ne masque ni le centre de la
+     carte ni le coin des alertes. */
   #detail{
-    position:fixed; left:var(--inset); bottom:var(--inset); width:var(--w-dock);
+    position:absolute; left:0; bottom:0; width:min(var(--w-dock), 62%);
+    max-height:66%; overflow-y:auto; scrollbar-width:thin;
     z-index:var(--z-dock); display:none;
-    background:var(--panelT); border:1px solid var(--line); border-radius:14px;
-    padding:15px 16px; backdrop-filter:blur(6px);
+    background:var(--surface-raised);
+    border-top:var(--border-width) solid var(--border-subtle);
+    border-right:var(--border-width) solid var(--border-subtle);
+    padding:var(--sp-5) var(--sp-6);
   }
   #detail h2{font-size:15px; letter-spacing:.02em; margin-bottom:2px; padding-right:24px}
   #detail .sub{color:var(--ink2); font-size:12px; margin-bottom:10px}
@@ -269,7 +288,7 @@
   .chip{font-size:10.5px; border:1px solid var(--line); color:var(--ink2); border-radius:20px; padding:2px 9px}
   .kv{display:grid; grid-template-columns:auto 1fr; gap:2px 14px; font-size:12px; margin-top:6px}
   .kv dt{color:var(--ink3)} .kv dd{font-variant-numeric:tabular-nums}
-  #detail .x, #modal .x{
+  #detail .x, #modal .x, #aismodal .x{
     position:absolute; top:8px; right:8px; border:none; background:none;
     color:var(--ink2); font-size:15px; padding:4px 8px;
   }
@@ -278,7 +297,7 @@
   .riskbar{height:100%; border-radius:3px}
 
   /* ===== Toasts ===== */
-  #toasts{position:fixed; right:var(--inset); bottom:var(--inset); z-index:var(--z-toast); display:flex; flex-direction:column; gap:8px; width:var(--w-toast)}
+  #toasts{position:absolute; right:var(--sp-5); top:var(--sp-5); z-index:var(--z-toast); display:flex; flex-direction:column; gap:8px; width:var(--w-toast)}
   .toast{
     background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--amber);
     border-radius:8px; padding:10px 13px; font-size:12.5px; line-height:1.4;
@@ -291,11 +310,27 @@
   @media (prefers-reduced-motion:reduce){.toast{animation:none}}
 
   /* ===== Modal ===== */
-  #modal{position:fixed; inset:0; z-index:var(--z-modal); display:none; align-items:center; justify-content:center; background:var(--ovl)}
-  #modal>div{
-    position:relative; width:min(620px, 92vw); max-height:84vh; overflow-y:auto;
-    background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:26px 28px;
+  /* Une seule définition pour les deux modales : l'AIS dupliquait tout en ligne. */
+  #modal, #aismodal{
+    position:fixed; inset:0; z-index:var(--z-modal); display:none;
+    align-items:center; justify-content:center; background:var(--scrim);
   }
+  #modal>div, #aismodal>div{
+    position:relative; max-height:84vh; overflow-y:auto;
+    background:var(--surface-raised); border:var(--border-width) solid var(--border-subtle);
+    border-radius:var(--radius-xl); padding:var(--sp-7);
+  }
+  #modal>div{width:min(620px, 92vw)}
+  #aismodal>div{width:min(520px, 92vw)}
+  .ais-h2{font-size:var(--fs-h1); margin-bottom:var(--sp-2)}
+  .ais-sub{color:var(--text-secondary); font-size:var(--fs-small); margin-bottom:var(--sp-5)}
+  .ais-steps{font-size:var(--fs-h3); line-height:var(--leading-loose)}
+  .ais-row{display:flex; gap:var(--sp-3)}
+  .ais-row input{flex:1}
+  .ais-row button{flex:none}
+  .ais-actions{display:flex; gap:var(--sp-4); margin-top:var(--sp-6)}
+  .ais-actions .push{margin-left:auto}
+  .ais-warn{color:var(--text-muted); font-size:var(--fs-label); margin-top:var(--sp-6)}
   #modal h2{font-size:17px; margin-bottom:4px}
   #modal h4{font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--accent); margin:18px 0 6px}
   #modal p, #modal li{font-size:13px; color:var(--ink); line-height:1.6}
@@ -320,9 +355,9 @@
 
   /* ===== Legend ===== */
   #legend{
-    position:fixed; left:50%; transform:translateX(-50%); bottom:var(--inset); z-index:var(--z-legend);
+    position:absolute; right:var(--sp-5); bottom:var(--sp-5); z-index:var(--z-legend);
     display:flex; flex-wrap:wrap; justify-content:center; gap:6px 13px; align-items:center;
-    font-size:11px; color:var(--ink2); max-width:min(860px,94vw);
+    font-size:var(--fs-nano); color:var(--text-secondary); max-width:min(420px,60%);
     background:var(--panelT); border:1px solid var(--line); border-radius:16px; padding:7px 16px;
   }
   #legend .sw{width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:4px; vertical-align:-1px}
@@ -334,9 +369,8 @@
   #legops{display:contents}
 
   /* ===== Recherche navire ===== */
-  /* left = marge + rail + gouttière : calculé, plus recopié à la main */
-  #searchbox{position:fixed; top:calc(var(--h-header) + var(--inset));
-    left:calc(var(--inset) + var(--w-rail) + var(--sp-5)); z-index:var(--z-search); width:265px}
+  #searchbox{position:absolute; top:var(--sp-5); left:var(--sp-5);
+    z-index:var(--z-search); width:265px}
   #searchbox input{
     font:inherit; width:100%; color:var(--ink); background:var(--panelT); backdrop-filter:blur(4px);
     border:1px solid var(--line); border-radius:20px; padding:8px 15px;
@@ -357,20 +391,104 @@
   .checkrow.pad{display:block; padding:2px 4px; margin-top:2px; line-height:1.45}
   .checkrow.pad input{vertical-align:-2px; margin-right:6px}
 
+  /* ===== Tableau des zones =====
+     Le score est un nombre monospace aligné à droite, pas un aplat de couleur :
+     avec les données réelles la quasi-totalité des zones est calme, et un écran
+     entièrement orange serait un mensonge. La sévérité passe par un liseré de
+     2px en tête de ligne, et le nombre reste toujours lisible. */
+  .thead, .zrow{
+    display:grid; grid-template-columns:38px minmax(0,1fr) 62px 34px;
+    align-items:center; gap:var(--sp-3);
+  }
+  .thead{
+    padding:0 var(--sp-2) var(--sp-2) calc(var(--sp-2) + 2px);
+    border-bottom:var(--border-width) solid var(--border-subtle); margin-bottom:var(--sp-1);
+  }
+  .th{
+    font:inherit; background:none; border:0; padding:0; cursor:pointer; text-align:left;
+    font-size:var(--fs-nano); font-weight:var(--fw-bold); text-transform:uppercase;
+    letter-spacing:var(--tracking-label); color:var(--text-muted); border-radius:0;
+  }
+  .th:hover{color:var(--text-secondary)}
+  .th.on{color:var(--accent)}
+  .th-score{text-align:right}
+  .th-trend{text-align:center}
+  .th.on::after{content:' ▾'; font-size:8px}
+  .th.on[data-dir="asc"]::after{content:' ▴'}
+
+  .zrow{
+    min-height:var(--h-row); padding:var(--sp-1) var(--sp-2);
+    border-left:2px solid transparent; cursor:pointer;
+    border-bottom:var(--border-width) solid var(--border-subtle);
+  }
+  .zrow:hover{background:var(--surface-sunken)}
+  .zrow.sel{background:var(--surface-sunken); border-left-color:var(--accent)}
+  .zrow.band-moderate{border-left-color:var(--risk-moderate)}
+  .zrow.band-high{border-left-color:var(--risk-high)}
+  .zrow.band-critical{border-left-color:var(--risk-critical)}
+  .zscore{
+    font-family:var(--font-mono); font-size:var(--fs-small); font-weight:var(--fw-bold);
+    font-variant-numeric:tabular-nums; text-align:right; color:var(--risk-calm);
+  }
+  .band-moderate .zscore{color:var(--risk-moderate)}
+  .band-high     .zscore{color:var(--risk-high)}
+  .band-critical .zscore{color:var(--risk-critical)}
+  .zname{
+    font-size:var(--fs-caption); line-height:var(--leading-tight);
+    display:flex; align-items:center; gap:var(--sp-2); min-width:0;
+  }
+  .zname .n{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .jwc{
+    font-size:8.5px; font-weight:var(--fw-bold); letter-spacing:.06em; vertical-align:1px;
+    border:var(--border-width) solid var(--border-subtle); border-radius:var(--radius-xs);
+    padding:0 3px; color:var(--text-muted);
+  }
+  .ztype{
+    font-size:var(--fs-nano); text-transform:uppercase; letter-spacing:.05em;
+    color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .ztrend{font-size:var(--fs-caption); color:var(--text-secondary); text-align:center}
+
+  /* ===== Barre d'état ===== */
+  #statusbar{
+    grid-area:status; display:flex; align-items:center; gap:var(--sp-4);
+    padding:0 var(--sp-5); background:var(--surface-raised);
+    font-size:var(--fs-nano); color:var(--text-secondary);
+    overflow:hidden; white-space:nowrap;
+  }
+  .sb-label{
+    text-transform:uppercase; letter-spacing:var(--tracking-label);
+    color:var(--text-muted); font-weight:var(--fw-bold);
+  }
+  .sb-sep{width:var(--border-width); height:11px; background:var(--border-subtle); flex:none}
+  .sb-spacer{margin-left:auto}
+  .sb-sources{display:flex; gap:var(--sp-4); align-items:center}
+  .src{display:inline-flex; align-items:center; gap:var(--sp-2); cursor:default}
+  .src i{width:5px; height:5px; border-radius:var(--radius-round); background:var(--status-ok); flex:none}
+  .src.down{color:var(--risk-critical)}
+  .src.down i{background:var(--risk-critical)}
+  .src.unknown{color:var(--text-muted)}
+  .src.unknown i{background:var(--text-muted)}
+  #sbMode.live{color:var(--status-ok)}
+
   /* ===== Responsive ===== */
   #ptoggles{display:none; gap:6px}
+  /* La grille suffit : plus aucune compensation de hauteur devinée à la main. */
   @media (max-width:1120px){
-    .panel{display:none}
-    .panel.open{display:flex; background:var(--panelT); border-radius:12px; padding:8px; width:min(320px, 92vw)}
+    body{grid-template-columns:minmax(0,1fr); grid-template-areas:"header" "stage" "status"}
+    .panel{position:absolute; top:var(--sp-5); bottom:var(--sp-5); width:min(320px,92vw);
+      z-index:var(--z-rail); display:none; border:var(--border-width) solid var(--border-subtle)}
+    #pl{left:var(--sp-5)} #pr{right:var(--sp-5)}
+    .panel.open{display:flex}
     #ptoggles{display:flex}
     #kpis .kpi:nth-child(4){display:none}
   }
   @media (max-width:760px){
-    #hdr{flex-wrap:wrap; height:auto; padding:8px 10px; row-gap:6px}
-    .panel{top:110px}
+    body{grid-template-rows:auto minmax(0,1fr) var(--h-statusbar)}
+    #hdr{flex-wrap:wrap; padding:var(--sp-4) var(--sp-3); row-gap:var(--sp-3)}
     #brand span{display:none}
     #kpis{margin-left:0}
-    #detail{width:min(340px, 92vw)}
+    #detail{width:100%}
   }
 </style>
 
@@ -402,47 +520,68 @@
   </div>
 </header>
 
-<canvas id="map"></canvas>
-<div id="tip"></div>
-
-<div id="searchbox">
-  <input id="shipsearch" type="text" data-i18n-placeholder="search.placeholder" placeholder="🔍 Rechercher un navire (nom, MMSI)…" autocomplete="off">
-  <div id="searchres"></div>
-</div>
-
 <aside class="panel" id="pl">
-  <div class="card">
+  <section class="card">
     <h3 id="hFilter" data-i18n="panel.filter">Filtre flotte</h3>
     <label class="checkrow pad"><input type="checkbox" id="ftop"> <span id="lTop5" data-i18n="filter.top5">Top 5 armateurs uniquement</span><br>
-      <small style="color:var(--ink3)">MSC · Maersk · CMA CGM · COSCO · Hapag-Lloyd</small></label>
-  </div>
-  <div class="card">
+      <small class="hint">MSC · Maersk · CMA CGM · COSCO · Hapag-Lloyd</small></label>
+  </section>
+  <section class="card grow">
     <h3><span id="hZonesRank" data-i18n="panel.zonesRank">Zones à risque · classement</span> <span id="riskFresh" class="fresh"></span></h3>
-    <div id="zlist"></div>
-  </div>
+    <div class="thead" id="zhead">
+      <button class="th th-score" data-sort="score" data-i18n="col.score">Score</button>
+      <button class="th th-name"  data-sort="name"  data-i18n="col.zone">Zone</button>
+      <button class="th th-type"  data-sort="type"  data-i18n="col.type">Type</button>
+      <button class="th th-trend" data-sort="trend" data-i18n="col.trend">Tend.</button>
+    </div>
+    <div id="zlist" role="list"></div>
+  </section>
 </aside>
+
+<main id="stage">
+  <canvas id="map"></canvas>
+  <div id="tip"></div>
+
+  <div id="searchbox">
+    <input id="shipsearch" type="text" data-i18n-placeholder="search.placeholder" placeholder="🔍 Rechercher un navire (nom, MMSI)…" autocomplete="off">
+    <div id="searchres"></div>
+  </div>
+
+  <div id="detail" role="dialog" data-i18n-aria="aria.detail" aria-label="Détail"></div>
+  <div id="toasts" role="status" aria-live="polite"></div>
+
+  <div id="legend">
+    <span id="legops"></span>
+    <span class="lsep"></span>
+    <span><span class="grad"></span><span id="legRisk" data-i18n="legend.risk">Risque de zone</span></span>
+    <span><span class="ring a"></span><span id="legApproach" data-i18n="legend.approach">Approche</span></span>
+    <span><span class="ring r"></span><span id="legInZone" data-i18n="legend.inzone">En zone</span></span>
+  </div>
+</main>
 
 <aside class="panel" id="pr">
-  <div class="card">
+  <section class="card">
     <h3 id="hTopShips" data-i18n="panel.topShips">Navires les plus exposés</h3>
     <div id="slist"><div class="empty" id="slistEmpty">Calcul en cours…</div></div>
-  </div>
-  <div class="card">
+  </section>
+  <section class="card grow">
     <h3 id="hAlertLog" data-i18n="panel.alertLog">Journal des alertes</h3>
     <div id="feed"><div class="empty">Aucune alerte pour l’instant.</div></div>
-  </div>
+  </section>
 </aside>
 
-<div id="detail" role="dialog" data-i18n-aria="aria.detail" aria-label="Détail"></div>
-<div id="toasts" role="status" aria-live="polite"></div>
-
-<div id="legend">
-  <span id="legops"></span>
-  <span class="lsep"></span>
-  <span><span class="grad"></span><span id="legRisk" data-i18n="legend.risk">Risque de zone</span></span>
-  <span><span class="ring a"></span><span id="legApproach" data-i18n="legend.approach">Approche</span></span>
-  <span><span class="ring r"></span><span id="legInZone" data-i18n="legend.inzone">En zone</span></span>
-</div>
+<!-- Barre d’état : la fiabilité de la donnée reste visible en permanence. -->
+<footer id="statusbar">
+  <span class="sb-label" data-i18n="status.sources">Sources</span>
+  <span id="srcHealth" class="sb-sources"></span>
+  <span class="sb-sep"></span>
+  <span class="sb-label" data-i18n="status.updated">Scores</span>
+  <span id="sbFresh" class="mono"></span>
+  <span class="sb-spacer"></span>
+  <span id="sbCount" class="mono"></span>
+  <span class="sb-sep"></span>
+  <span id="sbMode"></span>
+</footer>
 
 <div id="modal" role="dialog" aria-modal="true" data-i18n-aria="aria.about" aria-label="À propos">
   <div>
@@ -451,21 +590,21 @@
   </div>
 </div>
 
-<div id="aismodal" class="aismodal" role="dialog" aria-modal="true" data-i18n-aria="aria.ais" aria-label="Connexion AIS" style="position:fixed;inset:0;z-index:var(--z-modal);display:none;align-items:center;justify-content:center;background:var(--ovl)">
-  <div style="position:relative;width:min(520px,92vw);max-height:84vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px 28px">
+<div id="aismodal" role="dialog" aria-modal="true" data-i18n-aria="aria.ais" aria-label="Connexion AIS">
+  <div>
     <button class="x" id="ax" data-i18n-aria="aria.close" aria-label="Fermer">✕</button>
-    <h2 id="aisH2" data-i18n="ais.h2" style="font-size:17px;margin-bottom:4px">🛰️ Passer aux positions réelles</h2>
-    <p id="aisSub" data-i18n-html="ais.sub" class="sub" style="color:var(--ink2);font-size:12.5px;margin-bottom:12px">
+    <h2 id="aisH2" data-i18n="ais.h2" class="ais-h2">🛰️ Passer aux positions réelles</h2>
+    <p id="aisSub" data-i18n-html="ais.sub" class="ais-sub">
       Flux AIS en direct fourni par <b>aisstream.io</b> (gratuit).</p>
-    <p id="aisSteps" data-i18n-html="ais.steps" style="font-size:13px;line-height:1.6">
+    <p id="aisSteps" data-i18n-html="ais.steps" class="ais-steps">
       1. Crée un compte gratuit sur <b>aisstream.io</b> (connexion via ton compte GitHub)<br>
       2. Menu « API Keys » → génère une clé<br>
       3. Colle-la ci-dessous
     </p>
     <label class="fld" for="aiskey" id="aisKeyLabel" data-i18n="ais.keyLabel">Clé API aisstream.io</label>
-    <div style="display:flex;gap:6px">
-      <input type="password" id="aiskey" autocomplete="off" placeholder="ex. 2f7c1a…" style="flex:1">
-      <button id="aiseye" data-i18n-title="ais.eye" title="Afficher / masquer la clé" style="flex:none">👁</button>
+    <div class="ais-row">
+      <input type="password" id="aiskey" autocomplete="off" placeholder="ex. 2f7c1a…">
+      <button id="aiseye" data-i18n-title="ais.eye" title="Afficher / masquer la clé">👁</button>
     </div>
     <label class="fld" for="aisscope" id="aisScopeLabel" data-i18n="ais.scopeLabel">Couverture</label>
     <select id="aisscope">
@@ -473,13 +612,13 @@
       <option value="world" data-i18n="ais.scope.world">Monde entier (très gros volume — tests courts)</option>
     </select>
     <label class="checkrow"><input type="checkbox" id="aiscargo"> <span id="aisCargoLabel" data-i18n="ais.cargoLabel">Cargos uniquement (type AIS 70–79 — peut mettre quelques minutes à se remplir)</span></label>
-    <div style="display:flex;gap:8px;margin-top:16px">
+    <div class="ais-actions">
       <button class="btn-primary" id="aisconnect" data-i18n="ais.connect">Se connecter</button>
       <button id="aiscancel" data-i18n="ais.cancel">Annuler</button>
-      <button id="aisforget" data-i18n="ais.forget" data-i18n-title="ais.forget.title" title="Effacer la clé mémorisée dans ce navigateur" style="margin-left:auto">Oublier la clé</button>
+      <button id="aisforget" class="push" data-i18n="ais.forget" data-i18n-title="ais.forget.title" title="Effacer la clé mémorisée dans ce navigateur">Oublier la clé</button>
     </div>
     <div id="aisstatus"></div>
-    <p id="aisBottomWarn" data-i18n-html="ais.bottomWarn" class="sub" style="color:var(--ink3);font-size:11.5px;margin-top:14px">
+    <p id="aisBottomWarn" data-i18n-html="ais.bottomWarn" class="ais-warn">
       ⚠️ Dans l’aperçu en ligne, les connexions externes sont bloquées par sécurité :
       pour le direct, télécharge <b>proteus-prototype.html</b> et ouvre-le sur ton ordinateur.
       Couverture : antennes côtières (les océans lointains ont des trous — c’est normal).
@@ -548,6 +687,12 @@ const I18N = {
   'btn.mode':         ['Basculer entre simulation et flux AIS réel','Switch between simulation and live AIS feed'],
   'btn.info':         ['À propos du prototype','About this prototype'],
   'btn.theme':        ['Thème clair / sombre','Light / dark theme'],
+  'col.score':        ['Score','Score'],
+  'col.zone':         ['Zone','Zone'],
+  'col.type':         ['Type','Type'],
+  'col.trend':        ['Tend.','Trend'],
+  'status.sources':   ['Sources','Sources'],
+  'status.updated':   ['Scores','Scores'],
   'btn.density':      ['Densité d’affichage','Display density'],
   'search.placeholder':['🔍 Rechercher un navire (nom, MMSI)…','🔍 Search a vessel (name, MMSI)…'],
   'panel.filter':     ['Filtre flotte','Fleet filter'],
@@ -654,7 +799,7 @@ const ABOUT_EN = `
   <p class="sub" style="margin-top:16px">Tip: click a vessel or a zone on the map, or in the rankings. Scroll to zoom, click-and-drag to pan.</p>`;
 
 let ZONES = [];
-let riskUpdatedAt = null, riskLive = false;
+let riskUpdatedAt = null, riskLive = false, riskSources = null;
 
 function applyRisk(data){
   if(!data || !Array.isArray(data.zones) || !data.zones.length) return;
@@ -665,6 +810,7 @@ function applyRisk(data){
     ctx:z.ctx||'', ctx_en:z.ctx_en||'', f:z.f||[], f_en:z.f_en||[],
   }));
   riskUpdatedAt = Date.parse(data.updatedAt)||null;
+  riskSources = data.sources || null;
   // re-baseline silencieuse des états navire↔zone (évite une rafale d'alertes)
   const all = (typeof SHIPS!=='undefined'?SHIPS:[]).concat(
     (typeof live!=='undefined' && live.vessels)?[...live.vessels.values()]:[]);
@@ -673,7 +819,7 @@ function applyRisk(data){
     const again = ZONES.find(q=>q.id===selZone.id);
     if(again) selectZone(again,false); else { selZone=null; detail.style.display='none'; }
   }
-  if(typeof renderZones==='function'){ renderZones(); assessRisk(); renderRanks(); }
+  if(typeof renderZones==='function'){ renderZones(); assessRisk(); renderRanks(); renderStatusBar(); }
 }
 function riskFreshness(){
   if(!riskUpdatedAt) return tr('données embarquées','embedded data');
@@ -812,13 +958,24 @@ const SHIPS = [];
 const cv = document.getElementById('map'), ctx = cv.getContext('2d');
 let W=0,H=0,DPR=1;
 const view = {clon:25, clat:18, scale:3.4};
+let viewDirty = true;   // le fond de carte est mis en cache : ce drapeau force son repeint
+const stage = document.getElementById('stage');
+/* La carte n'occupe plus la fenêtre mais la cellule « scène » de la grille :
+   on mesure donc la scène, et on observe ses variations (rails, densité,
+   passage en mode étroit) plutôt que le seul redimensionnement de fenêtre. */
 function resize(){
   DPR = Math.min(2, window.devicePixelRatio||1);
-  W = innerWidth; H = innerHeight;
+  const r = stage.getBoundingClientRect();
+  W = Math.max(1, Math.round(r.width)); H = Math.max(1, Math.round(r.height));
   cv.width = W*DPR; cv.height = H*DPR;
   cv.style.width = W+'px'; cv.style.height = H+'px';
+  viewDirty = true;
 }
+/* Coordonnées locales au canvas : sans cela, tout le pointage serait décalé
+   de la largeur du rail gauche. */
+function evXY(e){ const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
 addEventListener('resize', ()=>{resize(); draw();});
+if(window.ResizeObserver) new ResizeObserver(()=>{resize(); draw();}).observe(stage);
 resize();
 
 function prj(lat,lon){
@@ -864,6 +1021,7 @@ function readTokens(){
   T.calm  = v('--risk-calm');      T.near  = v('--risk-moderate');
   T.inZ   = v('--risk-critical');
   // la rampe de risque alimente à la fois le canvas et les styles injectés
+  T.CALM = hexToRgb(v('--risk-calm'));
   T.AMB = hexToRgb(v('--risk-moderate'));
   T.ORA = hexToRgb(v('--risk-high'));
   T.RED = hexToRgb(v('--risk-critical'));
@@ -892,9 +1050,18 @@ readTokens();
 /* ================= Couleurs de risque ================= */
 function lerp(a,b,t){return a+(b-a)*t}
 function mix(c1,c2,t){ return [lerp(c1[0],c2[0],t),lerp(c1[1],c2[1],t),lerp(c1[2],c2[2],t)]; }
-function riskRGB(s){ // score 0-10
-  const c = s<5 ? mix(T.AMB,T.ORA,(s-2)/3) : mix(T.ORA,T.RED,Math.min(1,(s-5)/3.5));
+/* Bandes de la charte : calme < 4 (NEUTRE, aucune couleur chaude),
+   modéré 4–6,9, élevé 7–8,4, critique >= 8,5. Un score bas ne doit jamais
+   teinter l'écran en orange : aujourd'hui la carte est majoritairement calme. */
+function riskRGB(s){
+  if(s < 4) return T.CALM;
+  const c = s < 7 ? mix(T.AMB, T.ORA, (s-4)/3) : mix(T.ORA, T.RED, Math.min(1,(s-7)/3));
   return c.map(Math.round);
+}
+function riskBand(s){ return s>=8.5?'critical' : s>=7?'high' : s>=4?'moderate' : 'calm'; }
+function riskLabel(s){
+  return s>=8.5?tr('Critique','Critical') : s>=7?tr('Élevé','High')
+       : s>=4?tr('Modéré','Moderate') : tr('Calme','Calm');
 }
 function riskCSS(s,a=1){ const c=riskRGB(s); return `rgba(${c[0]},${c[1]},${c[2]},${a})`; }
 
@@ -991,7 +1158,6 @@ function esc(x){ return String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
    hors-écran uniquement quand la vue change ; zones et navires par-dessus
    à chaque image. */
 const baseCv=document.createElement('canvas'), bctx=baseCv.getContext('2d');
-let viewDirty=true;
 
 /* Tracés vectoriels mis en cache (calculés une seule fois, en degrés bruts).
    La projection étant un simple zoom + déplacement, on n'a plus qu'à laisser
@@ -1294,19 +1460,68 @@ function frame(t){
 
 /* ================= Panneaux ================= */
 const zlist=document.getElementById('zlist'), slist=document.getElementById('slist');
+/* Le type de zone existe dans la donnée depuis toujours mais n'était jamais
+   montré : c'est lui qui dit la NATURE du risque, pas seulement son intensité. */
+const ZTYPE = { 'détroit':['DÉTROIT','STRAIT'], 'conflit':['CONFLIT','CONFLICT'],
+  'piraterie':['PIRATERIE','PIRACY'], 'mixte':['MIXTE','MIXED'] };
+function zType(z){ const e=ZTYPE[z.type]; return e ? (LANG==='en'?e[1]:e[0]) : (z.type||'').toUpperCase(); }
+let zSort = { key:'score', dir:-1 };
+function sortZones(list){
+  const k=zSort.key, d=zSort.dir;
+  const TR={'▲':2,'▶':1,'▼':0};
+  return [...list].sort((a,b)=>{
+    let r;
+    if(k==='name')      r = zName(a).localeCompare(zName(b), locale());
+    else if(k==='type') r = String(a.type||'').localeCompare(String(b.type||''), locale());
+    else if(k==='trend')r = (TR[a.trend]??1)-(TR[b.trend]??1);
+    else                r = a.score-b.score;
+    return r*d || b.score-a.score;         // le score départage toujours
+  });
+}
 function renderZones(){
   const fr=document.getElementById('riskFresh'); if(fr) fr.textContent=riskFreshness();
-  zlist.innerHTML = [...ZONES].sort((a,b)=>b.score-a.score).map(z=>{
-    const tags=zTags(z);
-    return `
-    <div class="zrow" data-z="${z.id}">
-      <div class="zscore" style="background:${riskCSS(z.score)}">${z.score.toFixed(1)}</div>
-      <div class="zname">${esc(zName(z))}<small>${esc(tags[0])}${tags[1]?' · '+esc(tags[1]):''}</small></div>
-      <div class="ztrend" title="${tr('tendance','trend')}">${z.trend}</div>
+  zlist.innerHTML = sortZones(ZONES).map(z=>{
+    const band=riskBand(z.score);
+    return `<div class="zrow band-${band}${selZone&&selZone.id===z.id?' sel':''}" data-z="${z.id}" role="listitem"
+      title="${esc(zName(z))} — ${esc(riskLabel(z.score))} ${z.score.toFixed(1)}/10">
+      <span class="zscore">${z.score.toFixed(1)}</span>
+      <span class="zname"><span class="n">${esc(zName(z))}</span>${z.jwc?`<span class="jwc" title="Joint War Committee">JWC</span>`:''}</span>
+      <span class="ztype">${esc(zType(z))}</span>
+      <span class="ztrend">${z.trend}</span>
     </div>`;}).join('');
   zlist.querySelectorAll('.zrow').forEach(el=>el.onclick=()=>{
     const z=ZONES.find(q=>q.id===el.dataset.z); selectZone(z,true);
   });
+  const head=document.getElementById('zhead');
+  if(head) head.querySelectorAll('.th').forEach(th=>{
+    th.classList.toggle('on', th.dataset.sort===zSort.key);
+    th.dataset.dir = th.dataset.sort===zSort.key ? (zSort.dir<0?'desc':'asc') : '';
+    th.onclick=()=>{
+      if(zSort.key===th.dataset.sort) zSort.dir=-zSort.dir;
+      else zSort={key:th.dataset.sort, dir: th.dataset.sort==='name'||th.dataset.sort==='type' ? 1 : -1};
+      renderZones();
+    };
+  });
+}
+
+/* ===== Barre d'état : la fiabilité de la donnée, visible en permanence ===== */
+const SRC_LABEL = { gdelt:'GDELT', asam:'ASAM', gdacs:'GDACS', usgs:'USGS', nhc:'NOAA', meteo:'Météo' };
+function renderStatusBar(){
+  const el=document.getElementById('srcHealth');
+  if(el){
+    el.innerHTML = Object.keys(SRC_LABEL).map(k=>{
+      const known = riskSources && (k in riskSources);
+      const up = known ? riskSources[k] !== false : null;
+      const cls = up===null ? 'unknown' : (up ? '' : 'down');
+      const state = up===null ? tr('état inconnu','state unknown')
+                  : up ? tr('opérationnelle','operational') : tr('indisponible','unavailable');
+      return `<span class="src ${cls}" title="${esc(SRC_LABEL[k])} — ${esc(state)}"><i></i>${esc(SRC_LABEL[k])}</span>`;
+    }).join('');
+  }
+  const fr=document.getElementById('sbFresh'); if(fr) fr.textContent=riskFreshness();
+  const ct=document.getElementById('sbCount'); if(ct) ct.textContent=ZONES.length+' '+tr('zones suivies','zones tracked');
+  const md=document.getElementById('sbMode');
+  if(md){ md.textContent=t(MODE==='live'?'mode.badge.live':'mode.badge.sim'); md.className=(MODE==='live'?'live':''); }
 }
 let lastTop=[];
 function renderRanks(){
@@ -1500,7 +1715,7 @@ cv.addEventListener('pointermove',e=>{
     viewDirty=true;
     return;
   }
-  const s=hitShip(e.clientX,e.clientY);
+  const s=hitShip(...evXY(e));
   if(s){ tip.style.display='block'; tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY+10)+'px';
     tip.innerHTML=`<b>${esc(s.name)}</b> · ${esc(s.op)}`; cv.style.cursor='pointer'; }
   else{ tip.style.display='none'; cv.style.cursor='grab'; }
@@ -1509,20 +1724,21 @@ cv.addEventListener('pointerup',e=>{
   cv.classList.remove('drag');
   const wasDrag = drag && drag.moved; drag=null;
   if(wasDrag) return;
-  const s=hitShip(e.clientX,e.clientY);
+  const s=hitShip(...evXY(e));
   if(s){ selectShip(s); return; }
-  const [lat,lon]=unprj(e.clientX,e.clientY);
+  const [lat,lon]=unprj(...evXY(e));
   const z=ZONES.find(z=>havKm(lat,lon,z.c[0],z.c[1])<z.r);
   if(z) selectZone(z);
 });
 cv.addEventListener('wheel',e=>{
   e.preventDefault();
   const f = e.deltaY<0?1.18:1/1.18;
-  const [lat,lon]=unprj(e.clientX,e.clientY);
+  const [mx,my]=evXY(e);
+  const [lat,lon]=unprj(mx,my);
   view.scale=Math.max(1.6,Math.min(260,view.scale*f));   // zoom profond pour les zones denses
   // garder le point sous la souris
   const [x2,y2]=prj(lat,lon);
-  view.clon+=(x2-e.clientX)/view.scale; view.clat-=(y2-e.clientY)/view.scale;
+  view.clon+=(x2-mx)/view.scale; view.clat-=(y2-my)/view.scale;
   viewDirty=true;
 },{passive:false});
 
@@ -1554,6 +1770,7 @@ function refreshModeTexts(){
   const bMode = document.getElementById('bMode');
   const lbl   = document.getElementById('kClockL');
   if(badge){ badge.textContent = t(live?'mode.badge.live':'mode.badge.sim'); badge.classList.toggle('live', live); }
+  if(typeof renderStatusBar === 'function') renderStatusBar();
   if(bMode){ bMode.textContent = t(live?'mode.btn.live':'mode.btn.sim');     bMode.classList.toggle('on', live); }
   if(lbl){   lbl.textContent   = t(live?'mode.clock.live':'mode.clock.sim'); }
 }
@@ -1566,6 +1783,7 @@ function applyLang(){
   if(ab) ab.innerHTML = (LANG === 'en') ? ABOUT_EN : ABOUT_FR;
   bLang.textContent = (LANG === 'fr') ? 'EN' : 'FR';
   refreshModeTexts();
+  renderStatusBar();
   viewDirty = true;
   renderZones(); renderRanks(); renderFeed(); renderLegend();
   if(selShip) renderShipCard(selShip);
