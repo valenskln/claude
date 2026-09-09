@@ -319,10 +319,29 @@
     <div class="doc-meta">
       <span>CHARTE GRAPHIQUE · v1.0</span>
       <span>JUILLET 2026</span>
-      <span>RÉFÉRENCE POUR LA LANDING PAGE</span>
+      <span>RÉFÉRENCE DE MARQUE</span>
     </div>
   </div>
 </header>
+
+<div style="max-width:1000px;margin:28px auto 0;padding:16px 20px;border-left:3px solid var(--accent);
+     background:var(--panel);border-radius:0 8px 8px 0">
+  <b style="color:var(--ink)">Ce document couvre la marque, pas l'interface.</b>
+  <p style="color:var(--ink2);font-size:14px;line-height:1.6;margin-top:6px">
+    Positionnement, logo, ton de voix et supports de communication se règlent ici.
+    En revanche, les valeurs techniques de l'interface — couleurs, échelle typographique,
+    espacement, thèmes — vivent désormais dans
+    <a href="design-system.html" style="color:var(--accent)"><b>design-system.html</b></a>,
+    qui est <b>généré depuis le code de l'application</b> par
+    <code style="font-family:var(--font-mono);font-size:13px">node proto/sync-design-system.mjs</code>.
+    C'est lui qui fait foi : les valeurs ci-dessous ont été recopiées à la main en v1 et
+    peuvent avoir dérivé. Le nommage a d'ailleurs évolué — <code style="font-family:var(--font-mono);font-size:13px">--ocean</code>
+    est devenu <code style="font-family:var(--font-mono);font-size:13px">--surface-base</code>,
+    <code style="font-family:var(--font-mono);font-size:13px">--risk-amber</code> est devenu
+    <code style="font-family:var(--font-mono);font-size:13px">--risk-moderate</code>, et un thème clair
+    ainsi qu'un thème client sont désormais réellement implémentés.
+  </p>
+</div>
 
 <nav class="toc">
   <div class="wrap">
@@ -782,7 +801,7 @@
 <footer>
   <div class="wrap">
     <div class="wordmark" style="font-size:22px">PROTEUS<span class="dot">.AI</span></div>
-    <div style="margin-top:6px">Charte graphique v1.0 — référence pour la landing page et tous les supports de marque.</div>
+    <div style="margin-top:6px">Charte graphique v1.0 — référence de marque. Pour l'interface, voir <a href="design-system.html" style="color:var(--accent)">design-system.html</a>.</div>
     <div class="fm">DOCUMENT AUTONOME · AUCUNE DÉPENDANCE EXTERNE · JUILLET 2026</div>
   </div>
 </footer>

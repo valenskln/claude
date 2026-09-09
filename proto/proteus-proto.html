@@ -115,7 +115,7 @@
      espacements et la typographie ne bougent pas : c'est ce qui permet de
      rhabiller l'outil sans en changer la nature.
      ========================================================================== */
-  [data-theme="light"]{
+  :root[data-theme="light"]{
     --surface-base:#E8ECF3; --surface-raised:#FFFFFF; --surface-sunken:#F1F4FA;
     --surface-translucent:rgba(255,255,255,.94);
     --surface-header-top:rgba(255,255,255,.97); --surface-header-bottom:rgba(255,255,255,.86);
@@ -140,7 +140,7 @@
 
   /* Exemple de thème client (white-label) : une douzaine de lignes suffisent.
      À essayer avec ?theme=client-nord dans l'URL. */
-  [data-theme="client-nord"]{
+  :root[data-theme="client-nord"]{
     --surface-base:#0A1410; --surface-raised:#0F1D18; --surface-sunken:#14261F;
     --surface-translucent:rgba(15,29,24,.93);
     --surface-header-top:rgba(10,20,16,.96); --surface-header-bottom:rgba(10,20,16,.82);
@@ -151,7 +151,7 @@
   }
 
   /* Densité : le terminal peut respirer sans changer de nature. */
-  [data-density="comfortable"]{
+  :root[data-density="comfortable"]{
     --fs-body:15px; --fs-small:13.5px; --fs-caption:13px; --fs-micro:11.5px;
     --sp-3:8px; --sp-4:10px; --sp-5:14px;
     --inset:16px;
