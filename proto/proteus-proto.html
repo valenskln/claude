@@ -285,6 +285,15 @@
   #detail .sub{color:var(--ink2); font-size:12px; margin-bottom:10px}
   #detail .ctx{font-size:12.5px; color:var(--ink); line-height:1.55; margin:8px 0}
   .chips{display:flex; flex-wrap:wrap; gap:5px; margin-top:8px}
+  .blocklabel{
+    display:block; font-size:var(--fs-nano); letter-spacing:var(--tracking-label);
+    text-transform:uppercase; color:var(--text-muted); font-weight:var(--fw-bold);
+    margin-bottom:var(--sp-2);
+  }
+  .inc{font-size:var(--fs-caption); color:var(--text-primary); line-height:var(--leading-tight); margin-bottom:var(--sp-2)}
+  .inc .mono{color:var(--text-muted); margin-right:var(--sp-2)}
+  .fresh-inline{font-size:var(--fs-label)}
+  .chip.strong{border-color:var(--text-muted); color:var(--text-secondary); font-weight:var(--fw-bold); letter-spacing:.05em}
   .chip{font-size:10.5px; border:1px solid var(--line); color:var(--ink2); border-radius:20px; padding:2px 9px}
   .kv{display:grid; grid-template-columns:auto 1fr; gap:2px 14px; font-size:12px; margin-top:6px}
   .kv dt{color:var(--ink3)} .kv dd{font-variant-numeric:tabular-nums}
@@ -635,6 +644,12 @@
    Les scores sont calculés toutes les heures par le pipeline GitHub Actions
    (sources : GDELT, NGA ASAM, GDACS, USGS) et publiés dans risk.json.
    Un instantané est embarqué en secours pour l'usage hors-ligne. */
+/* ---------------------------------------------------------------------------
+   CONFIGURATION — point d'entrée des scores publiés par le robot horaire.
+   Le dépôt s'appelant encore « claude », l'URL GitHub Pages le reflète.
+   Après un renommage du dépôt, seule cette ligne est à changer ici (et
+   l'User-Agent dans risk/sources/util.mjs côté pipeline).
+   --------------------------------------------------------------------------- */
 const RISK_URL = 'https://valenskln.github.io/claude/risk.json';
 const RISK_SNAPSHOT = __RISK_SNAPSHOT__;
 
@@ -763,7 +778,7 @@ const ABOUT_FR = `
   <h4>Le temps réel est intégré 🛰️</h4>
   <ul>
     <li>Clique sur <b>« AIS direct »</b> dans l'en-tête et colle ta clé gratuite aisstream.io : les vrais navires remplacent la simulation, et tout le moteur (heatmap, alertes, classement) s'applique à leurs positions réelles.</li>
-    <li>⚠️ Fonctionne en ouvrant le fichier sur ton ordinateur — l'aperçu Claude bloque les connexions externes par sécurité.</li>
+    <li>⚠️ Fonctionne en ouvrant le fichier sur ton ordinateur — l'aperçu en ligne bloque les connexions externes par sécurité.</li>
   </ul>
   <h4>Prochaines étapes</h4>
   <ul>
@@ -789,7 +804,7 @@ const ABOUT_EN = `
   <h4>Real-time tracking is already built in 🛰️</h4>
   <ul>
     <li>Click <b>"AIS direct"</b> in the header and paste your free aisstream.io key: real vessels replace the simulation, and the whole engine (heatmap, alerts, ranking) applies to their actual positions.</li>
-    <li>⚠️ Works when you open the file on your own computer — the Claude preview blocks external connections for security.</li>
+    <li>⚠️ Works when you open the file on your own computer — the online preview blocks external connections for security.</li>
   </ul>
   <h4>Next steps</h4>
   <ul>
@@ -1391,7 +1406,7 @@ function startLive(key, scope){
   };
   ws.onerror=()=>{
     if(live.status!=='on')
-      setAisStatus(tr('Impossible de joindre aisstream.io. Dans l’aperçu Claude c’est normal (connexions externes bloquées) : télécharge le fichier et ouvre-le en local.','Cannot reach aisstream.io. This is expected in the Claude preview (external connections blocked): download the file and open it locally.'),'err');
+      setAisStatus(tr('Impossible de joindre aisstream.io. Dans l’aperçu en ligne c’est normal (connexions externes bloquées) : télécharge le fichier et ouvre-le en local.','Cannot reach aisstream.io. This is expected in the online preview (external connections blocked): download the file and open it locally.'),'err');
   };
 }
 function stopLive(silent){
@@ -1683,16 +1698,24 @@ function selectZone(z, center){
     `<div class="partrow"><span>${l}</span><div class="pw"><div class="pv" style="width:${Math.min(100,v/max*100)}%;background:${riskCSS(Math.max(3,z.score))}"></div></div><b class="mono">${(+v).toFixed(1)}</b></div>`).join('');
   const why = zWhy(z);
   const whyHtml = (why&&why.length)?`<ul class="why">${why.map(w=>`<li>${esc(w)}</li>`).join('')}</ul>`:'';
-  const hlHtml = (z.hl&&z.hl.length)?`<div class="hl"><b style="font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)">${tr('Dans la presse','In the press')}</b>${
+  /* Les incidents ASAM étaient déjà dans la donnée mais n'ont jamais été rendus.
+     Le bloc s'affiche dès que la source repart. */
+  const incHtml = (z.inc&&z.inc.length)?`<div class="hl"><b class="blocklabel">${tr('Incidents maritimes récents','Recent maritime incidents')}</b>${
+    z.inc.map(i=>`<div class="inc"><span class="mono">${esc(i.d||'')}</span> ${esc(i.t||'')}</div>`).join('')}</div>`:'';
+  const hlHtml = (z.hl&&z.hl.length)?`<div class="hl"><b class="blocklabel">${tr('Dans la presse','In the press')}</b>${
     z.hl.map(h=>`<a href="${esc(h.u)}" target="_blank" rel="noopener">${esc(h.t)}<small>${esc(h.s)}${h.d?' · '+esc(String(h.d).slice(6,8))+'/'+esc(String(h.d).slice(4,6)):''}</small></a>`).join('')}</div>`:'';
   detail.style.display='block';
   detail.innerHTML=`<button class="x" aria-label="${tr('Fermer','Close')}">✕</button>
     <h2><span style="color:${riskCSS(z.score)}">●</span> ${esc(zName(z))}</h2>
-    <div class="sub">${tr('Score de risque','Risk score')} <b class="mono" style="color:${riskCSS(z.score)}">${z.score.toFixed(1)}/10</b> · ${tr('tendance 7 j','7-day trend')} ${z.trend} · <span style="font-size:11px">${esc(riskFreshness())}</span></div>
+    <div class="sub">${tr('Score de risque','Risk score')} <b class="mono" style="color:${riskCSS(z.score)}">${z.score.toFixed(1)}/10</b>
+      · <b>${esc(riskLabel(z.score))}</b> · ${tr('tendance 7 j','7-day trend')} ${z.trend}
+      · <span class="fresh-inline">${esc(riskFreshness())}</span></div>
+    <div class="chips">${z.type?`<span class="chip strong">${esc(zType(z))}</span>`:''}${z.jwc?`<span class="chip strong" title="Joint War Committee">JWC</span>`:''}</div>
     ${partsHtml}
     ${whyHtml}
     <div class="ctx">${esc(zCtx(z))}</div>
     <div class="chips">${zTags(z).map(f=>`<span class="chip">${esc(f)}</span>`).join('')}</div>
+    ${incHtml}
     ${hlHtml}
     <dl class="kv" style="margin-top:10px">
       <dt>${tr('Navires en zone','Vessels in zone')}</dt><dd>${inside.length? inside.map(s=>esc(s.name||('MMSI '+s.mmsi))).join(', '):tr('aucun actuellement','none currently')}</dd>
