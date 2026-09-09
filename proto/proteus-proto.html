@@ -108,6 +108,53 @@
 
     color-scheme: dark;
   }
+
+  /* ==========================================================================
+     THÈMES — on ne redéfinit QUE l'étage sémantique. La structure, les
+     espacements et la typographie ne bougent pas : c'est ce qui permet de
+     rhabiller l'outil sans en changer la nature.
+     ========================================================================== */
+  [data-theme="light"]{
+    --surface-base:#E8ECF3; --surface-raised:#FFFFFF; --surface-sunken:#F1F4FA;
+    --surface-translucent:rgba(255,255,255,.94);
+    --surface-header-top:rgba(255,255,255,.97); --surface-header-bottom:rgba(255,255,255,.86);
+    --scrim:rgba(20,28,48,.45);
+    --border-subtle:#C8D0E0;
+    --text-primary:#141C30; --text-secondary:#48546E; --text-muted:#6B7690;
+    --text-on-risk:#FFFFFF;              /* le texte se pose sur une pastille sombre */
+    --accent:#1470C2;
+    --risk-calm:#5A6478;  --risk-moderate:#B07908;
+    --risk-high:#C25218;  --risk-critical:#BE352A;   /* valeurs à contraste AA */
+    --status-ok:#1E8A5F;
+    /* la carte doit suivre, sinon l'océan resterait noir */
+    --map-land:#D6DEE9; --map-land-stroke:rgba(90,110,140,.45);
+    --map-graticule:rgba(120,140,170,.32); --map-river:rgba(90,140,190,.55);
+    --map-label:rgba(72,84,110,.92);
+    /* pastilles armateur assombries pour rester lisibles sur fond clair */
+    --carrier-maersk:#1B87BD; --carrier-msc:#B8850C; --carrier-cmacgm:#3B48C4;
+    --carrier-cosco:#128F76;  --carrier-hapag:#C4551F; --carrier-one:#C42B72;
+    --carrier-evergreen:#2C8A42; --carrier-hmm:#6B4FC7; --carrier-zim:#8E3AA1;
+    color-scheme: light;
+  }
+
+  /* Exemple de thème client (white-label) : une douzaine de lignes suffisent.
+     À essayer avec ?theme=client-nord dans l'URL. */
+  [data-theme="client-nord"]{
+    --surface-base:#0A1410; --surface-raised:#0F1D18; --surface-sunken:#14261F;
+    --surface-translucent:rgba(15,29,24,.93);
+    --surface-header-top:rgba(10,20,16,.96); --surface-header-bottom:rgba(10,20,16,.82);
+    --border-subtle:#1E3A2E;
+    --accent:#3FD1B0;
+    --map-land:#16302A; --map-land-stroke:rgba(70,140,110,.35);
+    --map-graticule:rgba(40,90,70,.45); --map-river:rgba(50,130,110,.7);
+  }
+
+  /* Densité : le terminal peut respirer sans changer de nature. */
+  [data-density="comfortable"]{
+    --fs-body:15px; --fs-small:13.5px; --fs-caption:13px; --fs-micro:11.5px;
+    --sp-3:8px; --sp-4:10px; --sp-5:14px;
+    --inset:16px;
+  }
   *{box-sizing:border-box; margin:0; padding:0}
   html,body{height:100%}
   body{
@@ -348,6 +395,8 @@
     <button id="bSpeed" class="mono" data-i18n-title="btn.speed" title="Vitesse de simulation">1 s = 1 h</button>
     <button id="bHeat" class="on" data-i18n-title="btn.heat" title="Afficher / masquer la heatmap">Heatmap</button>
     <button id="bMode" data-i18n-title="btn.mode" title="Basculer entre simulation et flux AIS réel">🛰️ AIS direct</button>
+    <button id="bTheme" data-i18n-title="btn.theme" title="Thème clair / sombre">☀</button>
+    <button id="bDensity" data-i18n-title="btn.density" title="Densité d’affichage">☷</button>
     <button id="bLang" title="Switch language / Changer de langue">EN</button>
     <button id="bInfo" data-i18n-title="btn.info" title="À propos du prototype">?</button>
   </div>
@@ -466,6 +515,21 @@ function rName(route){ const r=ROUTES[route]; return LANG==='en' ? (r.name_en||r
 function rNote(route){ const r=ROUTES[route]; return LANG==='en' ? (r.note_en||r.note) : r.note; }
 function locale(){ return LANG==='en' ? 'en-US' : 'fr-FR'; }
 
+/* ===== Apparence : thème et densité =====
+   Appliqués AVANT la première lecture des tokens, sinon le canvas
+   démarrerait avec la palette du thème par défaut. */
+function initAppearance(){
+  let th=null, de=null;
+  try{ th=localStorage.getItem('proteus_theme'); de=localStorage.getItem('proteus_density'); }catch(e){}
+  const q=new URLSearchParams(location.search);
+  if(q.get('theme'))   th=q.get('theme');      // ?theme=client-nord pour une démo
+  if(q.get('density')) de=q.get('density');
+  const root=document.documentElement;
+  if(th && th!=='dark')      root.dataset.theme=th;
+  if(de && de!=='compact')   root.dataset.density=de;
+}
+initAppearance();
+
 /* --- Dictionnaire des chaînes fixes de l'interface -------------------------
    Une clé = un couple [fr, en]. Les éléments portent leur clé en attribut
    (data-i18n, -html, -title, -placeholder, -aria), donc on peut déplacer ou
@@ -483,6 +547,8 @@ const I18N = {
   'btn.heat':         ['Afficher / masquer la heatmap','Show / hide the heatmap'],
   'btn.mode':         ['Basculer entre simulation et flux AIS réel','Switch between simulation and live AIS feed'],
   'btn.info':         ['À propos du prototype','About this prototype'],
+  'btn.theme':        ['Thème clair / sombre','Light / dark theme'],
+  'btn.density':      ['Densité d’affichage','Display density'],
   'search.placeholder':['🔍 Rechercher un navire (nom, MMSI)…','🔍 Search a vessel (name, MMSI)…'],
   'panel.filter':     ['Filtre flotte','Fleet filter'],
   'filter.top5':      ['Top 5 armateurs uniquement','Top 5 carriers only'],
@@ -812,7 +878,8 @@ function readTokens(){
    qui est mis en cache et ne se redessine que si viewDirty est levé. */
 function setTheme(name){
   const root = document.documentElement;
-  if(name) root.dataset.theme = name; else delete root.dataset.theme;
+  if(name && name !== 'dark') root.dataset.theme = name; else delete root.dataset.theme;
+  try{ localStorage.setItem('proteus_theme', name || 'dark'); }catch(e){}
   readTokens();
   viewDirty = true;
   if(typeof renderZones === 'function'){ renderZones(); renderRanks(); renderLegend(); }
@@ -1505,6 +1572,36 @@ function applyLang(){
   if(selZone) selectZone(selZone,false);
 }
 bLang.onclick=()=>{ setLang(LANG==='fr'?'en':'fr'); applyLang(); };
+
+/* Thème : bascule sombre <-> clair. Les thèmes client se posent par URL
+   (?theme=client-nord) ou au déploiement, pas par ce bouton. */
+const bTheme = document.getElementById('bTheme');
+function themeGlyph(){
+  const cur = document.documentElement.dataset.theme || 'dark';
+  bTheme.textContent = (cur === 'light') ? '☾' : '☀';
+}
+bTheme.onclick = () => {
+  const cur = document.documentElement.dataset.theme || 'dark';
+  setTheme(cur === 'light' ? 'dark' : 'light');
+  themeGlyph();
+};
+themeGlyph();
+
+/* Densité : compact (défaut) <-> confortable. */
+const bDensity = document.getElementById('bDensity');
+function setDensity(d){
+  const root = document.documentElement;
+  if(d && d !== 'compact') root.dataset.density = d; else delete root.dataset.density;
+  try{ localStorage.setItem('proteus_density', d || 'compact'); }catch(e){}
+  bDensity.textContent = (d === 'comfortable') ? '☰' : '☷';
+  bDensity.classList.toggle('on', d === 'comfortable');
+  viewDirty = true;
+}
+bDensity.onclick = () => {
+  const cur = document.documentElement.dataset.density || 'compact';
+  setDensity(cur === 'comfortable' ? 'compact' : 'comfortable');
+};
+setDensity(document.documentElement.dataset.density || 'compact');
 
 const modal=document.getElementById('modal');
 document.getElementById('bInfo').onclick=()=>modal.style.display='flex';
