@@ -232,26 +232,26 @@
 <header id="hdr">
   <div id="brand">
     <b>PROTEUS<em>.AI</em></b>
-    <span id="brandTag">Flux maritime × risque géopolitique</span>
+    <span id="brandTag" data-i18n="brand.tag">Flux maritime × risque géopolitique</span>
   </div>
   <span class="badge" id="modeBadge">Prototype · données simulées</span>
   <div id="kpis">
-    <div class="kpi"><div class="v" id="kShips">–</div><div class="l" id="lShips">Navires</div></div>
-    <div class="kpi"><div class="v" id="kZones">–</div><div class="l" id="lZones">Zones suivies</div></div>
-    <div class="kpi"><div class="v warn" id="kAlerts">–</div><div class="l" id="lAlerts">En zone à risque</div></div>
+    <div class="kpi"><div class="v" id="kShips">–</div><div class="l" id="lShips" data-i18n="kpi.ships">Navires</div></div>
+    <div class="kpi"><div class="v" id="kZones">–</div><div class="l" id="lZones" data-i18n="kpi.zones">Zones suivies</div></div>
+    <div class="kpi"><div class="v warn" id="kAlerts">–</div><div class="l" id="lAlerts" data-i18n="kpi.alerts">En zone à risque</div></div>
     <div class="kpi"><div class="v mono" id="kClock" style="font-size:13.5px">–</div><div class="l" id="kClockL">Heure simulée</div></div>
   </div>
   <div id="ptoggles">
-    <button class="small" id="tgL">Zones</button>
-    <button class="small" id="tgR">Navires</button>
+    <button class="small" id="tgL" data-i18n="toggle.zones">Zones</button>
+    <button class="small" id="tgR" data-i18n="toggle.ships">Navires</button>
   </div>
   <div id="ctrls">
-    <button id="bPause" title="Pause / lecture">⏸</button>
-    <button id="bSpeed" class="mono" title="Vitesse de simulation">1 s = 1 h</button>
-    <button id="bHeat" class="on" title="Afficher / masquer la heatmap">Heatmap</button>
-    <button id="bMode" title="Basculer entre simulation et flux AIS réel">🛰️ AIS direct</button>
+    <button id="bPause" data-i18n-title="btn.pause" title="Pause / lecture">⏸</button>
+    <button id="bSpeed" class="mono" data-i18n-title="btn.speed" title="Vitesse de simulation">1 s = 1 h</button>
+    <button id="bHeat" class="on" data-i18n-title="btn.heat" title="Afficher / masquer la heatmap">Heatmap</button>
+    <button id="bMode" data-i18n-title="btn.mode" title="Basculer entre simulation et flux AIS réel">🛰️ AIS direct</button>
     <button id="bLang" title="Switch language / Changer de langue">EN</button>
-    <button id="bInfo" title="À propos du prototype">?</button>
+    <button id="bInfo" data-i18n-title="btn.info" title="À propos du prototype">?</button>
   </div>
 </header>
 
@@ -259,81 +259,81 @@
 <div id="tip"></div>
 
 <div id="searchbox">
-  <input id="shipsearch" type="text" placeholder="🔍 Rechercher un navire (nom, MMSI)…" autocomplete="off">
+  <input id="shipsearch" type="text" data-i18n-placeholder="search.placeholder" placeholder="🔍 Rechercher un navire (nom, MMSI)…" autocomplete="off">
   <div id="searchres"></div>
 </div>
 
 <aside class="panel" id="pl">
   <div class="card">
-    <h3 id="hFilter">Filtre flotte</h3>
-    <label class="checkrow pad"><input type="checkbox" id="ftop"> <span id="lTop5">Top 5 armateurs uniquement</span><br>
+    <h3 id="hFilter" data-i18n="panel.filter">Filtre flotte</h3>
+    <label class="checkrow pad"><input type="checkbox" id="ftop"> <span id="lTop5" data-i18n="filter.top5">Top 5 armateurs uniquement</span><br>
       <small style="color:var(--ink3)">MSC · Maersk · CMA CGM · COSCO · Hapag-Lloyd</small></label>
   </div>
   <div class="card">
-    <h3><span id="hZonesRank">Zones à risque · classement</span> <span id="riskFresh" class="fresh"></span></h3>
+    <h3><span id="hZonesRank" data-i18n="panel.zonesRank">Zones à risque · classement</span> <span id="riskFresh" class="fresh"></span></h3>
     <div id="zlist"></div>
   </div>
 </aside>
 
 <aside class="panel" id="pr">
   <div class="card">
-    <h3 id="hTopShips">Navires les plus exposés</h3>
+    <h3 id="hTopShips" data-i18n="panel.topShips">Navires les plus exposés</h3>
     <div id="slist"><div class="empty" id="slistEmpty">Calcul en cours…</div></div>
   </div>
   <div class="card">
-    <h3 id="hAlertLog">Journal des alertes</h3>
+    <h3 id="hAlertLog" data-i18n="panel.alertLog">Journal des alertes</h3>
     <div id="feed"><div class="empty">Aucune alerte pour l’instant.</div></div>
   </div>
 </aside>
 
-<div id="detail" role="dialog" aria-label="Détail"></div>
+<div id="detail" role="dialog" data-i18n-aria="aria.detail" aria-label="Détail"></div>
 <div id="toasts" role="status" aria-live="polite"></div>
 
 <div id="legend">
   <span id="legops"></span>
   <span class="lsep"></span>
-  <span><span class="grad"></span><span id="legRisk">Risque de zone</span></span>
-  <span><span class="ring a"></span><span id="legApproach">Approche</span></span>
-  <span><span class="ring r"></span><span id="legInZone">En zone</span></span>
+  <span><span class="grad"></span><span id="legRisk" data-i18n="legend.risk">Risque de zone</span></span>
+  <span><span class="ring a"></span><span id="legApproach" data-i18n="legend.approach">Approche</span></span>
+  <span><span class="ring r"></span><span id="legInZone" data-i18n="legend.inzone">En zone</span></span>
 </div>
 
-<div id="modal" role="dialog" aria-modal="true" aria-label="À propos">
+<div id="modal" role="dialog" aria-modal="true" data-i18n-aria="aria.about" aria-label="À propos">
   <div>
-    <button class="x" id="mx" aria-label="Fermer">✕</button>
+    <button class="x" id="mx" data-i18n-aria="aria.close" aria-label="Fermer">✕</button>
     <div id="aboutBody"></div>
   </div>
 </div>
 
-<div id="aismodal" class="aismodal" role="dialog" aria-modal="true" aria-label="Connexion AIS" style="position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:var(--ovl)">
+<div id="aismodal" class="aismodal" role="dialog" aria-modal="true" data-i18n-aria="aria.ais" aria-label="Connexion AIS" style="position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;background:var(--ovl)">
   <div style="position:relative;width:min(520px,92vw);max-height:84vh;overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:26px 28px">
-    <button class="x" id="ax" aria-label="Fermer">✕</button>
-    <h2 id="aisH2" style="font-size:17px;margin-bottom:4px">🛰️ Passer aux positions réelles</h2>
-    <p id="aisSub" class="sub" style="color:var(--ink2);font-size:12.5px;margin-bottom:12px">
+    <button class="x" id="ax" data-i18n-aria="aria.close" aria-label="Fermer">✕</button>
+    <h2 id="aisH2" data-i18n="ais.h2" style="font-size:17px;margin-bottom:4px">🛰️ Passer aux positions réelles</h2>
+    <p id="aisSub" data-i18n-html="ais.sub" class="sub" style="color:var(--ink2);font-size:12.5px;margin-bottom:12px">
       Flux AIS en direct fourni par <b>aisstream.io</b> (gratuit).</p>
-    <p id="aisSteps" style="font-size:13px;line-height:1.6">
+    <p id="aisSteps" data-i18n-html="ais.steps" style="font-size:13px;line-height:1.6">
       1. Crée un compte gratuit sur <b>aisstream.io</b> (connexion via ton compte GitHub)<br>
       2. Menu « API Keys » → génère une clé<br>
       3. Colle-la ci-dessous
     </p>
-    <label class="fld" for="aiskey" id="aisKeyLabel">Clé API aisstream.io</label>
+    <label class="fld" for="aiskey" id="aisKeyLabel" data-i18n="ais.keyLabel">Clé API aisstream.io</label>
     <div style="display:flex;gap:6px">
       <input type="password" id="aiskey" autocomplete="off" placeholder="ex. 2f7c1a…" style="flex:1">
-      <button id="aiseye" title="Afficher / masquer la clé" style="flex:none">👁</button>
+      <button id="aiseye" data-i18n-title="ais.eye" title="Afficher / masquer la clé" style="flex:none">👁</button>
     </div>
-    <label class="fld" for="aisscope" id="aisScopeLabel">Couverture</label>
+    <label class="fld" for="aisscope" id="aisScopeLabel" data-i18n="ais.scopeLabel">Couverture</label>
     <select id="aisscope">
-      <option value="zones" selected>Zones à risque uniquement (recommandé)</option>
-      <option value="world">Monde entier (très gros volume — tests courts)</option>
+      <option value="zones" selected data-i18n="ais.scope.zones">Zones à risque uniquement (recommandé)</option>
+      <option value="world" data-i18n="ais.scope.world">Monde entier (très gros volume — tests courts)</option>
     </select>
-    <label class="checkrow"><input type="checkbox" id="aiscargo"> <span id="aisCargoLabel">Cargos uniquement (type AIS 70–79 — peut mettre quelques minutes à se remplir)</span></label>
+    <label class="checkrow"><input type="checkbox" id="aiscargo"> <span id="aisCargoLabel" data-i18n="ais.cargoLabel">Cargos uniquement (type AIS 70–79 — peut mettre quelques minutes à se remplir)</span></label>
     <div style="display:flex;gap:8px;margin-top:16px">
-      <button class="btn-primary" id="aisconnect">Se connecter</button>
-      <button id="aiscancel">Annuler</button>
-      <button id="aisforget" title="Effacer la clé mémorisée dans ce navigateur" style="margin-left:auto">Oublier la clé</button>
+      <button class="btn-primary" id="aisconnect" data-i18n="ais.connect">Se connecter</button>
+      <button id="aiscancel" data-i18n="ais.cancel">Annuler</button>
+      <button id="aisforget" data-i18n="ais.forget" data-i18n-title="ais.forget.title" title="Effacer la clé mémorisée dans ce navigateur" style="margin-left:auto">Oublier la clé</button>
     </div>
     <div id="aisstatus"></div>
-    <p id="aisBottomWarn" class="sub" style="color:var(--ink3);font-size:11.5px;margin-top:14px">
-      ⚠️ Dans l’aperçu Claude (artifact), les connexions externes sont bloquées par sécurité :
+    <p id="aisBottomWarn" data-i18n-html="ais.bottomWarn" class="sub" style="color:var(--ink3);font-size:11.5px;margin-top:14px">
+      ⚠️ Dans l’aperçu en ligne, les connexions externes sont bloquées par sécurité :
       pour le direct, télécharge <b>proteus-prototype.html</b> et ouvre-le sur ton ordinateur.
       Couverture : antennes côtières (les océans lointains ont des trous — c’est normal).
       Ta clé reste dans ton navigateur, elle n’est envoyée qu’à aisstream.io.</p>
@@ -367,6 +367,74 @@ function zTags(z){ return LANG==='en' ? (z.f_en&&z.f_en.length?z.f_en:z.f) : z.f
 function rName(route){ const r=ROUTES[route]; return LANG==='en' ? (r.name_en||r.name) : r.name; }
 function rNote(route){ const r=ROUTES[route]; return LANG==='en' ? (r.note_en||r.note) : r.note; }
 function locale(){ return LANG==='en' ? 'en-US' : 'fr-FR'; }
+
+/* --- Dictionnaire des chaînes fixes de l'interface -------------------------
+   Une clé = un couple [fr, en]. Les éléments portent leur clé en attribut
+   (data-i18n, -html, -title, -placeholder, -aria), donc on peut déplacer ou
+   renommer n'importe quel noeud sans casser la traduction. */
+const I18N = {
+  'doc.title':        ['Proteus.AI · Tracker maritime & risque géopolitique','Proteus.AI · Live shipping & geopolitical risk tracker'],
+  'brand.tag':        ['Flux maritime × risque géopolitique','Live shipping × geopolitical risk'],
+  'kpi.ships':        ['Navires','Vessels'],
+  'kpi.zones':        ['Zones suivies','Zones tracked'],
+  'kpi.alerts':       ['En zone à risque','In risk zone'],
+  'toggle.zones':     ['Zones','Zones'],
+  'toggle.ships':     ['Navires','Ships'],
+  'btn.pause':        ['Pause / lecture','Pause / play'],
+  'btn.speed':        ['Vitesse de simulation','Simulation speed'],
+  'btn.heat':         ['Afficher / masquer la heatmap','Show / hide the heatmap'],
+  'btn.mode':         ['Basculer entre simulation et flux AIS réel','Switch between simulation and live AIS feed'],
+  'btn.info':         ['À propos du prototype','About this prototype'],
+  'search.placeholder':['🔍 Rechercher un navire (nom, MMSI)…','🔍 Search a vessel (name, MMSI)…'],
+  'panel.filter':     ['Filtre flotte','Fleet filter'],
+  'filter.top5':      ['Top 5 armateurs uniquement','Top 5 carriers only'],
+  'panel.zonesRank':  ['Zones à risque · classement','Risk zones · ranking'],
+  'panel.topShips':   ['Navires les plus exposés','Most exposed vessels'],
+  'panel.alertLog':   ['Journal des alertes','Alert log'],
+  'legend.risk':      ['Risque de zone','Zone risk'],
+  'legend.approach':  ['Approche','Approaching'],
+  'legend.inzone':    ['En zone','In zone'],
+  'aria.about':       ['À propos','About'],
+  'aria.close':       ['Fermer','Close'],
+  'aria.detail':      ['Détail','Detail'],
+  'aria.ais':         ['Connexion AIS','AIS connection'],
+  'ais.h2':           ['🛰️ Passer aux positions réelles','🛰️ Switch to real positions'],
+  'ais.sub':          ['Flux AIS en direct fourni par <b>aisstream.io</b> (gratuit).','Live AIS feed provided by <b>aisstream.io</b> (free).'],
+  'ais.steps':        ['1. Crée un compte gratuit sur <b>aisstream.io</b> (connexion via ton compte GitHub)<br>2. Menu « API Keys » → génère une clé<br>3. Colle-la ci-dessous',
+                       '1. Create a free account on <b>aisstream.io</b> (sign in with GitHub)<br>2. "API Keys" menu → generate a key<br>3. Paste it below'],
+  'ais.keyLabel':     ['Clé API aisstream.io','aisstream.io API key'],
+  'ais.eye':          ['Afficher / masquer la clé','Show / hide the key'],
+  'ais.scopeLabel':   ['Couverture','Coverage'],
+  'ais.scope.zones':  ['Zones à risque uniquement (recommandé)','Risk zones only (recommended)'],
+  'ais.scope.world':  ['Monde entier (très gros volume — tests courts)','Whole world (very high volume — short tests only)'],
+  'ais.cargoLabel':   ['Cargos uniquement (type AIS 70–79 — peut mettre quelques minutes à se remplir)','Cargo ships only (AIS type 70–79 — may take a few minutes to fill up)'],
+  'ais.connect':      ['Se connecter','Connect'],
+  'ais.cancel':       ['Annuler','Cancel'],
+  'ais.forget':       ['Oublier la clé','Forget the key'],
+  'ais.forget.title': ['Effacer la clé mémorisée dans ce navigateur','Erase the key saved in this browser'],
+  'ais.bottomWarn':   ['⚠️ Dans l’aperçu en ligne, les connexions externes sont bloquées par sécurité : pour le direct, télécharge <b>proteus-prototype.html</b> et ouvre-le sur ton ordinateur. Couverture : antennes côtières (les océans lointains ont des trous — c’est normal). Ta clé reste dans ton navigateur, elle n’est envoyée qu’à aisstream.io.',
+                       '⚠️ In the online preview, external connections are blocked for security: for live data, download <b>proteus-prototype.html</b> and open it on your computer. Coverage: coastal antennas (open ocean has gaps — that’s normal). Your key stays in your browser; it’s only ever sent to aisstream.io.'],
+  'mode.badge.sim':   ['Prototype · données simulées','Prototype · simulated data'],
+  'mode.badge.live':  ['Direct · flux AIS réel','Live · real AIS feed'],
+  'mode.btn.sim':     ['🛰️ AIS direct','🛰️ AIS live'],
+  'mode.btn.live':    ['🛰️ AIS : direct','🛰️ AIS: live'],
+  'mode.clock.sim':   ['Heure simulée','Simulated time'],
+  'mode.clock.live':  ['Temps réel','Real time'],
+};
+function t(key){
+  const e = I18N[key];
+  if(!e){ console.warn('[i18n] clé absente :', key); return key; }
+  return LANG === 'en' ? e[1] : e[0];
+}
+/* Applique le dictionnaire à tout le DOM porteur d'attributs data-i18n*. */
+function applyI18nSweep(root){
+  root = root || document;
+  root.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  root.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = t(el.dataset.i18nHtml); });
+  root.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  root.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  root.querySelectorAll('[data-i18n-aria]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAria)); });
+}
 
 const ABOUT_FR = `
   <h2>Proteus.AI — prototype de faisabilité</h2>
@@ -508,6 +576,10 @@ const ROUTES = {
 };
 const ENDS = { suez:['Rotterdam','Shanghai'], cap:['Rotterdam','Shanghai'], transpac:['Shanghai','Los Angeles'],
   transat:['Rotterdam','New York'], gulf:['Singapour','Jebel Ali'], blacksea:['Istanbul','Odesa'], guinee:['Rotterdam','Lagos'] };
+/* La plupart des ports s'écrivent pareil dans les deux langues : on ne traduit
+   que les exceptions, plutôt que de dupliquer toute la table. */
+const PORT_EN = { 'Singapour':'Singapore' };
+function portName(n){ return LANG==='en' ? (PORT_EN[n] || n) : n; }
 
 /* ================= Flotte simulée ================= */
 const OPS = ['MSC','Maersk','CMA CGM','COSCO','Hapag-Lloyd','ONE','Evergreen','HMM','ZIM'];
@@ -1134,7 +1206,7 @@ function statusHtml(st){
 }
 function renderShipCard(s){
   if(s.live) return renderLiveCard(s);
-  const z=s.worstZone, ends=ENDS[s.route], goingTo = s.dir>0?ends[1]:ends[0];
+  const z=s.worstZone, ends=ENDS[s.route], goingTo = portName(s.dir>0?ends[1]:ends[0]);
   const st=shipState(s);
   detail.style.display='block';
   detail.innerHTML=`<button class="x" aria-label="${tr('Fermer','Close')}">✕</button>
@@ -1272,68 +1344,24 @@ document.getElementById('bHeat').onclick=e=>{
 };
 const bLang=document.getElementById('bLang');
 function refreshModeTexts(){
-  const badge=document.getElementById('modeBadge'), bMode=document.getElementById('bMode');
-  const lbl=document.getElementById('kClockL');
-  if(MODE==='live'){
-    badge.textContent=tr('Direct · flux AIS réel','Live · real AIS feed'); badge.classList.add('live');
-    bMode.textContent=tr('🛰️ AIS : direct','🛰️ AIS: live'); bMode.classList.add('on');
-    lbl.textContent=tr('Temps réel','Real time');
-  }else{
-    badge.textContent=tr('Prototype · données simulées','Prototype · simulated data'); badge.classList.remove('live');
-    bMode.textContent=tr('🛰️ AIS direct','🛰️ AIS live'); bMode.classList.remove('on');
-    lbl.textContent=tr('Heure simulée','Simulated time');
-  }
+  const live = (MODE === 'live');
+  const badge = document.getElementById('modeBadge');
+  const bMode = document.getElementById('bMode');
+  const lbl   = document.getElementById('kClockL');
+  if(badge){ badge.textContent = t(live?'mode.badge.live':'mode.badge.sim'); badge.classList.toggle('live', live); }
+  if(bMode){ bMode.textContent = t(live?'mode.btn.live':'mode.btn.sim');     bMode.classList.toggle('on', live); }
+  if(lbl){   lbl.textContent   = t(live?'mode.clock.live':'mode.clock.sim'); }
 }
 function applyLang(){
-  document.title = tr('Proteus.AI · Tracker maritime & risque géopolitique','Proteus.AI · Live shipping & geopolitical risk tracker');
   document.documentElement.lang = LANG;
-  document.getElementById('brandTag').textContent = tr('Flux maritime × risque géopolitique','Live shipping × geopolitical risk');
-  document.getElementById('lShips').textContent = tr('Navires','Vessels');
-  document.getElementById('lZones').textContent = tr('Zones suivies','Zones tracked');
-  document.getElementById('lAlerts').textContent = tr('En zone à risque','In risk zone');
-  document.getElementById('tgL').textContent = tr('Zones','Zones');
-  document.getElementById('tgR').textContent = tr('Navires','Ships');
-  document.getElementById('bPause').title = tr('Pause / lecture','Pause / play');
-  document.getElementById('bSpeed').title = tr('Vitesse de simulation','Simulation speed');
-  document.getElementById('bHeat').title = tr('Afficher / masquer la heatmap','Show / hide the heatmap');
-  document.getElementById('bMode').title = tr('Basculer entre simulation et flux AIS réel','Switch between simulation and live AIS feed');
-  bLang.textContent = LANG==='fr' ? 'EN' : 'FR';
-  document.getElementById('bInfo').title = tr('À propos du prototype','About this prototype');
-  document.getElementById('shipsearch').placeholder = tr('🔍 Rechercher un navire (nom, MMSI)…','🔍 Search a vessel (name, MMSI)…');
-  document.getElementById('hFilter').textContent = tr('Filtre flotte','Fleet filter');
-  document.getElementById('lTop5').textContent = tr('Top 5 armateurs uniquement','Top 5 carriers only');
-  document.getElementById('hZonesRank').textContent = tr('Zones à risque · classement','Risk zones · ranking');
-  document.getElementById('hTopShips').textContent = tr('Navires les plus exposés','Most exposed vessels');
-  document.getElementById('hAlertLog').textContent = tr('Journal des alertes','Alert log');
-  document.getElementById('legRisk').textContent = tr('Risque de zone','Zone risk');
-  document.getElementById('legApproach').textContent = tr('Approche','Approaching');
-  document.getElementById('legInZone').textContent = tr('En zone','In zone');
-  document.getElementById('modal').setAttribute('aria-label', tr('À propos','About'));
-  document.getElementById('mx').setAttribute('aria-label', tr('Fermer','Close'));
-  document.getElementById('aboutBody').innerHTML = tr(ABOUT_FR, ABOUT_EN);
-  document.getElementById('aismodal').setAttribute('aria-label', tr('Connexion AIS','AIS connection'));
-  document.getElementById('ax').setAttribute('aria-label', tr('Fermer','Close'));
-  document.getElementById('aisH2').textContent = tr('🛰️ Passer aux positions réelles','🛰️ Switch to real positions');
-  document.getElementById('aisSub').innerHTML = tr('Flux AIS en direct fourni par <b>aisstream.io</b> (gratuit).','Live AIS feed provided by <b>aisstream.io</b> (free).');
-  document.getElementById('aisSteps').innerHTML = tr(
-    '1. Crée un compte gratuit sur <b>aisstream.io</b> (connexion via ton compte GitHub)<br>2. Menu « API Keys » → génère une clé<br>3. Colle-la ci-dessous',
-    '1. Create a free account on <b>aisstream.io</b> (sign in with GitHub)<br>2. "API Keys" menu → generate a key<br>3. Paste it below');
-  document.getElementById('aisKeyLabel').textContent = tr('Clé API aisstream.io','aisstream.io API key');
-  document.getElementById('aiseye').title = tr('Afficher / masquer la clé','Show / hide the key');
-  document.getElementById('aisScopeLabel').textContent = tr('Couverture','Coverage');
-  const opz=document.querySelector('#aisscope option[value="zones"]'); if(opz) opz.textContent=tr('Zones à risque uniquement (recommandé)','Risk zones only (recommended)');
-  const opw=document.querySelector('#aisscope option[value="world"]'); if(opw) opw.textContent=tr('Monde entier (très gros volume — tests courts)','Whole world (very high volume — short tests only)');
-  document.getElementById('aisCargoLabel').textContent = tr('Cargos uniquement (type AIS 70–79 — peut mettre quelques minutes à se remplir)','Cargo ships only (AIS type 70–79 — may take a few minutes to fill up)');
-  document.getElementById('aisconnect').textContent = tr('Se connecter','Connect');
-  document.getElementById('aiscancel').textContent = tr('Annuler','Cancel');
-  document.getElementById('aisforget').textContent = tr('Oublier la clé','Forget the key');
-  document.getElementById('aisforget').title = tr('Effacer la clé mémorisée dans ce navigateur','Erase the key saved in this browser');
-  document.getElementById('aisBottomWarn').innerHTML = tr(
-    '⚠️ Dans l’aperçu Claude (artifact), les connexions externes sont bloquées par sécurité : pour le direct, télécharge <b>proteus-prototype.html</b> et ouvre-le sur ton ordinateur. Couverture : antennes côtières (les océans lointains ont des trous — c’est normal). Ta clé reste dans ton navigateur, elle n’est envoyée qu’à aisstream.io.',
-    '⚠️ In the Claude preview (artifact), external connections are blocked for security: for live data, download <b>proteus-prototype.html</b> and open it on your computer. Coverage: coastal antennas (open ocean has gaps — that’s normal). Your key stays in your browser; it’s only ever sent to aisstream.io.');
-  document.getElementById('detail').setAttribute('aria-label', tr('Détail','Detail'));
+  document.title = t('doc.title');
+  applyI18nSweep();
+  // Le « à propos » est un bloc HTML entier, hors dictionnaire.
+  const ab = document.getElementById('aboutBody');
+  if(ab) ab.innerHTML = (LANG === 'en') ? ABOUT_EN : ABOUT_FR;
+  bLang.textContent = (LANG === 'fr') ? 'EN' : 'FR';
   refreshModeTexts();
-  viewDirty=true;
+  viewDirty = true;
   renderZones(); renderRanks(); renderFeed(); renderLegend();
   if(selShip) renderShipCard(selShip);
   if(selZone) selectZone(selZone,false);
