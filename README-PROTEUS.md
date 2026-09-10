@@ -8,14 +8,17 @@ risque géopolitique** des zones traversées.
 Fichier HTML 100 % autonome : double-cliquer dessus l'ouvre dans n'importe quel navigateur,
 sans installation ni connexion à un serveur.
 
-L'interface est un **terminal d'opérations** : tableaux serrés, chiffres monospace alignés,
-hiérarchie portée par la graisse et la densité plutôt que par la couleur.
+L'interface reprend le vocabulaire des **cartes marines de l'Amirauté** : papier crème, encre
+noire, terres en bistre, mer en bleu pâle — et le **magenta** réservé à l'information critique,
+comme sur une vraie carte. Ni ombres, ni arrondis, ni dégradés : des filets d'encre.
+Typographie : Spectral pour le titrage, IBM Plex Sans pour l'interface, IBM Plex Mono pour
+toute valeur mesurée. Les icônes sont dessinées, jamais des emojis.
 
 - **Coquille** en grille : en-tête · rail des zones · carte · rail des navires · barre d'état.
 - **Barre d'état permanente** : santé des 6 sources de données, fraîcheur des scores, mode.
   Une source en panne se voit en permanence.
-- **Thèmes** : sombre, clair, et thèmes client (white-label). Bouton `☀`, ou `?theme=client-nord`
-  dans l'URL. Densité compacte / confortable.
+- **Thèmes** : carte de jour, **carte de nuit** (la même carte lue à la lampe), et thèmes client
+  (white-label) via `?theme=client-nord`. Densité compacte / confortable.
 - **Bilingue** FR/EN, bascule instantanée.
 
 ### Ce qui est réel
@@ -39,7 +42,7 @@ hiérarchie portée par la graisse et la densité plutôt que par la couleur.
 |---|---|
 | `proteus-proto.html` | **la source unique** — contient les marqueurs `//WORLD_DATA`, `__MANROPE_B64__` et `__RISK_SNAPSHOT__`, ainsi que tous les tokens de design |
 | `world_compact.js` | fond de carte mondial compacté (généré par `compact.js`) |
-| `manrope.b64` | police Manrope encodée en base64 |
+| `fonts.css` + `*.woff2` | polices embarquées (Spectral, IBM Plex Sans, IBM Plex Mono), régénérées par `make-fonts.mjs` |
 | `risk-snapshot.json` | scores embarqués, utilisés hors ligne en secours |
 | `build.js` | assemble le tout et produit `proto/proteus.html` |
 | `check.mjs` | test de fumée dans un navigateur (contrat DOM, erreurs JS, captures) |
@@ -50,6 +53,7 @@ hiérarchie portée par la graisse et la densité plutôt que par la couleur.
 ```bash
 node proto/build.js                       # reconstruire le prototype
 node proto/check.mjs                       # tester (sort en 1 si régression)
+node proto/make-fonts.mjs                  # ré-embarquer les polices
 node proto/sync-design-system.mjs          # mettre à jour le design system
 node proto/sync-design-system.mjs --check  # échouer si le design system a dérivé
 ```

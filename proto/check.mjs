@@ -83,7 +83,7 @@ if (await has('#bTheme')) {
 // — densité : optionnel tant que la phase 4 n'est pas faite —
 if (await has('#bDensity')) { ok.push('#bDensity'); }
 
-console.log('police Manrope chargée :', await page.evaluate(() => document.fonts.check('14px Manrope')));
+console.log('polices embarquées chargées :', await page.evaluate(() => document.fonts.check('14px "IBM Plex Sans"') && document.fonts.check('14px Spectral') && document.fonts.check('14px "IBM Plex Mono"')));
 
 // — recherche —
 if (await has('#shipsearch')) {

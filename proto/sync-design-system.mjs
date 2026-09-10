@@ -10,7 +10,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, '..');
 const APP = path.join(here, 'proteus-proto.html');
 const DS  = path.join(root, 'design-system.html');
-const B64 = path.join(here, 'manrope.b64');
+const FONTS = path.join(here, 'fonts.css');
 
 const app = fs.readFileSync(APP, 'utf8');
 
@@ -39,7 +39,7 @@ if (process.argv.includes('--check')) {
 }
 
 ds = ds.slice(0, i) + wanted + ds.slice(j + E.length);
-if (ds.includes('__MANROPE_B64__')) ds = ds.replace('__MANROPE_B64__', fs.readFileSync(B64, 'utf8').trim());
+if (ds.includes('/*FONTS*/')) ds = ds.replace('/*FONTS*/', () => fs.readFileSync(FONTS, 'utf8'));
 fs.writeFileSync(DS, ds);
 const n = (tokens.match(/--[a-z0-9-]+\s*:/g) || []).length;
 console.log('design-system.html synchronisé :', n, 'tokens ·', (ds.length/1024|0)+' Ko');

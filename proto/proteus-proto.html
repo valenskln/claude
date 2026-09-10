@@ -1,10 +1,7 @@
 <title>Proteus.AI · Tracker maritime & risque géopolitique</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  @font-face{
-    font-family:'Manrope'; font-style:normal; font-weight:400 800; font-display:swap;
-    src:url("data:font/woff2;base64,__MANROPE_B64__") format('woff2');
-  }
+/*FONTS*/
   /* ==========================================================================
      TOKENS — trois étages.
      1. primitives : valeurs brutes, jamais lues par un composant.
@@ -13,90 +10,108 @@
                      magiques couplés à la main.
      Changer une couleur, une police ou la densité = toucher l'étage 2 ou 3.
      ========================================================================== */
+  /* ==========================================================================
+     IDENTITÉ « CARTE MARINE »
+     Le vocabulaire est celui des cartes de l'Amirauté : papier crème, encre
+     noire, terres en bistre, mer en bleu pâle — et le MAGENTA réservé à
+     l'information critique, comme sur une vraie carte. Pas d'arrondis, pas
+     d'ombres, pas de dégradés : des filets d'encre.
+
+     Trois étages : primitives -> sémantique -> layout. Un composant ne lit
+     jamais une primitive ; seul l'étage sémantique est redéfini par un thème.
+     ========================================================================== */
   :root{
-    /* — 1. primitives — */
-    --p-ocean-900:#07111C; --p-ocean-800:#0C1926; --p-ocean-700:#102030;
-    --p-ocean-600:#1C3247; --p-ocean-500:#17293A;
-    --p-slate-300:#8FA3B5; --p-slate-400:#5C7285; --p-white-50:#E8EEF4;
-    --p-cyan-400:#4FC3E8;  --p-amber-400:#E8B84B; --p-orange-400:#E8792E;
-    --p-red-400:#E0402F;   --p-green-400:#4FC38B;
+    /* — 1. primitives : papiers, encres, bistres, mers — */
+    --p-paper-50:#FBF9F3;  --p-paper-100:#F5F1E6; --p-paper-200:#EDE7D8;
+    --p-paper-300:#E2DAC6;
+    --p-buff-300:#E3D3AC;  --p-buff-500:#D4C094;
+    --p-ink-900:#1A1814;   --p-ink-700:#413C34;   --p-ink-500:#6B6459;
+    --p-ink-300:#9A9285;   --p-rule:#CFC6B0;
+    --p-sea-200:#D3E2EA;   --p-sea-400:#A5C3D1;   --p-sea-700:#2A6685;
+    --p-magenta:#B5145A;   --p-rust:#B04E18;      --p-ochre:#8C6B12;
+    --p-green:#2C6E4A;
 
-    /* — 2. sémantique : surfaces & texte — */
-    --surface-base:var(--p-ocean-900);        /* fond de page ET eau du canvas */
-    --surface-raised:var(--p-ocean-800);      /* panneaux, boutons, modales */
-    --surface-sunken:var(--p-ocean-700);      /* champs, survol, pistes de barres */
-    --surface-translucent:rgba(12,25,38,.93); /* panneaux flottants (avec flou) */
-    --surface-header-top:rgba(7,17,28,.96);
-    --surface-header-bottom:rgba(7,17,28,.82);
-    --scrim:rgba(3,8,14,.7);                  /* voile derrière les modales */
-    --border-subtle:var(--p-ocean-600);
-    --text-primary:var(--p-white-50);
-    --text-secondary:var(--p-slate-300);
-    --text-muted:var(--p-slate-400);
-    --text-on-risk:var(--p-ocean-900);        /* texte posé sur une pastille de score */
+    /* — 2. sémantique : surfaces et encres — */
+    --surface-base:var(--p-paper-200);      /* fond général */
+    --surface-raised:var(--p-paper-50);     /* panneaux, en-tête, modales */
+    --surface-sunken:var(--p-paper-300);    /* champs, survol, pistes de barres */
+    --surface-translucent:rgba(251,249,243,.96);
+    --surface-header-top:var(--p-paper-50);
+    --surface-header-bottom:var(--p-paper-50);
+    --scrim:rgba(26,24,20,.42);
+    --border-subtle:var(--p-rule);
+    --border-strong:var(--p-ink-900);
+    --text-primary:var(--p-ink-900);
+    --text-secondary:var(--p-ink-700);
+    --text-muted:var(--p-ink-500);
+    --text-on-risk:#FFFFFF;                 /* posé sur une pastille sombre */
 
-    /* — 2. sémantique : action & risque —
-       L'accent signale l'interface ; la rampe ambre→orange→rouge est RÉSERVÉE au
-       danger. Sous 4,0 le score reste neutre : pas de couleur chaude sans raison. */
-    --accent:var(--p-cyan-400);
-    --risk-calm:var(--p-slate-300);
-    --risk-moderate:var(--p-amber-400);
-    --risk-high:var(--p-orange-400);
-    --risk-critical:var(--p-red-400);
-    --status-ok:var(--p-green-400);
+    /* — 2. sémantique : action et risque —
+       Le bleu de carte signale l'interface. La montée ocre -> rouille ->
+       MAGENTA est réservée au danger : le magenta est la couleur que les
+       cartes marines réservent depuis toujours à l'information critique.
+       Sous 4,0 le score reste à l'encre neutre. */
+    --accent:var(--p-sea-700);
+    --risk-calm:var(--p-ink-500);
+    --risk-moderate:var(--p-ochre);
+    --risk-high:var(--p-rust);
+    --risk-critical:var(--p-magenta);
+    --status-ok:var(--p-green);
 
-    /* — 2. sémantique : fond de carte (lu par le canvas, cf. readTokens) — */
-    --map-land:var(--p-ocean-500);
-    --map-land-stroke:rgba(66,105,140,.35);
-    --map-graticule:rgba(30,53,75,.45);
-    --map-river:rgba(38,78,118,.75);
-    --map-label:rgba(143,163,181,.9);
+    /* — 2. sémantique : fond de carte (lu par le canvas via readTokens) — */
+    --map-land:var(--p-buff-300);
+    --map-land-stroke:rgba(26,24,20,.5);    /* trait de côte à l'encre */
+    --map-graticule:rgba(42,102,133,.20);
+    --map-river:rgba(42,102,133,.5);
+    --map-label:rgba(26,24,20,.72);
+    --map-sea:var(--p-sea-200);
 
     /* — 2. sémantique : armateurs (identification, jamais hiérarchie) — */
-    --carrier-maersk:#45B8E8; --carrier-msc:#F2C14E; --carrier-cmacgm:#6272E8;
-    --carrier-cosco:#3FD1B0;  --carrier-hapag:#F2814E; --carrier-one:#E85BA0;
-    --carrier-evergreen:#52C466;
-    --carrier-hmm:#9B87E0;    --carrier-zim:#B565C9;   /* manquaient : tombaient en gris */
-    --carrier-other:var(--p-slate-300);
+    --carrier-maersk:#0B6B9E; --carrier-msc:#A8790A;  --carrier-cmacgm:#343CA0;
+    --carrier-cosco:#0D7358;  --carrier-hapag:#B84E16; --carrier-one:#A62463;
+    --carrier-evergreen:#256E33; --carrier-hmm:#6244A0; --carrier-zim:#8C2F7E;
+    --carrier-other:var(--p-ink-300);
 
-    /* — coques de l'illustration navire (teintes propres, pas les pastilles) — */
-    --hull-cmacgm:#1B2D5B; --hull-msc:#20242C;   --hull-maersk:#5CB8E4;
-    --hull-hapag:#2E3338;  --hull-one:#C94795;   --hull-evergreen:#1E7A46;
-    --hull-cosco:#27447A;  --hull-default:#2E4156;
+    /* — coques de l'illustration navire — */
+    --hull-cmacgm:#1B2D5B; --hull-msc:#2B2E33;  --hull-maersk:#0E6E9C;
+    --hull-hapag:#33383D;  --hull-one:#A6285E;  --hull-evergreen:#1E6B3C;
+    --hull-cosco:#254070;  --hull-default:#4A463E;
 
-    /* — typographie : c'est ici qu'on change de police — */
-    --font-display:'Manrope',"Segoe UI",system-ui,-apple-system,sans-serif;
-    --font-mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;
-    --fs-h1:17px; --fs-h2:15px; --fs-h3:13px; --fs-body:14px;
-    --fs-small:12.5px; --fs-caption:12px; --fs-label:11px; --fs-micro:10.5px;
-    --fs-nano:9.5px; --fs-data:13.5px;
-    --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:700; --fw-black:800;
-    --tracking-label:.12em; --tracking-wide:.14em;
+    /* — typographie : serif gravée pour le titrage, grotesque pour l'interface,
+         monospace pour TOUTE valeur mesurée — */
+    --font-display:'Spectral', Georgia, 'Times New Roman', serif;
+    --font-sans:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --fs-h1:17px; --fs-h2:15px; --fs-h3:13px; --fs-body:13.5px;
+    --fs-small:12.5px; --fs-caption:12px; --fs-label:10.5px; --fs-micro:10.5px;
+    --fs-nano:9.5px; --fs-data:13px;
+    --fw-regular:400; --fw-medium:500; --fw-semibold:600; --fw-bold:600; --fw-black:700;
+    --tracking-label:.16em; --tracking-wide:.22em;
     --leading-tight:1.25; --leading-body:1.5; --leading-loose:1.6;
 
-    /* — espacement, géométrie, profondeur, mouvement — */
+    /* — espacement — */
     --sp-1:2px; --sp-2:4px; --sp-3:6px; --sp-4:8px;
     --sp-5:12px; --sp-6:16px; --sp-7:24px; --sp-8:32px;
-    --radius-xs:3px; --radius-sm:4px; --radius-md:6px; --radius-lg:8px;
-    --radius-xl:12px; --radius-pill:20px; --radius-round:50%;
+
+    /* — géométrie : une carte n'a pas de coins arrondis ni d'ombres — */
+    --radius-xs:0; --radius-sm:0; --radius-md:0; --radius-lg:0;
+    --radius-xl:0;  --radius-pill:0; --radius-round:50%;
     --border-width:1px;
-    --blur-panel:4px; --blur-header:6px;
+    --blur-panel:0px; --blur-header:0px;
+
     --z-map:0; --z-legend:15; --z-rail:20; --z-search:22; --z-dock:25;
     --z-header:30; --z-tip:40; --z-toast:50; --z-modal:60;
-    --motion-fast:120ms; --motion-base:250ms; --ease:cubic-bezier(.2,.7,.3,1);
+    --motion-fast:110ms; --motion-base:220ms; --ease:cubic-bezier(.2,.7,.3,1);
 
-    /* — 3. layout : les dimensions de la coquille —
-       Les positions dérivées se calculent (calc) au lieu d'être recopiées :
-       élargir un rail ne peut plus décaler la recherche en silence. */
-    --h-header:52px; --h-statusbar:26px; --h-row:26px;
-    --w-rail:296px;  --w-rail-right:300px;
-    --gap-shell:1px;                     /* le fond transparaît : c'est le filet */
+    /* — 3. layout — */
+    --h-header:54px; --h-statusbar:26px; --h-row:26px;
+    --w-rail:300px;  --w-rail-right:302px;
+    --gap-shell:1px;
     --inset:var(--sp-5);
-    --w-dock:340px;
+    --w-dock:352px;
     --w-toast:320px;
 
-    /* — alias de compatibilité : l'ancien nommage continue de fonctionner,
-         ce qui permet de migrer le CSS composant par composant — */
+    /* — alias de compatibilité — */
     --ocean:var(--surface-base);      --panel:var(--surface-raised);
     --panel2:var(--surface-sunken);   --line:var(--border-subtle);
     --ink:var(--text-primary);        --ink2:var(--text-secondary);
@@ -107,54 +122,55 @@
     --ovl:var(--scrim);               --scoreInk:var(--text-on-risk);
     --other:var(--carrier-other);
 
-    color-scheme: dark;
-  }
-
-  /* ==========================================================================
-     THÈMES — on ne redéfinit QUE l'étage sémantique. La structure, les
-     espacements et la typographie ne bougent pas : c'est ce qui permet de
-     rhabiller l'outil sans en changer la nature.
-     ========================================================================== */
-  :root[data-theme="light"]{
-    --surface-base:#E8ECF3; --surface-raised:#FFFFFF; --surface-sunken:#F1F4FA;
-    --surface-translucent:rgba(255,255,255,.94);
-    --surface-header-top:rgba(255,255,255,.97); --surface-header-bottom:rgba(255,255,255,.86);
-    --scrim:rgba(20,28,48,.45);
-    --border-subtle:#C8D0E0;
-    --text-primary:#141C30; --text-secondary:#48546E; --text-muted:#6B7690;
-    --text-on-risk:#FFFFFF;              /* le texte se pose sur une pastille sombre */
-    --accent:#1470C2;
-    --risk-calm:#5A6478;  --risk-moderate:#B07908;
-    --risk-high:#C25218;  --risk-critical:#BE352A;   /* valeurs à contraste AA */
-    --status-ok:#1E8A5F;
-    /* la carte doit suivre, sinon l'océan resterait noir */
-    --map-land:#D6DEE9; --map-land-stroke:rgba(90,110,140,.45);
-    --map-graticule:rgba(120,140,170,.32); --map-river:rgba(90,140,190,.55);
-    --map-label:rgba(72,84,110,.92);
-    /* pastilles armateur assombries pour rester lisibles sur fond clair */
-    --carrier-maersk:#1B87BD; --carrier-msc:#B8850C; --carrier-cmacgm:#3B48C4;
-    --carrier-cosco:#128F76;  --carrier-hapag:#C4551F; --carrier-one:#C42B72;
-    --carrier-evergreen:#2C8A42; --carrier-hmm:#6B4FC7; --carrier-zim:#8E3AA1;
     color-scheme: light;
   }
 
-  /* Exemple de thème client (white-label) : une douzaine de lignes suffisent.
-     À essayer avec ?theme=client-nord dans l'URL. */
-  :root[data-theme="client-nord"]{
-    --surface-base:#0A1410; --surface-raised:#0F1D18; --surface-sunken:#14261F;
-    --surface-translucent:rgba(15,29,24,.93);
-    --surface-header-top:rgba(10,20,16,.96); --surface-header-bottom:rgba(10,20,16,.82);
-    --border-subtle:#1E3A2E;
-    --accent:#3FD1B0;
-    --map-land:#16302A; --map-land-stroke:rgba(70,140,110,.35);
-    --map-graticule:rgba(40,90,70,.45); --map-river:rgba(50,130,110,.7);
+  /* ==========================================================================
+     THÈMES — seul l'étage sémantique est redéfini.
+     ========================================================================== */
+
+  /* Carte de nuit : la passerelle passe en éclairage réduit. Ce n'est pas un
+     « mode sombre » générique — c'est la même carte, lue à la lampe. */
+  :root[data-theme="nuit"]{
+    --surface-base:#15130F; --surface-raised:#1D1A15; --surface-sunken:#272219;
+    --surface-translucent:rgba(29,26,21,.96);
+    --surface-header-top:#1D1A15; --surface-header-bottom:#1D1A15;
+    --scrim:rgba(8,7,5,.72);
+    --border-subtle:#3A3428; --border-strong:#C9BFA6;
+    --text-primary:#EFE7D4; --text-secondary:#BDB29A; --text-muted:#8A8069;
+    --text-on-risk:#15130F;
+    --accent:#7FB8D4;
+    --risk-calm:#8A8069; --risk-moderate:#D6A426;
+    --risk-high:#E0743A; --risk-critical:#F0518E;
+    --status-ok:#5BAF7E;
+    --map-land:#2C2618; --map-land-stroke:rgba(201,191,166,.4);
+    --map-graticule:rgba(127,184,212,.16); --map-river:rgba(127,184,212,.42);
+    --map-label:rgba(239,231,212,.72); --map-sea:#15130F;
+    --carrier-maersk:#5FB8DE; --carrier-msc:#DFAE3A;  --carrier-cmacgm:#7C84E8;
+    --carrier-cosco:#46C2A2;  --carrier-hapag:#E2854A; --carrier-one:#E068A4;
+    --carrier-evergreen:#5FC06E; --carrier-hmm:#A38CE8; --carrier-zim:#CE6FC0;
+    --carrier-other:#8A8069;
+    color-scheme: dark;
   }
 
-  /* Densité : le terminal peut respirer sans changer de nature. */
+  /* Exemple de white-label : une douzaine de lignes, la structure ne bouge pas.
+     À essayer avec ?theme=client-nord */
+  :root[data-theme="client-nord"]{
+    --surface-base:#EDF1F0; --surface-raised:#FFFFFF; --surface-sunken:#DFE7E5;
+    --surface-translucent:rgba(255,255,255,.96);
+    --surface-header-top:#FFFFFF; --surface-header-bottom:#FFFFFF;
+    --border-subtle:#C3D2CE; --text-primary:#0F1F1B; --text-secondary:#3B4F49;
+    --accent:#0C6E5A;
+    --map-land:#D8E4DF; --map-land-stroke:rgba(15,31,27,.45);
+    --map-graticule:rgba(12,110,90,.18); --map-river:rgba(12,110,90,.5);
+    --font-display:'IBM Plex Sans', system-ui, sans-serif;   /* la police se change ici */
+  }
+
+  /* Densité : l'outil peut respirer sans changer de nature. */
   :root[data-density="comfortable"]{
     --fs-body:15px; --fs-small:13.5px; --fs-caption:13px; --fs-micro:11.5px;
     --sp-3:8px; --sp-4:10px; --sp-5:14px;
-    --inset:16px;
+    --h-row:32px; --inset:16px;
   }
   *{box-sizing:border-box; margin:0; padding:0}
   html,body{height:100%}
@@ -162,7 +178,8 @@
      gouttières de 1px et dessine les filets du terminal. */
   body{
     background:var(--border-subtle); color:var(--text-primary); overflow:hidden;
-    font:var(--fs-body)/var(--leading-body) var(--font-display);
+    font:var(--fs-body)/var(--leading-body) var(--font-sans);
+    -webkit-font-smoothing:antialiased;
     display:grid; height:100dvh; gap:var(--gap-shell);
     grid-template-columns:var(--w-rail) minmax(0,1fr) var(--w-rail-right);
     grid-template-rows:var(--h-header) minmax(0,1fr) var(--h-statusbar);
@@ -173,33 +190,48 @@
   }
   #stage{grid-area:stage; position:relative; overflow:hidden; background:var(--surface-base)}
   .mono{font-family:var(--font-mono)}
+  /* Icônes gravées : le trait suit la couleur du texte, comme à la plume. */
+  .ico{width:14px; height:14px; flex:none; vertical-align:-2px;
+    fill:none; stroke:currentColor; stroke-width:1.4;
+    stroke-linecap:round; stroke-linejoin:round}
+  .ico.solid{fill:currentColor; stroke:none}
+  button .ico{margin-right:5px}
+  button .ico:only-child{margin-right:0}
 
   /* ===== Header ===== */
   #hdr{
     grid-area:header; z-index:var(--z-header);
-    display:flex; align-items:center; gap:var(--sp-5); padding:0 var(--sp-5);
-    background:var(--surface-raised); min-width:0;
+    display:flex; align-items:center; gap:var(--sp-4); padding:0 var(--sp-5);
+    background:var(--surface-raised); min-width:0; white-space:nowrap; overflow:hidden;
   }
   #brand{display:flex; flex-direction:column; line-height:1.15; min-width:170px}
-  #brand b{font-size:17px; letter-spacing:.14em}
+  #brand b{font-family:var(--font-display); font-size:19px; font-weight:var(--fw-black);
+    letter-spacing:var(--tracking-wide)}
   #brand b em{font-style:normal; color:var(--accent)}
-  #brand span{font-size:10.5px; color:var(--ink2); letter-spacing:.06em; text-transform:uppercase}
+  #brand span{font-size:var(--fs-nano); color:var(--text-muted);
+    letter-spacing:var(--tracking-label); text-transform:uppercase}
   .badge{
     font-size:10px; letter-spacing:.1em; text-transform:uppercase; white-space:nowrap;
     border:1px solid var(--amber); color:var(--amber); border-radius:3px; padding:3px 8px;
   }
-  #kpis{display:flex; gap:8px; margin-left:auto}
+  #kpis{display:flex; gap:var(--sp-2); margin-left:auto; min-width:0}
+  /* Relevés d'en-tête : encadrés d'un filet, comme un cartouche de carte. */
   .kpi{
-    background:var(--panel); border:1px solid var(--line); border-radius:6px;
-    padding:5px 12px; text-align:right; min-width:86px;
+    background:transparent; border:var(--border-width) solid var(--border-subtle);
+    padding:4px 10px; text-align:right; min-width:74px; white-space:nowrap;
   }
-  .kpi .v{font-size:16px; font-weight:600; font-variant-numeric:tabular-nums}
-  .kpi .l{font-size:9.5px; color:var(--ink2); text-transform:uppercase; letter-spacing:.08em}
+  .kpi .v{font-family:var(--font-mono); font-size:15px; font-weight:var(--fw-bold);
+    font-variant-numeric:tabular-nums; line-height:1.15}
+  .kpi .l{font-size:var(--fs-nano); color:var(--text-muted); text-transform:uppercase;
+    letter-spacing:.1em; line-height:1.2}
   .kpi .v.warn{color:var(--orange)}
-  #ctrls{display:flex; gap:6px}
+  #ctrls{display:flex; gap:var(--sp-2); flex:none}
   button{
-    font:inherit; font-weight:600; color:var(--ink); background:var(--panel); border:1px solid var(--line);
-    border-radius:20px; padding:6px 14px; cursor:pointer;
+    font:inherit; font-size:var(--fs-caption); font-weight:var(--fw-semibold);
+    color:var(--text-primary); background:transparent;
+    border:var(--border-width) solid var(--border-subtle); border-radius:var(--radius-md);
+    padding:6px 10px; cursor:pointer; white-space:nowrap;
+    display:inline-flex; align-items:center; justify-content:center;
   }
   button:hover{background:var(--panel2)}
   button:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
@@ -281,7 +313,8 @@
     border-right:var(--border-width) solid var(--border-subtle);
     padding:var(--sp-5) var(--sp-6);
   }
-  #detail h2{font-size:15px; letter-spacing:.02em; margin-bottom:2px; padding-right:24px}
+  #detail h2{font-family:var(--font-display); font-size:19px; font-weight:var(--fw-black);
+    letter-spacing:.01em; margin-bottom:3px; padding-right:24px}
   #detail .sub{color:var(--ink2); font-size:12px; margin-bottom:10px}
   #detail .ctx{font-size:12.5px; color:var(--ink); line-height:1.55; margin:8px 0}
   .chips{display:flex; flex-wrap:wrap; gap:5px; margin-top:8px}
@@ -373,16 +406,19 @@
   #legend .ring{width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:4px; vertical-align:-1px; background:transparent}
   #legend .ring.a{border:2px solid var(--amber)} #legend .ring.r{border:2px solid var(--red)}
   #legend .grad{width:64px; height:8px; border-radius:4px; display:inline-block; margin-right:5px; vertical-align:-1px;
-    background:linear-gradient(90deg,var(--amber),var(--orange),var(--red))}
+    background:linear-gradient(90deg,var(--risk-moderate),var(--risk-high),var(--risk-critical))}
   #legend .lsep{width:1px; height:14px; background:var(--line)}
   #legops{display:contents}
 
   /* ===== Recherche navire ===== */
   #searchbox{position:absolute; top:var(--sp-5); left:var(--sp-5);
     z-index:var(--z-search); width:265px}
+  .search-ico{position:absolute; left:12px; top:50%; transform:translateY(-50%);
+    color:var(--text-muted); pointer-events:none; display:flex}
   #searchbox input{
-    font:inherit; width:100%; color:var(--ink); background:var(--panelT); backdrop-filter:blur(4px);
-    border:1px solid var(--line); border-radius:20px; padding:8px 15px;
+    font:inherit; width:100%; color:var(--text-primary); background:var(--surface-raised);
+    border:var(--border-width) solid var(--border-subtle); border-radius:var(--radius-md);
+    padding:8px 14px 8px 34px;
   }
   #searchbox input:focus-visible{outline:2px solid var(--accent); outline-offset:1px}
   #searchres{margin-top:6px; background:var(--panelT); border:1px solid var(--line); border-radius:12px; overflow:hidden; display:none}
@@ -518,14 +554,14 @@
     <button class="small" id="tgR" data-i18n="toggle.ships">Navires</button>
   </div>
   <div id="ctrls">
-    <button id="bPause" data-i18n-title="btn.pause" title="Pause / lecture">⏸</button>
+    <button id="bPause" data-i18n-title="btn.pause" title="Pause / lecture"></button>
     <button id="bSpeed" class="mono" data-i18n-title="btn.speed" title="Vitesse de simulation">1 s = 1 h</button>
     <button id="bHeat" class="on" data-i18n-title="btn.heat" title="Afficher / masquer la heatmap">Heatmap</button>
-    <button id="bMode" data-i18n-title="btn.mode" title="Basculer entre simulation et flux AIS réel">🛰️ AIS direct</button>
-    <button id="bTheme" data-i18n-title="btn.theme" title="Thème clair / sombre">☀</button>
-    <button id="bDensity" data-i18n-title="btn.density" title="Densité d’affichage">☷</button>
+    <button id="bMode" data-i18n-title="btn.mode" title="Basculer entre simulation et flux AIS réel">AIS direct</button>
+    <button id="bTheme" data-i18n-title="btn.theme" title="Carte de jour / de nuit"></button>
+    <button id="bDensity" data-i18n-title="btn.density" title="Densité d’affichage"></button>
     <button id="bLang" title="Switch language / Changer de langue">EN</button>
-    <button id="bInfo" data-i18n-title="btn.info" title="À propos du prototype">?</button>
+    <button id="bInfo" data-i18n-title="btn.info" title="À propos du prototype"></button>
   </div>
 </header>
 
@@ -552,7 +588,8 @@
   <div id="tip"></div>
 
   <div id="searchbox">
-    <input id="shipsearch" type="text" data-i18n-placeholder="search.placeholder" placeholder="🔍 Rechercher un navire (nom, MMSI)…" autocomplete="off">
+    <span class="search-ico" aria-hidden="true"></span>
+    <input id="shipsearch" type="text" data-i18n-placeholder="search.placeholder" placeholder="Rechercher un navire (nom, MMSI)…" autocomplete="off">
     <div id="searchres"></div>
   </div>
 
@@ -602,7 +639,7 @@
 <div id="aismodal" role="dialog" aria-modal="true" data-i18n-aria="aria.ais" aria-label="Connexion AIS">
   <div>
     <button class="x" id="ax" data-i18n-aria="aria.close" aria-label="Fermer">✕</button>
-    <h2 id="aisH2" data-i18n="ais.h2" class="ais-h2">🛰️ Passer aux positions réelles</h2>
+    <h2 id="aisH2" data-i18n="ais.h2" class="ais-h2">Passer aux positions réelles</h2>
     <p id="aisSub" data-i18n-html="ais.sub" class="ais-sub">
       Flux AIS en direct fourni par <b>aisstream.io</b> (gratuit).</p>
     <p id="aisSteps" data-i18n-html="ais.steps" class="ais-steps">
@@ -613,7 +650,7 @@
     <label class="fld" for="aiskey" id="aisKeyLabel" data-i18n="ais.keyLabel">Clé API aisstream.io</label>
     <div class="ais-row">
       <input type="password" id="aiskey" autocomplete="off" placeholder="ex. 2f7c1a…">
-      <button id="aiseye" data-i18n-title="ais.eye" title="Afficher / masquer la clé">👁</button>
+      <button id="aiseye" data-i18n-title="ais.eye" title="Afficher / masquer la clé"></button>
     </div>
     <label class="fld" for="aisscope" id="aisScopeLabel" data-i18n="ais.scopeLabel">Couverture</label>
     <select id="aisscope">
@@ -628,7 +665,7 @@
     </div>
     <div id="aisstatus"></div>
     <p id="aisBottomWarn" data-i18n-html="ais.bottomWarn" class="ais-warn">
-      ⚠️ Dans l’aperçu en ligne, les connexions externes sont bloquées par sécurité :
+      Dans l’aperçu en ligne, les connexions externes sont bloquées par sécurité :
       pour le direct, télécharge <b>proteus-prototype.html</b> et ouvre-le sur ton ordinateur.
       Couverture : antennes côtières (les océans lointains ont des trous — c’est normal).
       Ta clé reste dans ton navigateur, elle n’est envoyée qu’à aisstream.io.</p>
@@ -668,6 +705,32 @@ function zTags(z){ return LANG==='en' ? (z.f_en&&z.f_en.length?z.f_en:z.f) : z.f
 function rName(route){ const r=ROUTES[route]; return LANG==='en' ? (r.name_en||r.name) : r.name; }
 function rNote(route){ const r=ROUTES[route]; return LANG==='en' ? (r.note_en||r.note) : r.note; }
 function locale(){ return LANG==='en' ? 'en-US' : 'fr-FR'; }
+
+/* ===== Icônes =====
+   Les emojis se rendent différemment sur chaque système et trahissent une
+   interface bâclée. On dessine les nôtres : trait de 1,4 px, même graphie que
+   les filets de la carte. */
+const ICONS = {
+  pause:  '<rect x="4.5" y="3" width="2.4" height="10" rx="0"/><rect x="9.1" y="3" width="2.4" height="10" rx="0"/>',
+  play:   '<path d="M5 3.2 13 8l-8 4.8z"/>',
+  antenna:'<path d="M2.5 13.5 7 9M8.6 3.2a5.6 5.6 0 0 1 4.2 4.2L9.4 8.8 7.2 6.6z"/><path d="M9.6 1.2a8 8 0 0 1 5.2 5.2"/>',
+  day:    '<circle cx="8" cy="8" r="3.1"/><path d="M8 1v1.8M8 13.2V15M1 8h1.8M13.2 8H15M3.1 3.1l1.3 1.3M11.6 11.6l1.3 1.3M12.9 3.1l-1.3 1.3M4.4 11.6l-1.3 1.3"/>',
+  night:  '<path d="M13.2 9.6A5.8 5.8 0 0 1 6.4 2.8a5.8 5.8 0 1 0 6.8 6.8z"/>',
+  rows:   '<path d="M2 4h12M2 8h12M2 12h12"/>',
+  rowsWide:'<path d="M2 3.5h12M2 8h12M2 12.5h12"/>',
+  info:   '<circle cx="8" cy="8" r="6.4"/><path d="M8 7.2v4M8 4.8v.9"/>',
+  search: '<circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4 14 14"/>',
+  warn:   '<path d="M8 2.2 14.6 13.4H1.4z"/><path d="M8 6.6v3M8 11.2v.7"/>',
+  alert:  '<circle cx="8" cy="8" r="5.4"/>',
+  ship:   '<path d="M2.4 9.6h11.2l-1.5 3.6a1.6 1.6 0 0 1-1.5 1H5.4a1.6 1.6 0 0 1-1.5-1z"/><path d="M4.6 9.6V5.4h6.8v4.2M8 5.4V2.6"/>',
+  eye:    '<path d="M1.4 8S3.9 3.6 8 3.6 14.6 8 14.6 8 12.1 12.4 8 12.4 1.4 8 1.4 8z"/><circle cx="8" cy="8" r="1.9"/>',
+  layers: '<path d="M8 2 14.5 5.6 8 9.2 1.5 5.6z"/><path d="M1.5 9.2 8 12.8l6.5-3.6"/>',
+};
+function icon(name, extra){
+  const d = ICONS[name]; if(!d) return '';
+  const solid = (name==='pause'||name==='play'||name==='night'||name==='alert');
+  return `<svg class="ico${solid?' solid':''}${extra?' '+extra:''}" viewBox="0 0 16 16" aria-hidden="true" focusable="false">${d}</svg>`;
+}
 
 /* ===== Apparence : thème et densité =====
    Appliqués AVANT la première lecture des tokens, sinon le canvas
@@ -709,7 +772,7 @@ const I18N = {
   'status.sources':   ['Sources','Sources'],
   'status.updated':   ['Scores','Scores'],
   'btn.density':      ['Densité d’affichage','Display density'],
-  'search.placeholder':['🔍 Rechercher un navire (nom, MMSI)…','🔍 Search a vessel (name, MMSI)…'],
+  'search.placeholder':['Rechercher un navire (nom, MMSI)…','Search a vessel (name, MMSI)…'],
   'panel.filter':     ['Filtre flotte','Fleet filter'],
   'filter.top5':      ['Top 5 armateurs uniquement','Top 5 carriers only'],
   'panel.zonesRank':  ['Zones à risque · classement','Risk zones · ranking'],
@@ -722,7 +785,7 @@ const I18N = {
   'aria.close':       ['Fermer','Close'],
   'aria.detail':      ['Détail','Detail'],
   'aria.ais':         ['Connexion AIS','AIS connection'],
-  'ais.h2':           ['🛰️ Passer aux positions réelles','🛰️ Switch to real positions'],
+  'ais.h2':           ['Passer aux positions réelles','Switch to real positions'],
   'ais.sub':          ['Flux AIS en direct fourni par <b>aisstream.io</b> (gratuit).','Live AIS feed provided by <b>aisstream.io</b> (free).'],
   'ais.steps':        ['1. Crée un compte gratuit sur <b>aisstream.io</b> (connexion via ton compte GitHub)<br>2. Menu « API Keys » → génère une clé<br>3. Colle-la ci-dessous',
                        '1. Create a free account on <b>aisstream.io</b> (sign in with GitHub)<br>2. "API Keys" menu → generate a key<br>3. Paste it below'],
@@ -736,12 +799,12 @@ const I18N = {
   'ais.cancel':       ['Annuler','Cancel'],
   'ais.forget':       ['Oublier la clé','Forget the key'],
   'ais.forget.title': ['Effacer la clé mémorisée dans ce navigateur','Erase the key saved in this browser'],
-  'ais.bottomWarn':   ['⚠️ Dans l’aperçu en ligne, les connexions externes sont bloquées par sécurité : pour le direct, télécharge <b>proteus-prototype.html</b> et ouvre-le sur ton ordinateur. Couverture : antennes côtières (les océans lointains ont des trous — c’est normal). Ta clé reste dans ton navigateur, elle n’est envoyée qu’à aisstream.io.',
-                       '⚠️ In the online preview, external connections are blocked for security: for live data, download <b>proteus-prototype.html</b> and open it on your computer. Coverage: coastal antennas (open ocean has gaps — that’s normal). Your key stays in your browser; it’s only ever sent to aisstream.io.'],
+  'ais.bottomWarn':   ['Dans l’aperçu en ligne, les connexions externes sont bloquées par sécurité : pour le direct, télécharge <b>proteus-prototype.html</b> et ouvre-le sur ton ordinateur. Couverture : antennes côtières (les océans lointains ont des trous — c’est normal). Ta clé reste dans ton navigateur, elle n’est envoyée qu’à aisstream.io.',
+                       'In the online preview, external connections are blocked for security: for live data, download <b>proteus-prototype.html</b> and open it on your computer. Coverage: coastal antennas (open ocean has gaps — that’s normal). Your key stays in your browser; it’s only ever sent to aisstream.io.'],
   'mode.badge.sim':   ['Prototype · données simulées','Prototype · simulated data'],
   'mode.badge.live':  ['Direct · flux AIS réel','Live · real AIS feed'],
-  'mode.btn.sim':     ['🛰️ AIS direct','🛰️ AIS live'],
-  'mode.btn.live':    ['🛰️ AIS : direct','🛰️ AIS: live'],
+  'mode.btn.sim':     ['AIS direct','AIS live'],
+  'mode.btn.live':    ['AIS : direct','AIS : live'],
   'mode.clock.sim':   ['Heure simulée','Simulated time'],
   'mode.clock.live':  ['Temps réel','Real time'],
 };
@@ -775,10 +838,10 @@ const ABOUT_FR = `
     <li>Les <b>positions des navires</b> : flotte fictive animée le long des corridors. En production, elles viendraient d’un flux AIS temps réel (aisstream.io, Spire Maritime, MarineTraffic…).</li>
     <li>Le temps est accéléré (réglable en haut à droite) pour rendre les mouvements visibles.</li>
   </ul>
-  <h4>Le temps réel est intégré 🛰️</h4>
+  <h4>Le temps réel est intégré</h4>
   <ul>
     <li>Clique sur <b>« AIS direct »</b> dans l'en-tête et colle ta clé gratuite aisstream.io : les vrais navires remplacent la simulation, et tout le moteur (heatmap, alertes, classement) s'applique à leurs positions réelles.</li>
-    <li>⚠️ Fonctionne en ouvrant le fichier sur ton ordinateur — l'aperçu en ligne bloque les connexions externes par sécurité.</li>
+    <li>Fonctionne en ouvrant le fichier sur ton ordinateur — l'aperçu en ligne bloque les connexions externes par sécurité.</li>
   </ul>
   <h4>Prochaines étapes</h4>
   <ul>
@@ -801,10 +864,10 @@ const ABOUT_EN = `
     <li>The <b>vessel positions</b>: a fictional fleet animated along the corridors. In production these would come from a real-time AIS feed (aisstream.io, Spire Maritime, MarineTraffic…).</li>
     <li>Time is sped up (adjustable top right) to make movement visible.</li>
   </ul>
-  <h4>Real-time tracking is already built in 🛰️</h4>
+  <h4>Real-time tracking is already built in</h4>
   <ul>
     <li>Click <b>"AIS direct"</b> in the header and paste your free aisstream.io key: real vessels replace the simulation, and the whole engine (heatmap, alerts, ranking) applies to their actual positions.</li>
-    <li>⚠️ Works when you open the file on your own computer — the online preview blocks external connections for security.</li>
+    <li>Works when you open the file on your own computer — the online preview blocks external connections for security.</li>
   </ul>
   <h4>Next steps</h4>
   <ul>
@@ -1029,7 +1092,8 @@ function hexToRgb(c){
 function readTokens(){
   const cs = getComputedStyle(document.documentElement);
   const v = n => cs.getPropertyValue(n).trim();
-  T.water = v('--surface-base');   T.land  = v('--map-land');
+  T.water = v('--map-sea') || v('--surface-base');
+  T.land  = v('--map-land');
   T.landStroke = v('--map-land-stroke'); T.grat = v('--map-graticule');
   T.river = v('--map-river');      T.label = v('--map-label');
   T.other = v('--carrier-other');
@@ -1154,7 +1218,7 @@ function pushAlert(s,z,kind,d){
   if(toastsEl.children.length>=4) toastsEl.firstChild.remove();
   const el=document.createElement('div');
   el.className='toast'+(red?' red':'');
-  el.innerHTML = `<b>${red?'🔴':'⚠️'} ${esc(label)}${s.op?' · '+esc(s.op):''}</b>
+  el.innerHTML = `<b>${red?icon('alert'):icon('warn')} ${esc(label)}${s.op?' · '+esc(s.op):''}</b>
     ${tr(red?'Est entré dans':'S’approche de', red?'Has entered':'Is approaching')} <b>${esc(zn)}</b> — score ${z.score.toFixed(1)}/10
     <small>· ${tr(`${Math.round(d)} km du centre de zone`,`${Math.round(d)} km from zone center`)}</small>`;
   el.onclick=()=>{selectShip(s)};
@@ -1201,6 +1265,11 @@ function renderBase(){
   const c=bctx;
   c.setTransform(DPR,0,0,DPR,0,0);
   c.clearRect(0,0,W,H);
+  // L'océan est peint explicitement : le fond de page est du papier, la mer est
+  // de la mer. Auparavant le canvas restait transparent et laissait passer le
+  // fond — ce qui ne marchait que tant que toute l'interface était de la même
+  // couleur que l'eau.
+  c.fillStyle = T.water; c.fillRect(0,0,W,H);
   // graticule adaptatif (plus fin quand on zoome), limité au visible
   const step = view.scale>60 ? 5 : view.scale>15 ? 10 : 20;
   const halfLon=W/2/view.scale, halfLat=H/2/view.scale;
@@ -1241,9 +1310,9 @@ function draw(){
   for(const z of ZONES){
     const [x,y]=prj(z.c[0],z.c[1]);
     const ry=(z.r/111)*view.scale, rx=ry/Math.max(.25,Math.cos(z.c[0]*Math.PI/180));
-    if(showHeat){
+    if(showHeat && z.score >= 4){
       const g=ctx.createRadialGradient(x,y,0,x,y,Math.max(rx,ry));
-      const a=(0.16+0.045*z.score)*Math.min(1, 70/view.scale);  // s'estompe en zoom serré
+      const a=(0.10+0.055*(z.score-4))*Math.min(1, 70/view.scale);  // s'estompe en zoom serré
       g.addColorStop(0, riskCSS(z.score, a));
       g.addColorStop(0.65, riskCSS(z.score, a*0.5));
       g.addColorStop(1, riskCSS(z.score, 0));
@@ -1608,7 +1677,7 @@ function shipArt(op){
     }
   }
   const name = c ? `<text x="196" y="97" fill="#EDF2F7" font-size="13" font-weight="700"
-      text-anchor="middle" letter-spacing="2.5" font-family="Manrope,sans-serif">${esc(op.toUpperCase())}</text>` : '';
+      text-anchor="middle" letter-spacing="2.5" font-family="IBM Plex Sans,sans-serif">${esc(op.toUpperCase())}</text>` : '';
   return `<svg viewBox="0 0 360 130" role="img" aria-label="${tr('Porte-conteneurs','Container ship')} ${esc(op||tr('inconnu','unknown'))}">
     <rect width="360" height="130" fill="var(--panel2)"/>
     ${boxes}
@@ -1645,7 +1714,7 @@ function renderShipCard(s){
   const st=shipState(s);
   detail.style.display='block';
   detail.innerHTML=`<button class="x" aria-label="${tr('Fermer','Close')}">✕</button>
-    <h2>🚢 ${esc(s.name)}</h2>
+    <h2>${icon('ship')} ${esc(s.name)}</h2>
     <div class="sub">${esc(s.op)} · ${tr('porte-conteneurs','container ship')} ${s.teu.toLocaleString(locale())} ${tr('EVP','TEU')}</div>
     ${shipVisual(s.op)}
     <dl class="kv">
@@ -1668,7 +1737,7 @@ function renderLiveCard(v){
   const typeTxt = (v.type>=70&&v.type<80)?'cargo':(v.type>=80&&v.type<90)?'tanker':(v.type?tr('type AIS ','AIS type ')+v.type:tr('type n.c.','type n/a'));
   detail.style.display='block';
   detail.innerHTML=`<button class="x" aria-label="${tr('Fermer','Close')}">✕</button>
-    <h2>🛰️ ${esc(v.name||('MMSI '+v.mmsi))}</h2>
+    <h2>${icon('antenna')} ${esc(v.name||('MMSI '+v.mmsi))}</h2>
     <div class="sub">${esc(v.op||tr('armateur non identifié','unidentified operator'))} · ${typeTxt} · <b style="color:var(--ok)">${tr('position réelle','real position')}</b></div>
     ${shipVisual(v.op)}
     <dl class="kv">
@@ -1776,9 +1845,11 @@ function hitShip(px,py){
 }
 
 /* ================= Contrôles ================= */
-document.getElementById('bPause').onclick=e=>{
-  paused=!paused; e.currentTarget.textContent=paused?'▶':'⏸'; e.currentTarget.classList.toggle('on',paused);
-};
+const bPause = document.getElementById('bPause');
+function pauseGlyph(){ bPause.innerHTML = icon(paused ? 'play' : 'pause'); }
+bPause.onclick = () => { paused = !paused; pauseGlyph(); bPause.classList.toggle('on', paused); };
+pauseGlyph();
+document.getElementById('bInfo').innerHTML = icon('info');
 document.getElementById('bSpeed').onclick=e=>{
   speedIdx=(speedIdx+1)%SPEEDS.length; simSpeed=SPEEDS[speedIdx][0];
   e.currentTarget.textContent=SPEEDS[speedIdx][1];
@@ -1794,7 +1865,7 @@ function refreshModeTexts(){
   const lbl   = document.getElementById('kClockL');
   if(badge){ badge.textContent = t(live?'mode.badge.live':'mode.badge.sim'); badge.classList.toggle('live', live); }
   if(typeof renderStatusBar === 'function') renderStatusBar();
-  if(bMode){ bMode.textContent = t(live?'mode.btn.live':'mode.btn.sim');     bMode.classList.toggle('on', live); }
+  if(bMode){ bMode.innerHTML = icon('antenna') + esc(t(live?'mode.btn.live':'mode.btn.sim')); bMode.classList.toggle('on', live); }
   if(lbl){   lbl.textContent   = t(live?'mode.clock.live':'mode.clock.sim'); }
 }
 function applyLang(){
@@ -1818,12 +1889,12 @@ bLang.onclick=()=>{ setLang(LANG==='fr'?'en':'fr'); applyLang(); };
    (?theme=client-nord) ou au déploiement, pas par ce bouton. */
 const bTheme = document.getElementById('bTheme');
 function themeGlyph(){
-  const cur = document.documentElement.dataset.theme || 'dark';
-  bTheme.textContent = (cur === 'light') ? '☾' : '☀';
+  const cur = document.documentElement.dataset.theme || '';
+  bTheme.innerHTML = icon(cur === 'nuit' ? 'night' : 'day');
 }
 bTheme.onclick = () => {
-  const cur = document.documentElement.dataset.theme || 'dark';
-  setTheme(cur === 'light' ? 'dark' : 'light');
+  const cur = document.documentElement.dataset.theme || '';
+  setTheme(cur === 'nuit' ? '' : 'nuit');
   themeGlyph();
 };
 themeGlyph();
@@ -1834,7 +1905,7 @@ function setDensity(d){
   const root = document.documentElement;
   if(d && d !== 'compact') root.dataset.density = d; else delete root.dataset.density;
   try{ localStorage.setItem('proteus_density', d || 'compact'); }catch(e){}
-  bDensity.textContent = (d === 'comfortable') ? '☰' : '☷';
+  bDensity.innerHTML = icon(d === 'comfortable' ? 'rowsWide' : 'rows');
   bDensity.classList.toggle('on', d === 'comfortable');
   viewDirty = true;
 }
@@ -1851,6 +1922,7 @@ modal.addEventListener('click',e=>{if(e.target===modal)modal.style.display='none
 
 // --- recherche de navires ---
 const searchIn=document.getElementById('shipsearch'), searchRes=document.getElementById('searchres');
+document.querySelector('.search-ico').innerHTML = icon('search');
 let searchHits=[];
 searchIn.oninput=()=>{
   const q=searchIn.value.trim().toUpperCase();
