@@ -65,6 +65,24 @@ Le risque de guerre est son point de douleur immédiat et notre porte d'entrée.
 besoin — **évaluer, sourcer, justifier** — vaut pour l'ensemble de son risk assessment : la
 mécanique qu'on construit pour la guerre se réemploie pour les risques ordinaires et le cyber.
 
+## Arbitrages tranchés (ne pas partir dans l'autre sens)
+
+Deux décisions verrouillées. La session d'exécution s'y tient.
+
+- **Risque de guerre en v1, risk assessment en vision — c'est une séquence, pas une
+  restriction.** La v1 traite **le risque de guerre à fond** : c'est là qu'est la douleur
+  aiguë et non résolue, et là que l'avantage de Proteus (veille presse en direct + zones JWC)
+  est réel. Les risques ordinaires (perte, vol, casse) sont actuariels et historiques — la
+  veille live n'y apporte presque rien. Le « risk assessment large » vit dans le **pitch et la
+  vision**, pas dans les fonctions livrées. Ne pas diluer la v1 en voulant tout couvrir : ce
+  serait la « solution miracle » qu'on veut précisément éviter.
+- **Garder les 36 zones fines, les mapper vers le rating grossier — ne jamais collapser vers
+  8.** Le rating 8-zones du marché est grossier et lent ; s'y réduire ferait de Proteus une
+  redite de ce que LMA / Swiss Re / Munich Re publient déjà, donc **sans edge**. La valeur est
+  de voir **un détroit précis chauffer avant que toute la zone-monde ne soit re-ratée** : la
+  finesse **est** l'anticipation, c'est l'argument de vente. Afficher les 36 zones regroupées
+  **sous** les paliers de rating de l'assureur pour parler sa langue, sans perdre le grain.
+
 ## Ce que tu changes
 
 ### 1. Repositionnement (discours)
