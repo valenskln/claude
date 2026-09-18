@@ -9,11 +9,19 @@
 
 Proteus.AI est aujourd'hui un tracker maritime généraliste (36 zones à risque scorées
 0-10, tracking AIS, moteur de scoring horaire sur 7 sources ouvertes, identité « carte
-marine »). Tu vas **le resserrer sur une seule cible : le souscripteur risque de guerre
-d'un assureur maritime français**, et adopter **son langage métier**. Ce n'est pas une
-reconstruction — le moteur, les sources et l'identité visuelle restent. C'est un
-habillage métier qui transforme un outil de veille générique en **salle de veille de
-souscription risque de guerre**.
+marine »). Tu vas le resserrer sur **la fonction risk assessment d'un assureur maritime
+français** — l'évaluation du risque en amont de la souscription — et adopter **son langage
+métier**.
+
+**Le risque de guerre est la tête de pont, pas la clôture.** C'est là que la douleur est la
+plus vive (voir le constat) et que l'avantage de Proteus est le plus tranchant : veille
+presse en direct + zones listées Joint War Committee. Mais on vise le **risk assessment au
+sens large** — le risque de guerre en premier, puis les risques ordinaires (perte, vol,
+casse) et le cyber en extension. On entre par le point aigu, on ne s'y enferme pas.
+
+Ce n'est pas une reconstruction : le moteur, les sources et l'identité visuelle restent.
+C'est un habillage métier qui transforme un outil de veille générique en **outil
+d'accompagnement du risk assessment maritime, à commencer par le risque de guerre**.
 
 ## Le constat (d'où vient le pivot)
 
@@ -44,7 +52,7 @@ Le souscripteur risque de guerre vit une douleur précise :
 
 Tu construis le pivot **sur ces briques**, tu n'en réinventes aucune.
 
-## La cible : le souscripteur risque de guerre
+## La cible : le souscripteur, par la porte du risque de guerre
 
 Son métier est de prendre des risques pour en tirer une marge ; sa boussole est le
 **ratio combiné** (indice 100 = équilibre, en dessous = bénéfice). Ce qu'il redoute le
@@ -53,14 +61,20 @@ concentré sur une route qui passe en rating 7 du jour au lendemain, capté par 
 Re / Munich Re ou par un assessment du MICA Center *après* lui. Il ne veut pas un outil de
 plus à gérer ; il veut **anticiper, justifier et fluidifier**.
 
+Le risque de guerre est son point de douleur immédiat et notre porte d'entrée. Mais le même
+besoin — **évaluer, sourcer, justifier** — vaut pour l'ensemble de son risk assessment : la
+mécanique qu'on construit pour la guerre se réemploie pour les risques ordinaires et le cyber.
+
 ## Ce que tu changes
 
 ### 1. Repositionnement (discours)
 
 - **Titre / tagline / à-propos / pitch** : passer de « tracker maritime × risque
-  géopolitique » à **« veille de souscription risque de guerre »**. Le bénéfice mis en
-  avant : anticiper une bascule de rating avant qu'elle ne touche le book, avec une
-  justification sourcée et traçable.
+  géopolitique » à **l'accompagnement du risk assessment maritime**, avec le **risque de
+  guerre en accroche d'entrée** (« veille de souscription risque de guerre »). Le bénéfice
+  mis en avant : anticiper une bascule de rating avant qu'elle ne touche le book, avec une
+  justification **sourcée, corroborée et traçable**. Ton d'accompagnement, jamais de solution
+  miracle.
 - **Cadrage souveraineté** (à-propos et pitch, pas l'app quotidienne) : le marché français
   délivre des garanties risque de guerre étendues — jusqu'au *« war on land »*, une
   spécificité française. Proteus est une **IA française qui soutient la compétitivité des
@@ -100,8 +114,32 @@ Priorité, de la plus forte à la plus faible :
 4. **Reframe du score en aide à la souscription** — vocabulaire des composantes et des
    fiches réorienté « décision de souscription », sans toucher au calcul.
 
-### 4. Roadmap (v2, à mentionner, pas à construire)
+### 4. Fiabilité de l'information et identification des navires (on sera challengés là-dessus)
 
+Le premier reproche qu'on nous fera : *quelle fiabilité ? La presse suffit-elle ?* Il faut y
+répondre **dans le produit**, pas seulement dans le discours.
+
+- **La presse (GDELT) seule ne fait pas foi.** Un titre isolé et non confirmé n'est pas un
+  fait. Proteus **corrobore** : un signal ne pèse que recoupé entre plusieurs sources — presse
+  GDELT + listing Joint War Committee + événements GDACS / USGS / NOAA + incidents ASAM. Chaque
+  point de score reste **sourcé et daté**.
+- **Afficher un indice de confiance** par signal et par zone : *source unique non confirmée* →
+  *corroboré multi-sources* → *confirmé institutionnel (JWC / MICA)*. Le souscripteur voit non
+  seulement le score, mais **la solidité de ce qui le fonde**. C'est ce qui fait passer d'« une
+  veille » à « une veille défendable » face à un contradicteur.
+- **Identification des navires : l'AIS ne suffit pas, et il faut le dire.** L'AIS peut être
+  éteint, usurpé ou falsifié (*dark shipping*). Proteus doit **signaler cette limite** et prévoir
+  le **recoupement avec un tracker satellite** (AIS satellite ciblé sur les détroits, détection
+  des navires qui coupent leur signal). En v1 : l'annoncer honnêtement comme limite connue ;
+  en v2 : le brancher.
+- **Posture : accompagnement, pas solution miracle.** Proteus **éclaire et documente** une
+  décision, il ne la prend pas et ne prétend pas à la vérité. Bannir « certitude »,
+  « prédiction », « garantie » au profit de « signal », « faisceau d'indices », « à confirmer ».
+
+### 5. Roadmap (v2, à mentionner, pas à construire)
+
+- **Recoupement satellite** de l'identification des navires + détection du *dark shipping*
+  (réponse directe au point ci-dessus).
 - **Ratio combiné** et indicateurs de portefeuille.
 - **Risque cyber** maritime (garantie systémique, marché en plein essor — Marsh précurseur).
 - **Raccordement MICA Center / Marine nationale** (l'écosystème s'appuie de plus en plus
@@ -124,6 +162,10 @@ rester au vert, et `node proto/sync-design-system.mjs --check` aligné.
   fluidifier »* du document — jamais remplacer. Toute formulation qui laisse croire que
   Proteus « décide le rating » est à proscrire : elle décrédibilise l'outil devant un vrai
   souscripteur.
+- **On sera challengés sur la fiabilité — c'est anticipé, pas subi.** La corroboration
+  multi-sources et l'indice de confiance (voir §4) sont la réponse produit. Ne jamais
+  présenter un signal de presse isolé comme un fait établi, ni l'AIS comme une
+  identification certaine.
 - **Honnêteté sur le simulé.** Les positions des navires sont **simulées** (flotte
   fictive ; le flux AIS réel est optionnel). La vraie vue cumuls suppose le **portefeuille
   du client** (ses navires assurés). La v1 **démontre le concept sur la flotte simulée** et
@@ -138,10 +180,13 @@ rester au vert, et `node proto/sync-design-system.mjs --check` aligné.
 1. `node proto/build.js && node proto/check.mjs` au vert, `sync-design-system.mjs --check`
    aligné.
 2. Une zone chaude (ex. Ormuz) affiche : score 0-10 **et** rating 1-8, bande de taux
-   indicative, drapeau JWC, et si elle est en rating ≥ 7, l'alerte de bascule avec sa
-   justification sourcée.
+   indicative, drapeau JWC, **indice de confiance** du signal, et si elle est en rating ≥ 7,
+   l'alerte de bascule avec sa justification sourcée et corroborée.
 3. La vue cumuls liste les navires exposés d'une zone en rating 7/8, avec la mention
-   honnête « flotte simulée — brancher le book pour l'exposition réelle ».
-4. L'export d'une fiche de justification produit un document daté et sourcé.
-5. Relire l'à-propos et le pitch : la cible est le souscripteur, l'angle souveraineté FR
-   est présent, et nulle part Proteus ne prétend fixer un rating ou coter une prime.
+   honnête « flotte simulée — brancher le book pour l'exposition réelle » et le rappel que
+   **l'identification AIS reste à recouper** (satellite en v2).
+4. L'export d'une fiche de justification produit un document daté, sourcé et corroboré.
+5. Relire l'à-propos et le pitch : la cible est le souscripteur (entrée risque de guerre,
+   horizon risk assessment), l'angle souveraineté FR est présent, le ton est
+   **accompagnement et non solution miracle**, et nulle part Proteus ne prétend fixer un
+   rating, coter une prime, ni tenir un signal de presse isolé pour un fait.
