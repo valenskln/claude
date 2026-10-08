@@ -36,6 +36,19 @@ toute valeur mesurée. Les icônes sont dessinées, jamais des emojis.
   temps réel (aisstream.io, clé gratuite) — à ouvrir en local, l'aperçu en ligne bloque les
   connexions externes.
 
+## La vue focus 3D (`focus-zone-3d.html`) — prototype
+
+La carte 2D reste l'outil de travail. La **vue focus** est la maquette en relief d'**une**
+zone, façon salle des cartes : trait de côte réel extrudé, couloirs de navigation, cercle de
+zone, navires animés, et autour, le dossier du souscripteur (score, rating 1-8, bande de taux
+indicative, fiabilité du signal, cumuls, fil de veille). Prototype sur **Bab el-Mandeb**.
+
+- Ouverture en « plongée » : on part de la vue à plat de la carte, la caméra bascule en maquette.
+- Glisser pour tourner, molette pour zoomer, clic sur un navire ou une ligne des cumuls.
+- `?theme=nuit` pour la carte de nuit, `?still=1` pour sauter l'intro (captures).
+- Données de zone **réelles** (instantané `risk-snapshot.json`) ; flotte et expositions
+  **simulées**, étiquetées comme telles. Three.js r159 embarqué (licence MIT), 100 % hors ligne.
+
 ## Le dossier `proto/` (sources de fabrication)
 
 | Fichier | Rôle |
@@ -47,6 +60,8 @@ toute valeur mesurée. Les icônes sont dessinées, jamais des emojis.
 | `build.js` | assemble le tout et produit `proto/proteus.html` |
 | `check.mjs` | test de fumée dans un navigateur (contrat DOM, erreurs JS, captures) |
 | `sync-design-system.mjs` | recopie les tokens de l'app dans `design-system.html` |
+| `focus-zone.html` + `build-focus.js` | source et assemblage de la vue focus 3D → `focus-zone-3d.html` (refuse de construire si un couloir touche la terre) |
+| `vendor/three-0.159.0.min.js` | Three.js embarqué (MIT, voir `vendor/three-LICENSE`) |
 
 ### Commandes
 
@@ -56,6 +71,7 @@ node proto/check.mjs                       # tester (sort en 1 si régression)
 node proto/make-fonts.mjs                  # ré-embarquer les polices
 node proto/sync-design-system.mjs          # mettre à jour le design system
 node proto/sync-design-system.mjs --check  # échouer si le design system a dérivé
+node proto/build-focus.js                 # reconstruire la vue focus 3D
 ```
 
 Les captures de `check.mjs` vont dans un dossier temporaire ; utiliser `PROTEUS_SHOTS=/chemin`
