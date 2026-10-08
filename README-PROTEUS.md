@@ -36,32 +36,35 @@ toute valeur mesurée. Les icônes sont dessinées, jamais des emojis.
   temps réel (aisstream.io, clé gratuite) — à ouvrir en local, l'aperçu en ligne bloque les
   connexions externes.
 
-## La vue focus 3D (`focus-zone-3d.html`) — prototype « salle d'opérations »
+## La salle d'opérations (`proteus-ops.html`) — prototype
 
-La carte 2D reste l'outil de veille mondiale. La **vue focus** est le poste d'analyse d'**une**
-zone, avec sa propre identité, volontairement en rupture : fond nuit, maillage, lueur, polices
-Chakra Petch / Barlow / JetBrains Mono. Prototype sur **Bab el-Mandeb**.
+Identité propre, volontairement en rupture avec la carte 2D : fond nuit, maillage, lueur,
+polices Chakra Petch / Barlow / JetBrains Mono. Deux niveaux :
 
-Chaque effet 3D porte une information :
-- **Relief** (procédural, calé sur la géographie réelle) et **trait de côte réel**, maillage géographique.
-- **Zone** : anneau gradué du rayon de 300 km, balayage, paroi de zone, balise au détroit.
-- **Satellites et emprises** : deux passages (radar SAR, optique) balaient la zone ; tout navire
-  sous l'emprise est **recoupé AIS ↔ image**. Un **contact sans AIS** n'apparaît que lorsqu'un
-  passage le détecte → alerte « à qualifier », jamais « menace ».
-- **Calques de sources** sous la maquette (AIS · satellite · presse/JWC) : un navire sélectionné
-  projette une colonne qui montre quelle source confirme quoi.
-- Autour : indicateurs (navires, exposition, recoupement, contacts sans AIS), fil de veille,
-  tableau d'exposition, dossier de souscription (score, rating 1-8, taux indicatif, fiabilité).
+- **Globe** : les 36 zones (couleur = niveau, hauteur de la balise = score), les corridors réels
+  animés, la flotte, le fil de veille mondial (vrais titres de presse de toutes les zones),
+  la liste des zones triée par score. Clic sur une zone → plongée dans sa maquette.
+- **Vue focus 3D de chaque zone**, construite à l'ouverture (< 0,5 s) : trait de côte mondial
+  découpé au cadre, relief procédural (une maquette, pas une carte d'altitude), couloirs
+  calculés par plus court chemin **sur l'eau** à partir des corridors réels (jamais sur la
+  terre), ports / pays / mers, passages satellite et calques de sources, dossier de souscription.
 
-Commandes : glisser pour tourner, clic droit ou Maj + glisser pour déplacer, molette pour zoomer,
-clic sur un navire, `/` pour chercher, Échap pour désélectionner. Vues : ensemble, rasante du
-détroit, dessus. Panneau **Calques** : thème sombre / clair, calques, lueur, exagération du
-relief, vitesse de simulation. `?theme=clair`, `?still=1` (sans intro, pour les captures).
+Chaque effet 3D porte une information : les emprises satellite montrent ce qui est recoupé AIS ↔
+image ; un **contact sans AIS** n'apparaît qu'une fois détecté (« à qualifier », jamais « menace ») ;
+le navire sélectionné projette une colonne à travers les calques AIS · satellite · presse/JWC.
 
-Données de zone **réelles** (instantané `risk-snapshot.json`). Flotte, expositions, passages
-satellite et contact sans AIS **simulés**, étiquetés comme tels. Three.js r159 embarqué (MIT),
-polices OFL embarquées, 100 % hors ligne. Nécessite WebGL 2 ; sans carte graphique, la lueur se
-coupe d'elle-même.
+### AIS réel
+Bouton **AIS DIRECT** → clé gratuite aisstream.io (même clé que la carte 2D, gardée dans le
+navigateur). Les vrais navires remplacent la flotte simulée, sur le globe et dans chaque zone
+(type, longueur, MMSI/IMO, destination ; exposition estimée selon type et longueur).
+En direct, le recoupement satellite et le contact sans AIS sont **coupés** : aucune source
+satellite n'est branchée, on n'invente rien sur des navires réels. À ouvrir en local (un aperçu
+en ligne peut bloquer les connexions externes). Couverture côtière seulement.
+
+Commandes : glisser = tourner, clic droit ou Maj + glisser = déplacer, molette = zoom, `/` =
+chercher, Échap = désélectionner. `?zone=hormuz` ouvre une zone, `?theme=clair`, `?still=1`
+(sans intro). Scores rafraîchis depuis `risk.json` en ligne, instantané embarqué sinon.
+`focus-zone-3d.html` redirige vers `proteus-ops.html?zone=bab-el-mandeb`.
 
 ## Le dossier `proto/` (sources de fabrication)
 
@@ -74,8 +77,8 @@ coupe d'elle-même.
 | `build.js` | assemble le tout et produit `proto/proteus.html` |
 | `check.mjs` | test de fumée dans un navigateur (contrat DOM, erreurs JS, captures) |
 | `sync-design-system.mjs` | recopie les tokens de l'app dans `design-system.html` |
-| `focus-zone.html` + `build-focus.js` | source et assemblage de la vue focus 3D → `focus-zone-3d.html` (refuse de construire si un couloir ou le contact simulé touche la terre) |
-| `fonts-ops/` | polices de la vue focus (Chakra Petch, Barlow, JetBrains Mono — licences OFL incluses) |
+| `ops.html` + `build-ops.js` | source et assemblage de la salle d'opérations → `proteus-ops.html` (corridors repris de `proteus-proto.html`, trait de côte de `world_compact.js`) |
+| `fonts-ops/` | polices de la salle d'opérations (Chakra Petch, Barlow, JetBrains Mono — licences OFL incluses) |
 | `vendor/three-0.159.0.min.js` | Three.js embarqué (MIT, voir `vendor/three-LICENSE`) |
 
 ### Commandes
@@ -86,7 +89,7 @@ node proto/check.mjs                       # tester (sort en 1 si régression)
 node proto/make-fonts.mjs                  # ré-embarquer les polices
 node proto/sync-design-system.mjs          # mettre à jour le design system
 node proto/sync-design-system.mjs --check  # échouer si le design system a dérivé
-node proto/build-focus.js                 # reconstruire la vue focus 3D
+node proto/build-ops.js                   # reconstruire la salle d'opérations (globe + zones)
 ```
 
 Les captures de `check.mjs` vont dans un dossier temporaire ; utiliser `PROTEUS_SHOTS=/chemin`

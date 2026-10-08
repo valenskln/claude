@@ -1,0 +1,1797 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proteus · Salle d'opérations</title>
+<!--
+  Proteus — salle d'opérations (PROTOTYPE).
+  · Globe : les 36 zones surveillées, leur score (hauteur des balises), les corridors réels,
+    la flotte (simulée, ou réelle via AIS direct) et le fil de veille mondial.
+  · Vue focus 3D d'une zone : relief découpé dans le trait de côte mondial, couloirs calculés sur
+    l'eau, navires, recoupement AIS ↔ satellite, cumuls et dossier de souscription.
+  Chaque effet 3D porte une information. Données de zone réelles (instantané, rafraîchi en ligne).
+  Flotte simulée, passages satellite et contact sans AIS : SIMULÉS, étiquetés comme tels.
+  Source : proto/ops.html  ·  assemblage : node proto/build-ops.js
+-->
+<style>
+/*FONTS*/
+
+  /* ==========================================================================
+     TOKENS — identité « salle d'opérations ». La scène 3D lit ces mêmes tokens.
+     ========================================================================== */
+  :root{
+    --bg-0:#03060C; --bg-1:#07101D; --bg-2:#0D1727;
+    --glass:rgba(8,15,27,.74); --glass-hi:rgba(12,22,38,.92); --glass-row:rgba(120,170,230,.05);
+    --line:rgba(120,170,230,.13); --line-hi:rgba(120,170,230,.26);
+    --t1:#E6EEF9; --t2:#97A9C2; --t3:#5A6D87;
+    --signal:#3CD7FF; --signal-soft:rgba(60,215,255,.13);
+    --ok:#3DF5A6; --ok-soft:rgba(61,245,166,.12);
+    --warn:#FFC53D; --warn-soft:rgba(255,197,61,.13);
+    --high:#FF8A3D; --high-soft:rgba(255,138,61,.13); --crit:#FF3D71; --crit-soft:rgba(255,61,113,.13);
+    /* scène */
+    --sea:#040A14; --land-low:#0A1626; --land-high:#22597E; --contour:#5BB6E6;
+    --grid:#2BE3A0; --coast:#3CD7FF; --side-top:#0A1525; --side-bot:#02050A;
+    --globe-land:#0F2236; --globe-sea:#050C18; --atmo:#3CD7FF;
+    --sat-ink:#DDE8F6; --vignette:.5; --bloom:1.15; --glow-bg:#0B2238;
+
+    --font-display:'Chakra Petch', 'Barlow', system-ui, sans-serif;
+    --font-ui:'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, 'SF Mono', Consolas, monospace;
+    --r-panel:12px; --r-card:9px; --r-chip:5px;
+    --blur:14px;
+    color-scheme:dark;
+  }
+  :root[data-theme="clair"]{
+    --bg-0:#D5DFEA; --bg-1:#E9EFF6; --bg-2:#FFFFFF;
+    --glass:rgba(255,255,255,.80); --glass-hi:rgba(255,255,255,.95); --glass-row:rgba(20,60,120,.04);
+    --line:rgba(25,55,100,.12); --line-hi:rgba(25,55,100,.24);
+    --t1:#0C1A2D; --t2:#43566F; --t3:#7C8CA3;
+    --signal:#1E6BFF; --signal-soft:rgba(30,107,255,.10);
+    --ok:#0E9F63; --ok-soft:rgba(14,159,99,.10);
+    --warn:#D18E00; --warn-soft:rgba(209,142,0,.12);
+    --high:#E2641A; --high-soft:rgba(226,100,26,.12); --crit:#DD2160; --crit-soft:rgba(221,33,96,.10);
+    --sea:#BCD3EB; --land-low:#E2E8EF; --land-high:#8195AD; --contour:#6F86A3;
+    --grid:#1E6BFF; --coast:#1E6BFF; --side-top:#C3D1E1; --side-bot:#93A7BE;
+    --globe-land:#E4EAF1; --globe-sea:#B9D0E8; --atmo:#1E6BFF;
+    --sat-ink:#1D2C44; --vignette:.18; --bloom:.22; --glow-bg:#FFFFFF;
+    color-scheme:light;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg-0)}
+  body{color:var(--t1);font:400 14px/1.45 var(--font-ui);-webkit-font-smoothing:antialiased}
+  #scene{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab;touch-action:none}
+  #scene.drag{cursor:grabbing}
+  .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+  .cap{font:600 10.5px/1.2 var(--font-display);letter-spacing:.16em;text-transform:uppercase;color:var(--t3)}
+  button{font:inherit;color:inherit}
+  svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+  body[data-mode="world"] .z-only{display:none!important}
+  body[data-mode="zone"] .w-only{display:none!important}
+
+  .glass{position:absolute;z-index:20;background:var(--glass);border:1px solid var(--line);border-radius:var(--r-panel);
+         backdrop-filter:blur(var(--blur)) saturate(1.3);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.3)}
+  .reveal{opacity:0;transition:opacity .7s cubic-bezier(.2,.7,.3,1)}
+  body.ready .reveal{opacity:1}
+  body.ready .d1{transition-delay:.05s} body.ready .d2{transition-delay:.15s}
+  body.ready .d3{transition-delay:.25s} body.ready .d4{transition-delay:.35s}
+  #fade{position:fixed;inset:0;z-index:60;background:var(--bg-0);opacity:0;pointer-events:none;transition:opacity .35s;display:grid;place-items:center}
+  #fade.on{opacity:1}
+  #fade span{font:600 11px var(--font-mono);letter-spacing:.2em;color:var(--t3)}
+
+  /* — en-tête — */
+  header{position:fixed;top:0;left:0;right:0;height:56px;z-index:30;display:flex;align-items:center;gap:12px;padding:0 14px;
+         background:linear-gradient(var(--glass-hi),var(--glass));border-bottom:1px solid var(--line);white-space:nowrap;
+         backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur))}
+  .brand{display:flex;align-items:center;gap:10px;color:var(--t1);line-height:1;cursor:pointer;border:0;background:none;padding:0;text-align:left}
+  .brand b{font:700 16px/1 var(--font-display);letter-spacing:.24em}
+  .brand small{font:500 10.5px/1 var(--font-mono);color:var(--t3);letter-spacing:.04em}
+  .search{display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;width:min(300px,20vw);border:1px solid var(--line);
+          border-radius:8px;background:var(--glass-row);color:var(--t3)}
+  .search input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--t1);font:400 13.5px var(--font-ui)}
+  .search input::placeholder{color:var(--t3)}
+  .kbd{font:500 10.5px var(--font-mono);border:1px solid var(--line-hi);border-radius:4px;padding:1px 5px;color:var(--t3)}
+  .chip-zone{display:flex;align-items:center;gap:10px;height:38px;padding:0 10px 0 5px;border:1px solid var(--line);border-radius:9px;background:var(--glass-row);cursor:pointer;text-align:left}
+  .chip-zone:hover{border-color:var(--line-hi)}
+  .chip-zone .ic{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:var(--warn-soft);color:var(--warn)}
+  .chip-zone b{display:block;font:600 13px/1.1 var(--font-display);letter-spacing:.08em}
+  .chip-zone small{font:400 11px/1.2 var(--font-mono);color:var(--t3)}
+  .sp{flex:1}
+  .pill{display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 10px;border-radius:999px;font:600 11px/1 var(--font-mono);letter-spacing:.06em;border:0}
+  .pill.sim{background:var(--ok-soft);color:var(--ok)}
+  .pill.proto{border:1px solid var(--crit);color:var(--crit);border-radius:var(--r-chip)}
+  .pill.ais{cursor:pointer;border:1px solid var(--line-hi);color:var(--t2);background:none}
+  .pill.ais.on{border-color:var(--signal);color:var(--signal);background:var(--signal-soft)}
+  .pill.ais.wait{border-color:var(--warn);color:var(--warn)}
+  .dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:ping 1.8s infinite}
+  @keyframes ping{0%{box-shadow:0 0 0 0 currentColor}100%{box-shadow:0 0 0 7px transparent}}
+  .hbtn{height:34px;display:inline-flex;align-items:center;gap:7px;padding:0 11px;border-radius:8px;border:1px solid var(--line);
+        background:var(--glass-row);cursor:pointer;color:var(--t2);font:500 13px var(--font-ui);text-decoration:none}
+  .hbtn:hover{color:var(--t1);border-color:var(--line-hi)}
+
+  /* — panneaux communs — */
+  .ph{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 10px;gap:8px}
+  .ph h2{margin:0;font:700 12px/1 var(--font-display);letter-spacing:.2em;text-transform:uppercase;white-space:nowrap}
+  .ph .mono{font-size:11px;color:var(--t3);white-space:nowrap}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 14px 12px}
+  .stat{border:1px solid var(--line);border-radius:var(--r-card);padding:8px 6px 7px;text-align:center;background:var(--glass-row)}
+  .stat b{display:block;font:600 20px/1.1 var(--font-mono)}
+  .stat span{font:600 9.5px/1 var(--font-display);letter-spacing:.14em;color:var(--t3)}
+  .stat.alert b{color:var(--crit)}
+  .list{flex:1;overflow:auto;padding:0 10px 12px;scrollbar-width:thin}
+  .ev{padding:10px 8px;border-top:1px solid var(--line);border-radius:6px}
+  .ev.click{cursor:pointer} .ev.click:hover{background:var(--glass-row)}
+  .ev.new{animation:flash 1.8s ease-out}
+  @keyframes flash{0%{background:var(--signal-soft)}100%{background:transparent}}
+  .ev .top{display:flex;align-items:center;gap:8px;margin-bottom:4px;min-width:0}
+  .tag{font:700 9.5px/1 var(--font-mono);letter-spacing:.08em;padding:3px 6px;border-radius:4px;white-space:nowrap}
+  .tag.jwc{background:var(--warn-soft);color:var(--warn)} .tag.press{background:var(--signal-soft);color:var(--signal)}
+  .tag.sat{background:var(--ok-soft);color:var(--ok)} .tag.ais{color:var(--t2);border:1px solid var(--line-hi)}
+  .tag.alert{background:var(--crit-soft);color:var(--crit)} .tag.sys{background:var(--glass-row);color:var(--t2);border:1px solid var(--line)}
+  .tag.off{color:var(--high);border:1px dashed var(--high)} .tag.zn{color:var(--t1);border:1px solid var(--line-hi);overflow:hidden;text-overflow:ellipsis;max-width:130px}
+  .ev .t{font:400 11px var(--font-mono);color:var(--t3);margin-left:auto;white-space:nowrap}
+  .ev p{margin:0;font:500 13px/1.35 var(--font-ui);color:var(--t1)}
+  .ev small{display:block;margin-top:3px;font:400 10.5px/1.35 var(--font-mono);color:var(--t3)}
+  .ev a{color:inherit;text-decoration:none} .ev a:hover{color:var(--signal)}
+  .kpis{position:absolute;z-index:20;top:70px;left:328px;right:368px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .kpi{display:flex;gap:11px;align-items:flex-start;padding:12px 13px;border-radius:var(--r-panel);background:var(--glass);border:1px solid var(--line);
+       backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));min-width:0}
+  .kpi .ic{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;flex:none;background:var(--signal-soft);color:var(--signal)}
+  .kpi .ic svg{width:19px;height:19px}
+  .kpi.w .ic{background:var(--warn-soft);color:var(--warn)} .kpi.g .ic{background:var(--ok-soft);color:var(--ok)}
+  .kpi.a{border-color:var(--crit)} .kpi.a .ic{background:var(--crit-soft);color:var(--crit)}
+  .kpi .l{font:500 12px/1.2 var(--font-ui);color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi .v{font:600 22px/1.15 var(--font-mono);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi .v small{font-size:12px;color:var(--t3);font-weight:400}
+  .kpi .s{font:400 11px/1.3 var(--font-mono);color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kpi .s .up{color:var(--ok)} .kpi .s .bad{color:var(--crit)}
+  .bar{height:4px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:7px}
+  .bar i{display:block;height:100%;border-radius:3px;background:var(--ok);transition:width .6s}
+
+  /* — monde : liste des zones (gauche), fil mondial (droite), légende — */
+  #zlist{top:70px;left:14px;bottom:14px;width:300px;display:flex;flex-direction:column;overflow:hidden}
+  .ztabs{display:flex;gap:2px;margin:0 14px 10px;padding:3px;border-radius:8px;background:var(--glass-row);border:1px solid var(--line)}
+  .ztabs button{flex:1;border:0;background:none;padding:5px 0;border-radius:6px;font:500 12px var(--font-ui);color:var(--t2);cursor:pointer}
+  .ztabs button.on{background:var(--bg-2);color:var(--t1)}
+  .zr{display:grid;grid-template-columns:10px 1fr auto;gap:10px;align-items:center;padding:8px 8px;border-radius:7px;cursor:pointer;border-top:1px solid var(--line)}
+  .zr:hover,.zr.hov{background:var(--signal-soft)}
+  .zr .dt{width:9px;height:9px;border-radius:50%}
+  .zr b{display:block;font:600 13px/1.2 var(--font-ui);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .zr small{font:400 10.5px var(--font-mono);color:var(--t3)}
+  .zr .sc{text-align:right;font:600 14px/1.1 var(--font-mono)}
+  .zr .sc small{display:block;font-weight:400}
+  .jw{font:700 8.5px/1 var(--font-mono);letter-spacing:.06em;padding:2px 4px;border-radius:3px;background:var(--warn-soft);color:var(--warn);margin-left:5px;vertical-align:1px}
+  #wfeed{top:70px;right:14px;bottom:14px;width:340px;display:flex;flex-direction:column;overflow:hidden}
+  #legend{position:absolute;z-index:20;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:14px;align-items:center;padding:9px 14px;white-space:nowrap}
+  #legend span{display:inline-flex;align-items:center;gap:6px;font:500 11px var(--font-mono);color:var(--t2)}
+  #legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  #legend .sep{width:1px;height:16px;background:var(--line-hi)}
+
+  /* — zone : fil (gauche), dossier (droite), exposition (bas) — */
+  #feed{top:70px;left:14px;bottom:14px;width:300px;display:flex;flex-direction:column;overflow:hidden}
+  #dossier{top:70px;right:14px;bottom:14px;width:340px;overflow:auto;padding:16px;scrollbar-width:thin}
+  .dh{display:flex;gap:12px;align-items:flex-start}
+  .dh .ic{width:44px;height:44px;border-radius:10px;display:grid;place-items:center;background:var(--warn-soft);color:var(--warn);flex:none}
+  .dh .ic svg{width:24px;height:24px}
+  .dh .k{font:600 10.5px/1 var(--font-display);letter-spacing:.16em;color:var(--signal)}
+  .dh h1{margin:5px 0 3px;font:700 22px/1.1 var(--font-display);letter-spacing:.03em}
+  .dh .co{font:400 11px var(--font-mono);color:var(--t3)}
+  .status{display:flex;gap:10px;align-items:center;margin:12px 0 0;flex-wrap:wrap}
+  .st{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 9px;border-radius:6px;font:600 11.5px/1 var(--font-ui)}
+  .st.w{background:var(--warn-soft);color:var(--warn)} .st.g{background:var(--ok-soft);color:var(--ok)} .st.c{background:var(--crit-soft);color:var(--crit)}
+  .st.n{color:var(--t3);font:400 11px var(--font-mono);padding:0}
+  .ctx{font-size:13px;color:var(--t2);margin:10px 0 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+  .card{border:1px solid var(--line);border-radius:var(--r-card);padding:10px 11px;background:var(--glass-row)}
+  .card .l{font:500 11.5px/1.2 var(--font-ui);color:var(--t2)}
+  .card .v{font:600 22px/1.2 var(--font-mono);margin-top:3px}
+  .card .v small{font-size:12px;color:var(--t3);font-weight:400}
+  .card .v.s{font-size:14.5px;padding-top:6px}
+  .sec{margin-top:16px}
+  .sec .cap{display:flex;justify-content:space-between;margin-bottom:8px}
+  .ladder{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}
+  .ladder div{height:26px;border-radius:4px;display:grid;place-items:center;font:600 12px var(--font-mono);color:var(--t3);background:var(--glass-row);border:1px solid var(--line)}
+  .ladder div.on{color:var(--bg-0);border-color:transparent}
+  .ladder div.cur{box-shadow:0 0 0 2px var(--bg-1),0 0 0 3.5px var(--t1)}
+  .ladder div.susp{border:1px dashed var(--crit);color:var(--crit)}
+  .lg{display:flex;justify-content:space-between;font:400 10.5px var(--font-mono);color:var(--t3);margin-top:6px}
+  .lg b{color:var(--crit);font-weight:600}
+  .premwrap{position:relative;margin-top:12px}
+  .prem{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--ok),var(--warn) 45%,var(--high) 75%,var(--crit));opacity:.35}
+  .premwrap i{position:absolute;top:-3px;height:12px;border-radius:3px;border:2px solid var(--t1)}
+  .rel{display:grid;grid-template-columns:1fr 60px;gap:9px 10px;align-items:center}
+  .rel span{font:500 13px/1.2 var(--font-ui)} .rel small{display:block;font:400 10.5px var(--font-mono);color:var(--t3);margin-top:2px}
+  .seg{display:flex;gap:3px} .seg i{flex:1;height:5px;border-radius:2px;background:var(--line-hi)}
+  .seg.l3 i{background:var(--ok)} .seg.l2 i:nth-child(-n+2){background:var(--signal)} .seg.l1 i:first-child{background:var(--warn)}
+  .seg.na{font:400 10.5px var(--font-mono);color:var(--t3);justify-content:flex-end}
+  .seg.sim i{background:repeating-linear-gradient(90deg,var(--signal) 0 3px,transparent 3px 5px)}
+  .pr{display:grid;grid-template-columns:118px 1fr 30px;gap:8px;align-items:center;font-size:12.5px;margin:6px 0;color:var(--t2)}
+  .pr .pw{height:5px;border-radius:3px;background:var(--line)} .pr .pv{height:100%;border-radius:3px;background:var(--warn)}
+  .pr b{font:600 12px var(--font-mono);text-align:right;color:var(--t1)}
+  ul.why{margin:0;padding-left:16px;font-size:13px;color:var(--t2)} ul.why li{margin:3px 0}
+  .hl a{display:block;padding:8px 0;border-top:1px solid var(--line);color:var(--t1);text-decoration:none;font-size:13px}
+  .hl a:hover{color:var(--signal)} .hl small{display:block;font:400 10.5px var(--font-mono);color:var(--t3);margin-top:2px}
+  .stance{margin-top:16px;padding:10px 12px;border-radius:8px;background:var(--signal-soft);color:var(--t2);font-size:12.5px;border-left:2px solid var(--signal)}
+  .empty{padding:18px;text-align:center;color:var(--t3);font:400 12px var(--font-mono)}
+
+  #fleet{left:328px;right:368px;bottom:14px;height:212px;display:flex;flex-direction:column;overflow:hidden;transition:height .35s}
+  #fleet.min{height:48px}
+  .fh{display:flex;align-items:center;gap:12px;padding:9px 12px 7px 14px}
+  .fh h2{margin:0;font:700 12px/1 var(--font-display);letter-spacing:.2em;text-transform:uppercase;white-space:nowrap}
+  .tabs{display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--glass-row);border:1px solid var(--line)}
+  .tabs button{border:0;background:none;padding:5px 10px;border-radius:6px;font:500 12.5px var(--font-ui);color:var(--t2);cursor:pointer;white-space:nowrap}
+  .tabs button.on{background:var(--bg-2);color:var(--t1)}
+  .tabs button b{font:600 11px var(--font-mono);margin-left:5px;color:var(--t3)}
+  .tabs button.al b{color:var(--crit)}
+  .fh .tot{margin-left:auto;font:600 15px var(--font-mono);white-space:nowrap} .fh .tot small{font:400 11px var(--font-mono);color:var(--t3)}
+  .ibtn{width:28px;height:28px;border-radius:7px;border:1px solid var(--line);background:none;display:grid;place-items:center;color:var(--t2);cursor:pointer;flex:none}
+  #fleet.min .ibtn svg{transform:rotate(180deg)}
+  #fleetBody{flex:1;overflow:auto;padding:0 8px 8px;scrollbar-width:thin}
+  table{width:100%;border-collapse:separate;border-spacing:0 3px;font-size:13px}
+  th{font:600 9.5px/1 var(--font-display);letter-spacing:.14em;color:var(--t3);text-transform:uppercase;text-align:left;padding:4px 8px;white-space:nowrap}
+  th.r,td.r{text-align:right}
+  td{padding:0 8px;height:33px;background:var(--glass-row);white-space:nowrap}
+  td:first-child{border-radius:7px 0 0 7px} td:last-child{border-radius:0 7px 7px 0}
+  tbody tr{cursor:pointer} tbody tr:hover td{background:var(--signal-soft)}
+  tbody tr.sel td{background:var(--signal-soft);box-shadow:inset 0 1px 0 var(--signal),inset 0 -1px 0 var(--signal)}
+  td .nm{font:600 13px var(--font-ui)} td .cr{font:400 10.5px var(--font-mono);color:var(--t3);margin-left:7px}
+  .bdg{display:inline-flex;align-items:center;gap:5px;height:21px;padding:0 7px;border-radius:5px;font:600 10.5px var(--font-mono);white-space:nowrap}
+  .bdg.ok{background:var(--ok-soft);color:var(--ok)} .bdg.ais{color:var(--t2);border:1px solid var(--line-hi)}
+  .bdg.dark{background:var(--crit-soft);color:var(--crit)} .bdg.live{background:var(--signal-soft);color:var(--signal)}
+
+  /* — commandes de vue + calques — */
+  #tools{position:absolute;z-index:22;top:178px;right:380px;display:flex;flex-direction:column;gap:2px;padding:4px}
+  #tools button{width:36px;height:36px;border:0;border-radius:8px;background:none;color:var(--t2);display:grid;place-items:center;cursor:pointer}
+  #tools button:hover{background:var(--glass-row);color:var(--t1)}
+  #tools button.on{color:var(--signal);background:var(--signal-soft)}
+  #tools hr{border:0;border-top:1px solid var(--line);margin:3px 4px}
+  #layers{top:178px;right:430px;width:280px;padding:14px 16px;display:none;z-index:23;background:var(--glass-hi)}
+  #layers.open{display:block}
+  #layers .cap{margin:14px 0 8px} #layers .cap:first-child{margin-top:0}
+  #layers .note{font:400 10.5px/1.4 var(--font-mono);color:var(--t3);margin-top:4px}
+  .segc{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:3px;border-radius:8px;background:var(--glass-row);border:1px solid var(--line)}
+  .segc button{border:0;background:none;padding:7px 0;border-radius:6px;font:600 11px var(--font-display);letter-spacing:.14em;color:var(--t3);cursor:pointer}
+  .segc button.on{background:var(--bg-2);color:var(--t1)}
+  .tg{display:flex;align-items:center;gap:10px;padding:5px 0;font-size:13px;color:var(--t2);cursor:pointer;user-select:none}
+  .tg input{appearance:none;width:30px;height:17px;border-radius:9px;background:var(--line-hi);position:relative;cursor:pointer;margin:0;flex:none;transition:background .2s}
+  .tg input::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--t1);transition:left .2s}
+  .tg input:checked{background:var(--signal)} .tg input:checked::after{left:15px}
+  .sl{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:13px;color:var(--t2);margin:6px 0}
+  .sl output{font:500 12px var(--font-mono);color:var(--t1)}
+  .sl input{grid-column:1/-1;width:100%;accent-color:var(--signal)}
+
+  /* — sélecteur de zone, AIS direct — */
+  #zpick{top:62px;left:500px;width:330px;max-height:70vh;display:none;flex-direction:column;overflow:hidden;z-index:35;background:var(--glass-hi)}
+  #zpick.open{display:flex}
+  #aism{position:fixed;inset:0;z-index:50;display:none;place-items:center;background:rgba(0,0,0,.45)}
+  #aism.open{display:grid}
+  #aism .box{position:relative;width:min(520px,92vw);padding:20px 22px;background:var(--glass-hi);border:1px solid var(--line-hi);border-radius:14px;
+             backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur))}
+  #aism h3{margin:0 0 4px;font:700 15px var(--font-display);letter-spacing:.14em}
+  #aism p{margin:8px 0;font-size:13px;color:var(--t2)}
+  #aism ol{margin:8px 0;padding-left:18px;font-size:13px;color:var(--t2)}
+  #aism input{width:100%;height:38px;padding:0 12px;border-radius:8px;border:1px solid var(--line-hi);background:var(--glass-row);color:var(--t1);font:400 13px var(--font-mono);outline:0}
+  #aism .row{display:flex;gap:8px;margin-top:12px}
+  #aism .go{height:36px;padding:0 16px;border-radius:8px;border:0;background:var(--signal);color:var(--bg-0);font:700 12px var(--font-display);letter-spacing:.12em;cursor:pointer}
+  #aism .sec2{height:36px;padding:0 14px;border-radius:8px;border:1px solid var(--line-hi);background:none;color:var(--t2);cursor:pointer}
+  #aisMsg{min-height:20px;font:400 11.5px/1.4 var(--font-mono);color:var(--t2);margin-top:10px}
+  #aisMsg.ok{color:var(--ok)} #aisMsg.err{color:var(--crit)}
+  #aism .fine{font:400 10.5px/1.45 var(--font-mono);color:var(--t3);margin-top:10px}
+
+  /* — étiquettes posées sur la scène — */
+  #labels{position:fixed;inset:0;pointer-events:none;z-index:5;overflow:hidden}
+  .lb{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;transition:opacity .3s}
+  .lb.land{font:600 11px/1 var(--font-display);letter-spacing:.38em;color:var(--t2);text-shadow:0 0 8px var(--bg-0)}
+  .lb.sea{font:500 10.5px/1 var(--font-mono);letter-spacing:.32em;color:var(--signal)}
+  .lb.port{font:500 10.5px/1 var(--font-mono);letter-spacing:.08em;color:var(--t1);transform:translate(9px,-50%);text-shadow:0 0 6px var(--bg-0)}
+  .lb.port::before{content:"";position:absolute;left:-9px;top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:50%;background:var(--t1);box-shadow:0 0 8px var(--signal)}
+  .lb.strait{transform:translate(-50%,-100%);padding:5px 8px;border:1px solid var(--warn);border-radius:5px;background:var(--glass-hi);
+             font:600 11px/1.25 var(--font-display);letter-spacing:.12em;color:var(--warn)}
+  .lb.layer{transform:translate(-100%,-50%);padding-right:12px;text-align:right;font:600 10px/1.25 var(--font-display);letter-spacing:.2em;color:var(--t2)}
+  .lb.layer small{display:block;font:400 9.5px var(--font-mono);letter-spacing:0;color:var(--t3)}
+  .lb.layer::after{content:"";position:absolute;right:0;top:50%;width:7px;height:1px;background:currentColor}
+  .lb.sat{transform:translate(22px,-50%);font:600 10px/1.3 var(--font-mono);letter-spacing:.08em;color:var(--t1)}
+  .lb.sat small{display:block;color:var(--t3);font-weight:400}
+  .lb.zone{font:600 10px/1 var(--font-mono);letter-spacing:.14em;color:var(--warn)}
+  .lb.mk{transform:translate(14px,-50%);font:600 10.5px/1.2 var(--font-mono);color:var(--t1);padding:3px 6px;border-radius:4px;background:var(--glass-hi);border:1px solid var(--line-hi)}
+  .lb.mk.ok{border-color:var(--ok);color:var(--ok)} .lb.mk.no{border-color:var(--crit);color:var(--crit)} .lb.mk.w{border-color:var(--warn);color:var(--warn)}
+  .lb.hov{transform:translate(12px,-160%);font:600 11px var(--font-mono);color:var(--t1);background:var(--glass-hi);padding:3px 7px;border-radius:4px;border:1px solid var(--line-hi)}
+  .lb.gz{transform:translate(10px,-50%);font:600 10.5px/1.15 var(--font-mono);letter-spacing:.06em;color:var(--t1);text-shadow:0 0 6px var(--bg-0);pointer-events:auto;cursor:pointer}
+  .lb.gz small{display:block;font-weight:400;color:var(--t3);letter-spacing:0}
+  .lb.gz.hot{color:var(--signal)}
+
+  #leader{position:fixed;inset:0;pointer-events:none;z-index:24;width:100%;height:100%}
+  #callout{position:fixed;z-index:25;width:252px;padding:12px 13px;display:none;background:var(--glass-hi);border:1px solid var(--line-hi);border-radius:10px;
+           backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur))}
+  #callout .h{display:flex;align-items:center;gap:8px}
+  #callout b{font:700 14px/1.2 var(--font-display);letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #callout .x{margin-left:auto;cursor:pointer;color:var(--t3);border:0;background:none;padding:2px}
+  #callout .row{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;color:var(--t2);margin-top:5px}
+  #callout .row span:last-child{font:500 12px var(--font-mono);color:var(--t1);text-align:right}
+  #callout .n{font:400 10.5px var(--font-mono);color:var(--t3);margin-top:8px}
+  #callout .open{margin-top:10px;width:100%;height:32px;border-radius:7px;border:0;background:var(--signal);color:var(--bg-0);font:700 11px var(--font-display);letter-spacing:.14em;cursor:pointer}
+  #toast{position:fixed;z-index:40;left:50%;top:70px;transform:translate(-50%,-20px);opacity:0;transition:all .4s;padding:10px 14px;border-radius:9px;
+         background:var(--glass-hi);border:1px solid var(--crit);color:var(--t1);font:500 13px var(--font-ui);display:flex;gap:10px;align-items:center;pointer-events:none}
+  #toast.on{opacity:1;transform:translate(-50%,0)}
+  #nowebgl{position:fixed;inset:0;display:none;place-items:center;font:600 16px var(--font-display);letter-spacing:.1em}
+
+  @media (max-width:1360px){ #feed,#zlist{display:none!important} .kpis,#fleet{left:14px} }
+  @media (max-width:900px){
+    #dossier,#wfeed{top:auto;height:42vh;left:14px;right:14px;width:auto} #fleet,#tools,#legend,.search,.chip-zone small,.pill.proto,.hbtn{display:none!important}
+    .kpis{right:14px;grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body data-mode="world">
+<canvas id="scene" aria-label="Scène 3D"></canvas>
+<div id="labels"></div>
+<svg id="leader"><polyline id="leaderLine" fill="none" stroke-width="1.2" points=""/></svg>
+
+<header>
+  <button class="brand" id="brand" title="Carte du monde">
+    <svg width="26" height="26" viewBox="0 0 26 26"><path d="M13 1.5 23 7.25v11.5L13 24.5 3 18.75V7.25z" fill="none" stroke="var(--signal)" stroke-width="1.6"/>
+      <path d="M13 7 18 13l-5 6-5-6z" fill="var(--signal)" opacity=".9"/></svg>
+    <span><b>PROTEUS</b><br><small>war-risk desk</small></span>
+  </button>
+  <label class="search"><svg class="i" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3.5 3.5"/></svg>
+    <input id="q" placeholder="Zone, navire, armateur…" autocomplete="off"><span class="kbd">/</span></label>
+  <button class="chip-zone z-only" id="zChip" title="Changer de zone">
+    <span class="ic"><svg class="i" viewBox="0 0 16 16"><path d="M8 1.5 14.5 13.5h-13z"/><path d="M8 6v3.5M8 11.5v.1"/></svg></span>
+    <span><b id="zName">—</b><small id="zSub">—</small></span>
+    <svg class="i" viewBox="0 0 16 16" style="color:var(--t3)"><path d="m4 6 4 4 4-4"/></svg>
+  </button>
+  <span class="sp"></span>
+  <span class="pill proto" id="protoPill" title="Données de zone réelles · flotte, satellites et contact sans AIS simulés">PROTOTYPE · FLOTTE SIMULÉE</span>
+  <button class="pill ais" id="aisBtn" title="Brancher le vrai flux AIS"><span class="dot" style="animation:none"></span><span id="aisTxt">AIS DIRECT</span></button>
+  <span class="pill sim z-only" id="simPill" title="Rejeu accéléré à partir de l'instantané"><span class="dot"></span>SIM <span id="clock">--:--</span> UTC <span id="rate">×230</span></span>
+  <a class="hbtn w-only" href="proteus-prototype.html" title="La carte 2D classique"><svg class="i" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M6 3v10M10 3v10"/></svg>Carte 2D</a>
+  <button class="hbtn z-only" id="toWorld"><svg class="i" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12"/></svg>Carte du monde</button>
+</header>
+
+<!-- ============ MONDE ============ -->
+<aside id="zlist" class="glass reveal d2 w-only" aria-label="Zones surveillées">
+  <div class="ph"><h2>Zones surveillées</h2><span class="mono" id="zlCount">—</span></div>
+  <div class="ztabs" id="ztabs"><button data-f="all" class="on">Toutes</button><button data-f="jwc">Listées JWC</button><button data-f="hot">Score ≥ 4</button></div>
+  <div class="list" id="zlBody"></div>
+</aside>
+<section id="wkpis" class="kpis reveal d1 w-only" aria-label="Indicateurs mondiaux"></section>
+<aside id="wfeed" class="glass reveal d3 w-only" aria-label="Fil de veille mondial">
+  <div class="ph"><h2>Fil de veille mondial</h2><span class="mono" id="wfUpd">—</span></div>
+  <div class="stats"><div class="stat"><b id="wfN">0</b><span>TITRES</span></div><div class="stat"><b id="wfSrc">—</b><span>SOURCES</span></div>
+    <div class="stat" id="wfJbox"><b id="wfJ">0</b><span>ZONES JWC</span></div></div>
+  <div class="list" id="wfBody"></div>
+</aside>
+<div id="legend" class="glass reveal d4 w-only">
+  <span><i style="background:var(--ok)"></i>calme &lt; 4</span><span><i style="background:var(--warn)"></i>modéré</span>
+  <span><i style="background:var(--high)"></i>élevé ≥ 7</span><span><i style="background:var(--crit)"></i>critique ≥ 8,5</span>
+  <span class="sep"></span><span>hauteur de balise = score</span><span class="sep"></span><span>flux = corridors réels</span>
+</div>
+
+<!-- ============ ZONE ============ -->
+<aside id="feed" class="glass reveal d2 z-only" aria-label="Fil de veille">
+  <div class="ph"><h2>Fil de veille</h2><span class="mono" id="feedUpd">—</span></div>
+  <div class="stats"><div class="stat"><b id="stSig">0</b><span>SIGNAUX</span></div><div class="stat"><b id="stSrc">—</b><span>SOURCES</span></div>
+    <div class="stat" id="stAlBox"><b id="stAl">0</b><span>ALERTES</span></div></div>
+  <div class="list" id="feedList"></div>
+</aside>
+<section id="kpis" class="kpis reveal d1 z-only" aria-label="Indicateurs"></section>
+<aside id="dossier" class="glass reveal d3 z-only" aria-label="Dossier de zone"></aside>
+<section id="fleet" class="glass reveal d4 z-only" aria-label="Exposition">
+  <div class="fh"><h2>Exposition</h2>
+    <div class="tabs" id="tabs"><button data-t="in" class="on">Dans la zone<b>0</b></button><button data-t="appr">En approche<b>0</b></button><button data-t="dark" class="al">Sans AIS<b>0</b></button></div>
+    <span class="tot" id="fleetTot"></span>
+    <button class="ibtn" id="fleetMin" title="Réduire / déplier"><svg class="i" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button></div>
+  <div id="fleetBody"></div>
+</section>
+
+<nav id="tools" class="glass reveal d2" aria-label="Commandes de vue">
+  <button id="tZin" title="Zoomer"><svg class="i" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg></button>
+  <button id="tZout" title="Dézoomer"><svg class="i" viewBox="0 0 16 16"><path d="M3 8h10"/></svg></button>
+  <hr>
+  <button id="tHome" title="Vue d'ensemble"><svg class="i" viewBox="0 0 16 16"><path d="M2.5 7.5 8 3l5.5 4.5V13h-11z"/></svg></button>
+  <button id="tStrait" class="z-only" title="Vue rasante sur le centre de la zone"><svg class="i" viewBox="0 0 16 16"><path d="M1.5 11.5 6 6l3 3 2-2 3.5 4.5"/><circle cx="11.5" cy="4" r="1.3"/></svg></button>
+  <button id="tTop" class="z-only" title="Vue de dessus (comme la carte)"><svg class="i" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="11" rx="1"/><path d="M2.5 8h11M8 2.5v11"/></svg></button>
+  <button id="tRot" class="on" title="Rotation lente"><svg class="i" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.6-3.7M13 2.5v2.8h-2.8"/></svg></button>
+  <button id="tReplay" class="z-only" title="Rejouer la plongée"><svg class="i" viewBox="0 0 16 16"><path d="M8 2v9M4.5 7.5 8 11l3.5-3.5M3 14h10"/></svg></button>
+  <hr>
+  <button id="tLayers" title="Calques et rendu"><svg class="i" viewBox="0 0 16 16"><path d="M8 2 14 5.2 8 8.4 2 5.2z"/><path d="m2 8 6 3.2L14 8M2 10.8 8 14l6-3.2"/></svg></button>
+</nav>
+<section id="layers" class="glass" aria-label="Calques">
+  <div class="cap">Thème</div>
+  <div class="segc" id="segTheme"><button data-v="">SOMBRE</button><button data-v="clair">CLAIR</button></div>
+  <div class="cap">Calques</div>
+  <label class="tg w-only"><input type="checkbox" data-l="routes" checked>Corridors</label>
+  <label class="tg w-only"><input type="checkbox" data-l="fleet" checked>Navires</label>
+  <label class="tg z-only"><input type="checkbox" data-l="sat" checked>Satellites et emprises</label>
+  <label class="tg z-only"><input type="checkbox" data-l="stack" checked>Calques de sources</label>
+  <label class="tg z-only"><input type="checkbox" data-l="sweep" checked>Balayage de zone</label>
+  <label class="tg"><input type="checkbox" data-l="grid" checked>Maillage géographique</label>
+  <label class="tg z-only"><input type="checkbox" data-l="trails" checked>Sillages</label>
+  <label class="tg"><input type="checkbox" data-l="labels" checked>Étiquettes</label>
+  <div class="cap">Rendu</div>
+  <label class="tg"><input type="checkbox" id="bloomTg" checked>Lueur</label>
+  <div class="sl z-only"><span>Exagération du relief</span><output id="exO">×1,0</output><input type="range" id="ex" min="0" max="2.5" step="0.1" value="1"></div>
+  <div class="sl z-only"><span>Vitesse de simulation</span><output id="spO">×1</output><input type="range" id="sp" min="0" max="4" step="0.5" value="1"></div>
+  <div class="note z-only" id="layNote"></div>
+</section>
+<section id="zpick" class="glass" aria-label="Changer de zone">
+  <div class="ph"><h2>Changer de zone</h2><span class="mono">36</span></div>
+  <div class="list" id="zpBody"></div>
+</section>
+
+<div id="aism" role="dialog" aria-modal="true" aria-labelledby="aisH">
+  <div class="box">
+    <h3 id="aisH">AIS DIRECT</h3>
+    <p>Remplace la flotte simulée par les <b>vraies positions</b> des navires, via <b>aisstream.io</b> (gratuit).</p>
+    <ol><li>Crée un compte sur aisstream.io (connexion GitHub).</li><li>Menu « API Keys » → génère une clé.</li><li>Colle-la ici.</li></ol>
+    <input id="aisKey" type="password" placeholder="Clé API aisstream.io" autocomplete="off">
+    <div class="row"><button class="go" id="aisGo">CONNECTER</button><button class="sec2" id="aisStop">Revenir à la simulation</button><span class="sp"></span><button class="sec2" id="aisClose">Fermer</button></div>
+    <div id="aisMsg"></div>
+    <div class="fine">Couverture : antennes côtières (≈ 40 à 60 milles des côtes) — la haute mer a des trous, c'est normal.
+      Une seule connexion par clé : ferme les autres onglets Proteus. Ta clé reste dans ce navigateur, elle n'est envoyée qu'à aisstream.io.
+      Dans un aperçu en ligne, les connexions externes peuvent être bloquées : ouvre le fichier sur ton ordinateur.
+      En mode direct, le recoupement satellite est coupé (pas de source satellite branchée) : rien n'est inventé sur des navires réels.</div>
+  </div>
+</div>
+
+<div id="callout"></div>
+<div id="toast"></div>
+<div id="fade"><span id="fadeTxt">CHARGEMENT</span></div>
+<div id="nowebgl">CETTE VUE NÉCESSITE WEBGL 2</div>
+
+<script>
+//THREE_JS
+</script>
+<script>
+//WORLD_DATA
+</script>
+<script>
+//ROUTES_DATA
+</script>
+<script>
+'use strict';
+let SNAPD = __SNAPSHOT__;
+const params = new URLSearchParams(location.search);
+const STILL = params.has('still');
+const $ = id => document.getElementById(id);
+const root = document.documentElement;
+const D2R = Math.PI / 180;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const smooth = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const easeIO = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const RISK_URL = 'https://valenskln.github.io/claude/risk.json';
+
+/* ================================================================ thème / tokens */
+let theme = params.get('theme') === 'clair' ? 'clair' : '';
+if (theme) root.setAttribute('data-theme', theme);
+const css = n => getComputedStyle(root).getPropertyValue(n).trim();
+const col = n => new THREE.Color(css(n) || '#888');
+const num = n => parseFloat(css(n)) || 0;
+
+/* ================================================================ métier */
+const fr1 = v => v.toFixed(1).replace('.', ',');
+const riskBand = s => s >= 8.5 ? 'critical' : s >= 7 ? 'high' : s >= 4 ? 'moderate' : 'calm';
+const BAND = { critical: ['Critique', '--crit'], high: ['Élevé', '--high'], moderate: ['Modéré', '--warn'], calm: ['Calme', '--ok'] };
+const bandVar = s => BAND[riskBand(s)][1];
+const rating = s => 1 + Math.floor(s * 0.7999);                     // rating 1-8 ; 7-8 = suspension de garantie
+const rate = r => 0.01 * Math.pow(300, (clamp(r, 1, 8) - 1) / 7);   // taux INDICATIF, log 0,01 % -> 3 %
+const pct = v => (v < 0.1 ? v.toFixed(3) : v < 1 ? v.toFixed(2) : v.toFixed(1)).replace('.', ',') + ' %';
+const money = v => v >= 1e9 ? fr1(v / 1e9) + ' Md$' : Math.round(v / 1e6) + ' M$';
+const dms = (v, p, n) => { const a = Math.abs(v), d = Math.floor(a), m = Math.round((a - d) * 60); return `${d}°${String(m).padStart(2, '0')}′${v >= 0 ? p : n}`; };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const havKm = (a1, o1, a2, o2) => { const la1 = a1 * D2R, la2 = a2 * D2R, dla = (a2 - a1) * D2R, dlo = (o2 - o1) * D2R;
+  const h = Math.sin(dla / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dlo / 2) ** 2; return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h))); };
+const zones = () => SNAPD.zones;
+const zoneById = id => zones().find(z => z.id === id);
+const SRC_LABEL = { asam: 'ASAM', gdacs: 'GDACS', usgs: 'USGS', meteo: 'Open-Meteo', nhc: 'NOAA', gdelt: 'GDELT' };
+
+/* ================================================================ horloge simulée */
+let SNAP = new Date(SNAPD.updatedAt).getTime();
+const RATE = 230;                       // 1 s réelle ≈ 3 min 50 s de mer
+let simSpeed = 1, simMs = SNAP;
+const hhmm = ms => { const d = new Date(ms); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); };
+const ddmm = ms => { const d = new Date(ms); return String(d.getUTCDate()).padStart(2, '0') + '/' + String(d.getUTCMonth() + 1).padStart(2, '0'); };
+
+/* ================================================================ géographie embarquée */
+// trait de côte mondial : anneaux [lon, lat] entiers × WORLD_SCALE
+const WR = WORLD.map(r => {
+  const n = r.length / 2, lon = new Float32Array(n), lat = new Float32Array(n); let a = 1e9, b = -1e9, c = 1e9, d = -1e9;
+  for (let i = 0; i < n; i++) { const x = r[2 * i] / WORLD_SCALE, y = r[2 * i + 1] / WORLD_SCALE; lon[i] = x; lat[i] = y; if (x < a) a = x; if (x > b) b = x; if (y < c) c = y; if (y > d) d = y; }
+  return { lon, lat, a, b, c, d, n };
+});
+// repères : ports, pays, mers (étiquettes seulement — positions approximatives)
+const PORTS = [['Djibouti',11.6,43.15],['Aden',12.8,45.03],['Assab',13.0,42.74],['Mokha',13.32,43.25],['Hodeïda',14.8,42.95],['Berbera',10.44,45.01],['Bosaso',11.28,49.18],
+ ['Mogadiscio',2.04,45.34],['Kismayo',-0.36,42.54],['Mombasa',-4.05,39.67],['Salalah',16.94,54.0],['Mascate',23.6,58.6],['Sohar',24.5,56.6],['Fujaïrah',25.12,56.35],
+ ['Bandar Abbas',27.18,56.27],['Jebel Ali',25.01,55.06],['Doha',25.3,51.55],['Dammam',26.43,50.1],['Koweït',29.37,47.98],['Bassora',30.5,47.8],['Bouchehr',28.97,50.84],
+ ['Ras Tanura',26.64,50.16],['Djeddah',21.48,39.17],['Port-Soudan',19.6,37.22],['Yanbu',24.09,38.06],['Aqaba',29.52,35.0],['Suez',29.97,32.55],['Port-Saïd',31.26,32.3],
+ ['Alexandrie',31.2,29.9],['Haïfa',32.82,35.0],['Beyrouth',33.9,35.5],['Lattaquié',35.52,35.78],['Limassol',34.67,33.04],['Mersin',36.8,34.63],['Tripoli',32.9,13.18],
+ ['Benghazi',32.12,20.06],['Misrata',32.38,15.1],['La Valette',35.9,14.51],['Istanbul',41.0,28.98],['Constanța',44.17,28.65],['Varna',43.2,27.92],['Odessa',46.48,30.73],
+ ['Novorossiïsk',44.72,37.78],['Kertch',45.36,36.47],['Marioupol',47.1,37.55],['Sébastopol',44.6,33.52],['Berdiansk',46.75,36.8],['Batoumi',41.65,41.64],['Gibraltar',36.14,-5.35],
+ ['Algésiras',36.13,-5.43],['Tanger Med',35.89,-5.5],['Malaga',36.72,-4.42],['Douvres',51.12,1.31],['Calais',50.96,1.85],['Dunkerque',51.05,2.37],['Anvers',51.26,4.4],
+ ['Rotterdam',51.95,4.14],['Le Havre',49.48,0.11],['Felixstowe',51.96,1.33],['Southampton',50.9,-1.4],['Copenhague',55.68,12.6],['Göteborg',57.7,11.95],['Kiel',54.32,10.14],
+ ['Gdańsk',54.4,18.67],['Klaipėda',55.71,21.13],['Riga',56.95,24.1],['Tallinn',59.44,24.75],['Helsinki',60.16,24.95],['Saint-Pétersbourg',59.93,30.2],['Kaliningrad',54.71,20.5],
+ ['Stockholm',59.33,18.07],['Mourmansk',68.97,33.08],['Kirkenes',69.73,30.05],['Hammerfest',70.66,23.68],['Lagos',6.45,3.39],['Cotonou',6.35,2.43],['Lomé',6.13,1.28],
+ ['Tema',5.63,0.0],['Port Harcourt',4.78,7.0],['Bonny',4.43,7.17],['Douala',4.05,9.7],['Malabo',3.75,8.78],['Abidjan',5.3,-4.0],['Libreville',0.39,9.45],['La Guaira',10.6,-66.93],
+ ['Puerto Cabello',10.48,-68.01],['Maracaibo',10.65,-71.6],['Port of Spain',10.65,-61.52],['Willemstad',12.11,-68.93],['Port-au-Prince',18.55,-72.34],['Kingston',17.97,-76.79],
+ ['Saint-Domingue',18.47,-69.88],['Santiago de Cuba',20.02,-75.82],['Balboa',8.95,-79.57],['Colón',9.36,-79.9],['Guayaquil',-2.2,-79.9],['Manta',-0.95,-80.72],['Paita',-5.08,-81.1],
+ ['Beira',-19.83,34.84],['Nacala',-14.54,40.67],['Pemba',-12.97,40.5],['Mtwara',-10.27,40.2],['Dar es Salaam',-6.82,39.29],['Zanzibar',-6.16,39.19],['Mamoudzou',-12.78,45.23],
+ ['Toamasina',-18.15,49.4],['Antsiranana',-12.28,49.29],['Le Cap',-33.92,18.42],['Saldanha',-33.0,17.95],['Port Elizabeth',-33.96,25.6],['Mossel Bay',-34.18,22.14],
+ ['Singapour',1.26,103.82],['Port Klang',3.0,101.39],['Penang',5.42,100.34],['Belawan',3.78,98.69],['Dumai',1.68,101.45],['Tanjung Pelepas',1.36,103.55],['Batam',1.13,104.05],
+ ['Jakarta',-6.1,106.88],['Merak',-5.93,106.0],['Panjang',-5.47,105.32],['Surabaya',-7.2,112.73],['Benoa',-8.75,115.21],['Lembar',-8.73,116.07],['Makassar',-5.13,119.41],
+ ['Zamboanga',6.9,122.07],['Jolo',6.05,121.0],['Sandakan',5.84,118.12],['Tawau',4.24,117.88],['Puerto Princesa',9.74,118.73],['Kota Kinabalu',5.98,116.07],['Manille',14.58,120.97],
+ ['Subic',14.8,120.27],['Kaohsiung',22.6,120.28],['Keelung',25.14,121.74],['Taichung',24.27,120.51],['Xiamen',24.45,118.08],['Fuzhou',26.0,119.4],['Hong Kong',22.3,114.17],
+ ['Shenzhen',22.5,113.88],['Haikou',20.03,110.3],['Sanya',18.25,109.5],['Da Nang',16.07,108.22],['Hô Chi Minh-Ville',10.77,106.7],['Haiphong',20.86,106.68],['Shanghai',30.62,122.06],
+ ['Ningbo',29.93,121.85],['Naha',26.21,127.68],['Ishigaki',24.34,124.16],['Busan',35.1,129.04],['Incheon',37.45,126.6],['Pyeongtaek',36.97,126.83],['Nampho',38.73,125.4],
+ ['Dalian',38.92,121.65],['Qingdao',36.07,120.32],['Yantai',37.55,121.4],['Chittagong',22.33,91.8],['Mongla',22.47,89.6],['Yangon',16.77,96.17],['Sittwe',20.15,92.9],
+ ['Visakhapatnam',17.68,83.29],['Paradip',20.26,86.67],['Chennai',13.08,80.29],['Colombo',6.95,79.84],['Hambantota',6.12,81.11]];
+const COUNTRIES = [['YÉMEN',14.6,44.5],['YÉMEN',15.5,48.0],['ÉRYTHRÉE',14.3,40.7],['ÉRYTHRÉE',15.8,38.6],['DJIBOUTI',11.55,42.45],['ÉTHIOPIE',10.3,41.1],['SOMALIE',10.0,46.3],
+ ['SOMALIE',5.0,46.0],['SOMALIE',2.5,44.5],['OMAN',22.0,57.5],['OMAN',18.5,55.0],['ÉMIRATS',23.8,54.5],['IRAN',28.2,57.2],['IRAN',30.0,51.5],['QATAR',25.3,51.2],
+ ['ARABIE SAOUDITE',24.0,45.0],['ARABIE SAOUDITE',26.5,49.0],['ARABIE SAOUDITE',22.0,40.5],['ARABIE SAOUDITE',27.0,37.5],['KOWEÏT',29.3,47.6],['IRAK',31.0,46.5],['ÉGYPTE',29.0,31.0],
+ ['ÉGYPTE',24.5,33.0],['SOUDAN',18.0,33.0],['SOUDAN',19.5,36.0],['ISRAËL',31.0,34.85],['LIBAN',33.9,35.9],['SYRIE',35.0,37.5],['CHYPRE',35.0,33.2],['TURQUIE',38.5,32.0],
+ ['TURQUIE',41.0,33.5],['TURQUIE',40.2,27.5],['TURQUIE',37.5,36.0],['JORDANIE',31.0,36.5],['LIBYE',30.0,17.0],['LIBYE',32.0,13.5],['TUNISIE',34.0,9.5],['GRÈCE',39.5,22.0],
+ ['BULGARIE',42.7,25.5],['ROUMANIE',45.5,25.0],['ROUMANIE',44.3,28.0],['UKRAINE',49.0,32.0],['UKRAINE',47.0,35.5],['UKRAINE',46.9,31.0],['CRIMÉE',45.3,34.3],['RUSSIE',46.0,40.5],
+ ['RUSSIE',67.8,38.5],['RUSSIE',59.5,31.0],['GÉORGIE',42.0,43.5],['MOLDAVIE',47.2,28.5],['NORVÈGE',69.5,25.0],['NORVÈGE',60.5,8.5],['FINLANDE',62.0,26.0],['SUÈDE',60.0,15.5],
+ ['SUÈDE',57.5,14.5],['ESTONIE',58.7,25.8],['LETTONIE',56.9,25.5],['LITUANIE',55.4,24.0],['POLOGNE',52.5,19.0],['POLOGNE',54.0,17.5],['ALLEMAGNE',52.0,10.0],['DANEMARK',56.0,9.2],
+ ['PAYS-BAS',52.3,5.6],['BELGIQUE',50.7,4.5],['FRANCE',47.0,2.5],['FRANCE',49.8,2.5],['ROYAUME-UNI',52.5,-1.5],['ESPAGNE',40.0,-3.5],['ESPAGNE',37.3,-5.0],['PORTUGAL',39.5,-8.0],
+ ['MAROC',32.0,-6.5],['MAROC',34.6,-5.0],['ALGÉRIE',28.0,3.0],['ALGÉRIE',35.5,1.0],['NIGERIA',9.0,8.0],['NIGERIA',5.9,6.5],['BÉNIN',9.5,2.3],['GHANA',7.5,-1.0],['CAMEROUN',5.0,12.0],
+ ['GABON',-0.8,11.6],['CÔTE D’IVOIRE',7.5,-5.5],['VENEZUELA',8.0,-65.0],['VENEZUELA',10.0,-66.5],['COLOMBIE',4.5,-73.5],['COLOMBIE',10.0,-74.0],['HAÏTI',19.0,-72.4],
+ ['RÉP. DOMINICAINE',18.8,-70.5],['CUBA',21.8,-78.5],['JAMAÏQUE',18.1,-77.3],['PANAMA',8.5,-80.3],['COSTA RICA',10.0,-84.0],['ÉQUATEUR',-1.5,-78.5],['PÉROU',-6.0,-77.0],
+ ['PÉROU',-4.8,-80.4],['MOZAMBIQUE',-13.5,38.0],['MOZAMBIQUE',-18.5,35.0],['TANZANIE',-6.5,35.0],['TANZANIE',-9.5,38.5],['MADAGASCAR',-19.0,46.7],['MADAGASCAR',-14.0,49.0],
+ ['AFRIQUE DU SUD',-30.0,24.0],['AFRIQUE DU SUD',-33.0,20.5],['KENYA',0.5,38.0],['KENYA',-2.0,40.0],['INDE',22.0,79.0],['INDE',20.0,85.5],['BANGLADESH',23.7,90.3],['MYANMAR',21.0,96.0],
+ ['MYANMAR',19.5,94.6],['SRI LANKA',7.8,80.7],['THAÏLANDE',15.0,101.0],['THAÏLANDE',8.5,99.0],['MALAISIE',4.0,102.0],['MALAISIE',2.5,113.0],['MALAISIE',5.3,117.0],
+ ['INDONÉSIE',-0.5,101.5],['INDONÉSIE',-7.4,110.5],['INDONÉSIE',-1.0,114.0],['INDONÉSIE',-8.6,117.5],['INDONÉSIE',-2.0,121.0],['PHILIPPINES',16.0,121.0],['PHILIPPINES',8.0,125.0],
+ ['PHILIPPINES',10.5,123.0],['VIETNAM',14.0,108.3],['VIETNAM',21.0,105.8],['VIETNAM',10.0,105.8],['CAMBODGE',12.5,104.5],['CHINE',30.0,112.0],['CHINE',23.5,113.5],['CHINE',26.0,117.5],
+ ['CHINE',31.0,121.0],['CHINE',36.5,118.5],['CHINE',41.0,122.5],['TAÏWAN',23.7,121.0],['JAPON',36.0,138.5],['JAPON',32.8,131.0],['JAPON',26.5,128.0],['CORÉE DU SUD',36.5,127.8],
+ ['CORÉE DU NORD',40.0,127.0],['CORÉE DU NORD',38.5,126.0],['ITALIE',42.5,12.5],['ITALIE',37.5,14.2],['NAMIBIE',-22.0,17.0]];
+const SEAS = [['MER ROUGE',15.0,41.95],['MER ROUGE',22.5,37.8],['MER ROUGE',26.5,35.0],['GOLFE D’ADEN',12.3,46.55],['GOLFE D’ADEN',13.0,49.5],['MER D’ARABIE',15.0,62.0],
+ ['GOLFE D’OMAN',24.5,59.0],['GOLFE PERSIQUE',27.0,51.5],['GOLFE PERSIQUE',28.5,49.5],['MÉDITERRANÉE',34.0,18.0],['MÉDITERRANÉE',33.5,30.0],['MÉDITERRANÉE',36.5,1.0],
+ ['MER NOIRE',43.5,34.0],['MER NOIRE',44.0,31.0],['MER D’AZOV',46.2,36.6],['MER DE MARMARA',40.7,28.2],['MER ÉGÉE',38.5,25.0],['MER BALTIQUE',57.0,19.0],['GOLFE DE FINLANDE',59.9,26.0],
+ ['PAS DE CALAIS',50.95,1.55],['MANCHE',50.2,-1.0],['MER DU NORD',54.5,3.5],['MER DU NORD',52.5,3.0],['KATTEGAT',57.0,11.5],['MER DE BARENTS',72.0,38.0],['MER DE CHINE MÉRIDIONALE',12.0,114.0],
+ ['MER DE CHINE MÉRIDIONALE',16.0,116.0],['MER DE CHINE ORIENTALE',28.0,125.0],['MER JAUNE',36.0,123.5],['DÉTROIT DE TAÏWAN',24.2,119.3],['MER DE SULU',8.0,120.0],['MER DE CÉLÈBES',4.0,122.0],
+ ['MER DE JAVA',-5.0,111.0],['MER DE JAVA',-5.5,107.5],['DÉTROIT DE MALACCA',3.5,100.5],['OCÉAN INDIEN',-5.0,95.0],['OCÉAN INDIEN',0.0,56.0],['GOLFE DU BENGALE',16.0,89.0],
+ ['GOLFE DE GUINÉE',2.5,3.0],['GOLFE DE GUINÉE',3.0,7.5],['MER DES CARAÏBES',13.0,-72.0],['MER DES CARAÏBES',15.0,-66.0],['GOLFE DE PANAMA',8.0,-79.0],['OCÉAN PACIFIQUE',0.0,-84.0],
+ ['GOLFE DE GUAYAQUIL',-3.0,-80.5],['CANAL DU MOZAMBIQUE',-16.0,42.0],['OCÉAN ATLANTIQUE',36.0,-9.0],['OCÉAN ATLANTIQUE',-35.5,15.0],['MER D’ALBORAN',36.0,-3.5],
+ ['DÉTROIT DE LOMBOK',-8.6,115.75],['DÉTROIT DE LA SONDE',-6.0,105.7],['DÉTROIT DE LUÇON',20.5,121.0],['MER DES PHILIPPINES',18.0,126.0],['MER IONIENNE',38.0,18.5],['GOLFE DE SYRTE',31.5,18.5]];
+
+/* ================================================================ rendu partagé */
+const canvas = $('scene');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: STILL });
+  if (!renderer.capabilities.isWebGL2) throw new Error('webgl1');
+} catch (e) { $('nowebgl').style.display = 'grid'; throw e; }
+const PR = Math.min(2, devicePixelRatio || 1);
+renderer.setPixelRatio(PR);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+const camera = new THREE.PerspectiveCamera(24, 1, 1, 30000);
+const VIS = { sat: true, stack: true, sweep: true, grid: true, trails: true, labels: true, routes: true, fleet: true };
+let mode = 'world';
+const TC = {};
+
+/* ---------------------------------------------------------------- lueur (bloom) maison */
+// Three r159 en UMD n'embarque pas EffectComposer : seuil + flou gaussien séparable sur 3 niveaux.
+// Garde-fou : toute valeur non finie est neutralisée (pow/smoothstep indéfinis rendent NaN sur GPU Apple).
+const post = (() => {
+  const P = { bloom: 1, vig: .5, glow: new THREE.Color(), on: true };
+  const qs = new THREE.Scene(), qc = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); qs.add(quad);
+  const V = `varying vec2 vUv; void main(){ vUv=uv; gl_Position=vec4(position.xy,0.,1.); }`;
+  const bright = new THREE.ShaderMaterial({ uniforms: { t: { value: null }, th: { value: .5 } }, vertexShader: V,
+    fragmentShader: `uniform sampler2D t; uniform float th; varying vec2 vUv; void main(){ vec3 c=texture2D(t,vUv).rgb; if(any(isnan(c))||any(isinf(c))) c=vec3(0.); c=clamp(c,0.,8.); float l=max(c.r,max(c.g,c.b)); gl_FragColor=vec4(c*smoothstep(th,th+.35,l),1.); }` });
+  const blur = new THREE.ShaderMaterial({ uniforms: { t: { value: null }, d: { value: new THREE.Vector2() } }, vertexShader: V,
+    fragmentShader: `uniform sampler2D t; uniform vec2 d; varying vec2 vUv;
+      void main(){ vec3 c=texture2D(t,vUv).rgb*.2270; c+=(texture2D(t,vUv+d*1.3846).rgb+texture2D(t,vUv-d*1.3846).rgb)*.3162; c+=(texture2D(t,vUv+d*3.2308).rgb+texture2D(t,vUv-d*3.2308).rgb)*.0703; gl_FragColor=vec4(c,1.); }` });
+  const copy = new THREE.ShaderMaterial({ uniforms: { t: { value: null } }, vertexShader: V, fragmentShader: `uniform sampler2D t; varying vec2 vUv; void main(){ gl_FragColor=vec4(texture2D(t,vUv).rgb,1.); }` });
+  const comp = new THREE.ShaderMaterial({ uniforms: { tS: { value: null }, b1: { value: null }, b2: { value: null }, b3: { value: null }, k: { value: 1 }, vig: { value: .5 }, glow: { value: new THREE.Color() }, asp: { value: 1 } }, vertexShader: V,
+    fragmentShader: `uniform sampler2D tS,b1,b2,b3; uniform float k,vig,asp; uniform vec3 glow; varying vec2 vUv;
+      void main(){ vec3 c=texture2D(tS,vUv).rgb; if(any(isnan(c))||any(isinf(c))) c=vec3(0.);
+        vec3 b = texture2D(b1,vUv).rgb*.6 + texture2D(b2,vUv).rgb*.9 + texture2D(b3,vUv).rgb*1.1; if(any(isnan(b))||any(isinf(b))) b=vec3(0.); c += clamp(b,0.,8.)*k;
+        vec2 q=(vUv-vec2(.5,.52))*vec2(asp,1.); float r=length(q);
+        c += glow*exp(-r*r*4.)*.08*step(.3,vig);
+        c *= mix(1., 1.-smoothstep(.25,1.2,r), vig);
+        gl_FragColor=vec4(c,1.);
+        #include <colorspace_fragment>
+      }` });
+  const mk = (w, h, s) => new THREE.WebGLRenderTarget(Math.max(1, w), Math.max(1, h), { type: THREE.HalfFloatType, samples: s || 0, depthBuffer: !!s });
+  let rtS, lv = [];
+  P.resize = (w, h) => {
+    [rtS, ...lv.flat()].forEach(r => r && r.dispose());
+    rtS = mk(Math.round(w * PR), Math.round(h * PR), 4);
+    lv = [2, 4, 8].map(f => [mk(Math.round(w * PR / f), Math.round(h * PR / f)), mk(Math.round(w * PR / f), Math.round(h * PR / f))]);
+    comp.uniforms.asp.value = w / h;
+  };
+  const pass = (m, target) => { quad.material = m; renderer.setRenderTarget(target); renderer.render(qs, qc); };
+  P.render = scene => {
+    renderer.setRenderTarget(rtS); renderer.render(scene, camera);
+    const k = P.on ? P.bloom : 0;
+    if (k > 0) {
+      bright.uniforms.t.value = rtS.texture; pass(bright, lv[0][0]);
+      lv.forEach(([a, b], i) => {
+        if (i > 0) { copy.uniforms.t.value = lv[i - 1][0].texture; pass(copy, a); }
+        blur.uniforms.t.value = a.texture; blur.uniforms.d.value.set(1 / a.width, 0); pass(blur, b);
+        blur.uniforms.t.value = b.texture; blur.uniforms.d.value.set(0, 1 / a.height); pass(blur, a);
+      });
+    }
+    comp.uniforms.tS.value = rtS.texture; comp.uniforms.b1.value = lv[0][0].texture; comp.uniforms.b2.value = lv[1][0].texture; comp.uniforms.b3.value = lv[2][0].texture;
+    comp.uniforms.k.value = k; comp.uniforms.vig.value = P.vig; comp.uniforms.glow.value.copy(P.glow);
+    pass(comp, null);
+  };
+  return P;
+})();
+
+/* ---------------------------------------------------------------- étiquettes (communes aux deux vues) */
+let labelEls = [];
+function clearLabels() { labelEls.forEach(L => L.el.remove()); labelEls = []; }
+function addLabel(cls, html, v, opt = {}) {
+  const el = document.createElement('div'); el.className = 'lb ' + cls; el.innerHTML = html; $('labels').appendChild(el);
+  const L = { el, v, prio: 2, ...opt }; labelEls.push(L); return L;
+}
+const proj = (x, y, z) => { const p = new THREE.Vector3(x, y, z).project(camera); return { x: (p.x + 1) / 2 * innerWidth, y: (1 - p.y) / 2 * innerHeight, z: p.z }; };
+function panelRects() { return ['kpis', 'wkpis', 'dossier', 'fleet', 'feed', 'tools', 'callout', 'layers', 'zlist', 'wfeed', 'legend', 'zpick'].map($).filter(el => el && el.offsetParent !== null).map(el => el.getBoundingClientRect()).filter(r => r.width); }
+// Place les étiquettes, masque celles qui passent sous un panneau ou en chevauchent une plus prioritaire.
+function placeLabels(alpha, ctx) {
+  const rects = panelRects(), placed = [];
+  const order = labelEls.slice().sort((a, b) => a.prio - b.prio);
+  for (const L of order) {
+    if (L.update) L.update(L);
+    const p = proj(L.v.x, L.v.y, L.v.z);
+    const w = L.w || (L.w = L.el.offsetWidth || 80), h = 14;
+    const lx = L.left ? p.x - w : L.right ? p.x : p.x - w / 2, rx = lx + w;
+    let a = alpha * (VIS.labels || L.always ? 1 : 0) * (L.vis == null ? 1 : L.vis);
+    const under = !L.always && rects.some(r => rx > r.left - 6 && lx < r.right + 6 && p.y + h > r.top && p.y - h < r.bottom);
+    if (p.z >= 1 || under) a = 0;
+    if (a > .05 && !L.always) { if (placed.some(q => rx > q[0] - 4 && lx < q[1] + 4 && Math.abs(p.y - q[2]) < 15)) a = 0; else placed.push([lx, rx, p.y]); }
+    L.el.style.left = p.x.toFixed(1) + 'px'; L.el.style.top = p.y.toFixed(1) + 'px'; L.el.style.opacity = a;
+    L.el.style.pointerEvents = a > .5 && L.click ? 'auto' : 'none';
+  }
+}
+
+/* ================================================================ AIS DIRECT (aisstream.io) */
+// Méthode éprouvée par testeur-ais.html : abonnement monde entier, une seule boîte, filtrage local.
+const live = { ws: null, on: false, status: 'off', vessels: new Map(), msg: 0, key: '' };
+function aisMsg(t, cls) { $('aisMsg').textContent = t; $('aisMsg').className = cls || ''; }
+function aisUi() {
+  const b = $('aisBtn'); b.classList.toggle('on', live.on); b.classList.toggle('wait', !live.on && live.status !== 'off');
+  $('aisTxt').textContent = live.on ? `AIS DIRECT · ${live.vessels.size.toLocaleString('fr-FR')}` : live.status !== 'off' ? 'AIS · CONNEXION…' : 'AIS DIRECT';
+  b.querySelector('.dot').style.animation = live.on ? '' : 'none';
+  $('protoPill').textContent = live.on ? 'PROTOTYPE · AIS RÉEL' : 'PROTOTYPE · FLOTTE SIMULÉE';
+  $('simPill').style.display = live.on ? 'none' : '';
+}
+function aisStart(key) {
+  aisStop(true); live.key = key; live.msg = 0; live.status = 'connecting'; aisUi();
+  aisMsg('Connexion à aisstream.io…');
+  let ws;
+  try { ws = new WebSocket('wss://stream.aisstream.io/v0/stream'); }
+  catch (e) { live.status = 'off'; aisUi(); aisMsg('Connexion impossible : cet environnement bloque les connexions externes. Ouvre le fichier sur ton ordinateur.', 'err'); return; }
+  ws.binaryType = 'arraybuffer'; live.ws = ws;
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ APIKey: key, BoundingBoxes: [[[-90, -180], [90, 180]]] }));
+    live.status = 'waiting'; live.t0 = Date.now(); aisMsg('Connecté — en attente des premiers navires…', 'ok');
+    clearInterval(live.watch);
+    live.watch = setInterval(() => {
+      if (live.status !== 'waiting') { clearInterval(live.watch); return; }
+      if (Date.now() - live.t0 > 20000) { clearInterval(live.watch); aisStop(true); aisMsg('Aucune donnée en 20 s. Une seule connexion par clé : ferme les autres onglets Proteus ou le testeur, attends 30 s, réessaie.', 'err'); }
+    }, 1000);
+  };
+  ws.onmessage = ev => {
+    let m; try { m = JSON.parse(typeof ev.data === 'string' ? ev.data : new TextDecoder().decode(ev.data)); } catch (e) { return; }
+    if (m.error) { aisMsg('Réponse du serveur : ' + m.error, 'err'); live.serverErr = true; return; }
+    live.msg++;
+    if (!live.on) { live.on = true; live.status = 'on'; clearInterval(live.watch); aisMsg('Flux AIS reçu ✓ — les vrais navires remplacent la simulation.', 'ok'); try { localStorage.setItem('proteus_aiskey', key); } catch (e) {} onLiveChange(); }
+    aisHandle(m);
+  };
+  ws.onclose = () => { clearInterval(live.watch); const was = live.on; if (live.status !== 'off') { aisStop(true); if (!live.serverErr) aisMsg(was ? 'Connexion interrompue.' : 'Connexion fermée par le serveur (clé invalide, ou déjà utilisée dans un autre onglet).', 'err'); } };
+  ws.onerror = () => { if (!live.on) aisMsg('Impossible de joindre aisstream.io. Dans un aperçu en ligne c’est normal : ouvre le fichier en local.', 'err'); };
+}
+function aisStop(silent) {
+  clearInterval(live.watch);
+  if (live.ws) { const w = live.ws; live.ws = null; try { w.onclose = null; w.close(); } catch (e) {} }
+  const was = live.on; live.on = false; live.status = 'off'; live.vessels.clear(); live.serverErr = false; aisUi();
+  if (was) onLiveChange();
+  if (!silent) aisMsg('Retour à la flotte simulée.');
+}
+function aisHandle(m) {
+  const meta = m.MetaData || {}, mmsi = meta.MMSI; if (mmsi == null) return;
+  let v = live.vessels.get(mmsi);
+  if (!v) { if (live.vessels.size > 60000) return; v = { mmsi, name: '', lat: null, lon: null, cog: 0, sog: 0, hdg: null, type: null, len: 0, dest: '', imo: null, t: 0 }; live.vessels.set(mmsi, v); }
+  const nm = (meta.ShipName || '').trim(); if (nm && !v.name) v.name = nm;
+  const msg = m.Message || {};
+  if (m.MessageType === 'PositionReport' && msg.PositionReport) {
+    const p = msg.PositionReport;
+    if (Math.abs(p.Latitude) <= 90 && Math.abs(p.Longitude) <= 180) { v.lat = p.Latitude; v.lon = p.Longitude; }
+    v.cog = p.Cog != null && p.Cog < 360 ? p.Cog : v.cog; v.sog = p.Sog != null && p.Sog < 102.3 ? p.Sog : 0; v.hdg = p.TrueHeading != null && p.TrueHeading < 360 ? p.TrueHeading : null; v.t = Date.now();
+  } else if (m.MessageType === 'ShipStaticData' && msg.ShipStaticData) {
+    const s = msg.ShipStaticData; if (s.Type) v.type = s.Type; if (s.Destination) v.dest = s.Destination.trim(); if (s.ImoNumber) v.imo = s.ImoNumber;
+    if (s.Name && !v.name) v.name = s.Name.trim();
+    if (s.Dimension) v.len = (s.Dimension.A || 0) + (s.Dimension.B || 0);
+    if (v.lat == null && typeof meta.latitude === 'number') { v.lat = meta.latitude; v.lon = meta.longitude; v.t = Date.now(); }
+  }
+}
+// Estimation d'exposition sur un navire réel : ordre de grandeur selon le type AIS et la longueur.
+function liveExposure(v) {
+  if (v.type >= 70 && v.type < 80) { const teu = v.len ? clamp(Math.round((v.len - 90) * .65) * 100, 300, 24000) : 4000; return { teu, hull: teu * 9000, cargo: teu * .75 * 30000 }; }
+  if (v.type >= 80 && v.type < 90) return { teu: 0, hull: v.len > 250 ? 90e6 : 40e6, cargo: v.len > 250 ? 160e6 : 50e6 };
+  return { teu: 0, hull: v.len > 150 ? 30e6 : 8e6, cargo: 0 };
+}
+const typeLabel = t => t >= 70 && t < 80 ? 'cargo' : t >= 80 && t < 90 ? 'pétrolier' : t >= 60 && t < 70 ? 'passagers' : t === 30 ? 'pêche' : t ? 'type ' + t : 'type n.c.';
+function liveFresh() { const now = Date.now(); for (const [k, v] of live.vessels) if (now - v.t > 15 * 60e3) live.vessels.delete(k); }
+$('aisBtn').onclick = () => { try { $('aisKey').value = localStorage.getItem('proteus_aiskey') || ''; } catch (e) {} $('aism').classList.add('open'); $('aisKey').focus(); };
+$('aisClose').onclick = () => $('aism').classList.remove('open');
+$('aisGo').onclick = () => { const k = $('aisKey').value.replace(/[\s​-‍⁠﻿]/g, ''); if (!k) { aisMsg('Colle ta clé d’abord.', 'err'); return; } aisStart(k); };
+$('aisStop').onclick = () => aisStop();
+function onLiveChange() { aisUi(); if (mode === 'zone' && ZV) ZV.liveChanged(); renderWorldKpis(); }
+
+/* ================================================================ GLOBE */
+const G = (() => {
+  const scene = new THREE.Scene(), R = 100;
+  const v3 = (lat, lon, r) => { const ph = (90 - lat) * D2R, th = (lon + 180) * D2R; return new THREE.Vector3(-r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th)); };
+  // texture : terres, côtes, graticule, dessinés depuis les tokens
+  const TW = 4096, TH = 2048, cv = document.createElement('canvas'); cv.width = TW; cv.height = TH;
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  function paint() {
+    const g = cv.getContext('2d'), px = lon => (lon + 180) / 360 * TW, py = lat => (90 - lat) / 180 * TH;
+    g.fillStyle = css('--globe-sea'); g.fillRect(0, 0, TW, TH);
+    g.strokeStyle = css('--grid'); g.globalAlpha = theme ? .25 : .16; g.lineWidth = 1.2; g.beginPath();
+    for (let lo = -180; lo <= 180; lo += 15) { g.moveTo(px(lo), 0); g.lineTo(px(lo), TH); }
+    for (let la = -75; la <= 75; la += 15) { g.moveTo(0, py(la)); g.lineTo(TW, py(la)); }
+    g.stroke(); g.globalAlpha = 1;
+    const path = r => { g.beginPath(); for (let i = 0; i < r.n; i++) { const x = px(r.lon[i]), y = py(r.lat[i]); if (i && Math.abs(r.lon[i] - r.lon[i - 1]) > 180) g.moveTo(x, y); else if (i) g.lineTo(x, y); else g.moveTo(x, y); } g.closePath(); };
+    g.fillStyle = css('--globe-land'); for (const r of WR) { path(r); g.fill(); }
+    g.strokeStyle = css('--coast'); g.lineWidth = 1.6; g.globalAlpha = theme ? .7 : .85; for (const r of WR) { path(r); g.stroke(); } g.globalAlpha = 1;
+    tex.needsUpdate = true;
+  }
+  const globeMat = new THREE.ShaderMaterial({
+    uniforms: { map: { value: tex }, uRim: { value: new THREE.Color() }, uDark: { value: 1 } },
+    vertexShader: `varying vec2 vUv; varying vec3 vN; void main(){ vUv=uv; vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+    fragmentShader: `uniform sampler2D map; uniform vec3 uRim; uniform float uDark; varying vec2 vUv; varying vec3 vN;
+      void main(){ vec3 c = texture2D(map,vUv).rgb; float f = clamp(1.-vN.z,0.,1.); float f4 = f*f*f*f;
+        c *= mix(1., .6 + .4*clamp(vN.z,0.,1.), uDark); c += uRim*f4*.28*uDark;
+        gl_FragColor = vec4(c,1.);
+        #include <colorspace_fragment>
+      }` });
+  const globe = new THREE.Mesh(new THREE.SphereGeometry(R, 128, 96), globeMat); scene.add(globe);
+  const atmoMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.BackSide, blending: THREE.AdditiveBlending,
+    uniforms: { uC: { value: new THREE.Color() }, uA: { value: 1 } },
+    vertexShader: `varying vec3 vN; void main(){ vN=normalize(normalMatrix*normal); gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+    fragmentShader: `uniform vec3 uC; uniform float uA; varying vec3 vN; void main(){ float k = clamp(.74 + vN.z, 0., 1.); float a = k*k*k*uA; gl_FragColor = vec4(uC, clamp(a,0.,1.));
+      #include <colorspace_fragment>
+    }` });
+  scene.add(new THREE.Mesh(new THREE.SphereGeometry(R * 1.13, 96, 64), atmoMat));
+  // corridors : lignes posées sur le globe, flux animé le long de la route
+  const routeMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    uniforms: { uC: { value: new THREE.Color() }, uT: { value: 0 }, uA: { value: 1 } },
+    vertexShader: `attribute float ld; varying float vL; void main(){ vL=ld; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+    fragmentShader: `uniform vec3 uC; uniform float uT, uA; varying float vL; void main(){ float d = fract(vL/9. - uT*.5);
+      float a = .22 + .78*smoothstep(0.,.12,d)*(1.-smoothstep(.3,.42,d)); gl_FragColor = vec4(uC, clamp(a*uA,0.,1.));
+      #include <colorspace_fragment>
+    }` });
+  const routeGrp = new THREE.Group(); scene.add(routeGrp);
+  const ROUTE_ARR = Object.entries(ROUTES).map(([k, r]) => {
+    const pts = [], ld = []; let acc = 0, prev = null;
+    for (let i = 0; i < r.pts.length - 1; i++) {
+      const [a1, o1] = r.pts[i], [a2, o2] = r.pts[i + 1], n = Math.max(2, Math.ceil(Math.hypot(a2 - a1, o2 - o1) / 1.2));
+      for (let s = 0; s < n; s++) { const t = s / n, p = v3(a1 + (a2 - a1) * t, o1 + (o2 - o1) * t, R * 1.004); if (prev) acc += p.distanceTo(prev); pts.push(p); ld.push(acc); prev = p; }
+    }
+    const last = r.pts[r.pts.length - 1], p = v3(last[0], last[1], R * 1.004); acc += p.distanceTo(prev); pts.push(p); ld.push(acc);
+    const geo = new THREE.BufferGeometry().setFromPoints(pts); geo.setAttribute('ld', new THREE.Float32BufferAttribute(ld, 1));
+    const line = new THREE.Line(geo, routeMat); routeGrp.add(line);
+    const cum = [0]; for (let i = 1; i < r.pts.length; i++) cum.push(cum[i - 1] + havKm(...r.pts[i - 1], ...r.pts[i]));
+    return { k, r, cum, len: cum[cum.length - 1] };
+  });
+  // balises de zone : anneau au sol, mât dont la hauteur = score, tête lumineuse
+  const zoneGrp = new THREE.Group(); scene.add(zoneGrp);
+  const hitMeshes = [];
+  let ZM = [];
+  function buildZones() {
+    zoneGrp.clear(); hitMeshes.length = 0; ZM = [];
+    for (const z of zones()) {
+      const n = v3(z.c[0], z.c[1], 1).normalize(), base = n.clone().multiplyScalar(R), rr = z.r / 6371 * R;
+      const c = col(bandVar(z.score));
+      const ringMat = new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .75, side: THREE.DoubleSide, depthWrite: false });
+      const ring = new THREE.Mesh(new THREE.RingGeometry(rr * .955, rr, 72), ringMat); ring.position.copy(n.clone().multiplyScalar(R * 1.002)); ring.lookAt(n.clone().multiplyScalar(R * 2)); zoneGrp.add(ring);
+      const disc = new THREE.Mesh(new THREE.CircleGeometry(rr * .9, 48), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: .07, side: THREE.DoubleSide, depthWrite: false }));
+      disc.position.copy(ring.position); disc.quaternion.copy(ring.quaternion); zoneGrp.add(disc);
+      const h = 1.5 + z.score * 2.6, mastGeo = new THREE.CylinderGeometry(.22, .22, h, 6); mastGeo.translate(0, h / 2, 0);
+      const mat = new THREE.MeshBasicMaterial({ color: c });
+      const mast = new THREE.Mesh(mastGeo, mat); mast.position.copy(base); mast.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n); zoneGrp.add(mast);
+      const head = new THREE.Mesh(new THREE.OctahedronGeometry(1.1), mat); head.position.copy(n.clone().multiplyScalar(R + h)); zoneGrp.add(head);
+      const pulse = new THREE.Mesh(new THREE.RingGeometry(rr * .975, rr, 72), new THREE.MeshBasicMaterial({ color: c, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
+      pulse.position.copy(ring.position); pulse.quaternion.copy(ring.quaternion); pulse.visible = z.score >= 3; zoneGrp.add(pulse);
+      const hit = new THREE.Mesh(new THREE.SphereGeometry(Math.max(3.5, rr * .8), 12, 8), new THREE.MeshBasicMaterial({ visible: false })); hit.position.copy(base); hit.userData.z = z; zoneGrp.add(hit); hitMeshes.push(hit);
+      ZM.push({ z, n, h, ring, head, pulse, hit, phase: Math.random() });
+    }
+  }
+  // flotte du globe : simulée le long des corridors, ou réelle (AIS direct)
+  const FLEET_PLAN = [['suez', 7], ['cap', 10], ['transpac', 8], ['transat', 6], ['gulf', 5], ['blacksea', 3], ['guinee', 4]];
+  let sd = 42; const rr = () => (sd = (sd * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  const simFleet = []; FLEET_PLAN.forEach(([k, n]) => { const R0 = ROUTE_ARR.find(x => x.k === k); if (!R0) return; for (let i = 0; i < n; i++) simFleet.push({ R: R0, d: rr() * R0.len, dir: rr() < .5 ? 1 : -1, v: 18 + rr() * 10 }); });
+  const MAXP = 60000, fpos = new Float32Array(MAXP * 3), fcol = new Float32Array(MAXP * 3);
+  const fgeo = new THREE.BufferGeometry(); fgeo.setAttribute('position', new THREE.BufferAttribute(fpos, 3)); fgeo.setAttribute('color', new THREE.BufferAttribute(fcol, 3));
+  const dotTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.35, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); })();
+  const fleet = new THREE.Points(fgeo, new THREE.PointsMaterial({ size: 5 * PR, sizeAttenuation: false, vertexColors: true, map: dotTex, transparent: true, depthWrite: false }));
+  fleet.frustumCulled = false; scene.add(fleet);
+  let fleetN = 0, inZoneN = 0;
+  function posOnRoute(R0, d) { const c = R0.cum; let i = 1; while (i < c.length - 1 && c[i] < d) i++; const t = (d - c[i - 1]) / Math.max(1e-6, c[i] - c[i - 1]); const [a1, o1] = R0.r.pts[i - 1], [a2, o2] = R0.r.pts[i]; return [a1 + (a2 - a1) * t, o1 + (o2 - o1) * t]; }
+  function inAnyZone(lat, lon) { for (const z of zones()) if (Math.abs(lat - z.c[0]) < 12 && havKm(lat, lon, z.c[0], z.c[1]) < z.r) return z; return null; }
+  function updateFleet(dt) {
+    let n = 0, nz = 0; const cs = TC.signal, cw = TC.warn, ct = TC.t3;
+    const put = (lat, lon, c) => { const p = v3(lat, lon, R * 1.006); fpos[n * 3] = p.x; fpos[n * 3 + 1] = p.y; fpos[n * 3 + 2] = p.z; fcol[n * 3] = c.r; fcol[n * 3 + 1] = c.g; fcol[n * 3 + 2] = c.b; n++; };
+    if (live.on) {
+      for (const v of live.vessels.values()) { if (v.lat == null || n >= MAXP) continue; const z = inAnyZone(v.lat, v.lon); if (z) nz++;
+        put(v.lat, v.lon, z ? cw : (v.type >= 70 && v.type < 90) ? cs : ct); }
+    } else for (const s of simFleet) {
+      s.d += s.dir * s.v * dt * simSpeed; if (s.d > s.R.len) { s.d = s.R.len; s.dir = -1; } if (s.d < 0) { s.d = 0; s.dir = 1; }
+      const [la, lo] = posOnRoute(s.R, s.d), z = inAnyZone(la, lo); if (z) nz++; put(la, lo, z ? cw : cs);
+    }
+    fleetN = n; inZoneN = nz; fgeo.setDrawRange(0, n); fgeo.attributes.position.needsUpdate = true; fgeo.attributes.color.needsUpdate = true;
+    fleet.visible = VIS.fleet;
+  }
+  // caméra orbitale
+  const gc = { R: 800, lat: 18, lon: 52 };
+  const VIEWS = { home: { R: 800, lat: 18, lon: 52 } };
+  let tween = null, lastInput = 0, autoRot = true, hover = null, sel = null;
+  function place() { const p = v3(gc.lat, gc.lon, gc.R); camera.position.copy(p); camera.up.set(0, 1, 0); camera.lookAt(0, 0, 0); }
+  function flyTo(v, dur = 1200) { if (tween && tween.res) tween.res(); const to = { ...gc, ...v }; let dl = to.lon - gc.lon; dl = ((dl + 540) % 360) - 180; to.lon = gc.lon + dl; tween = { from: { ...gc }, to, t0: performance.now(), dur }; return new Promise(res => tween.res = res); }
+  // étiquettes de zone
+  function buildLabels() {
+    for (const m of ZM) {
+      const z = m.z, L = addLabel('gz', `${esc(z.name)}<small>${fr1(z.score)} · R${rating(z.score)}${z.jwc ? ' · JWC' : ''}</small>`, m.n.clone().multiplyScalar(R + m.h + .8), { prio: z.score >= 3 ? 1 : 3, right: true, click: true });
+      L.el.onclick = () => openZone(z.id);
+      L.el.onmouseenter = () => setHover(z); L.el.onmouseleave = () => setHover(null);
+      L.update = L2 => { const camDir = camera.position.clone().normalize(); const f = m.n.dot(camDir); L2.vis = smooth(.08, .3, f) * (z.score >= 2 || hover === z || gc.R < 450 ? 1 : 0); L2.el.classList.toggle('hot', hover === z); };
+      m.label = L;
+    }
+  }
+  function setHover(z) { hover = z; document.querySelectorAll('.zr').forEach(r => r.classList.toggle('hov', z && r.dataset.id === z.id)); }
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  function zoneAt(e) { ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+    const hits = ray.intersectObjects([globe, ...hitMeshes], false); const h = hits.find(x => x.object.userData.z); if (!h) return null;
+    const gHit = hits.find(x => x.object === globe); return gHit && gHit.distance < h.distance - 3 ? null : h.object.userData.z; }
+  function recolor() {
+    paint(); globeMat.uniforms.uRim.value.copy(col('--atmo')); globeMat.uniforms.uDark.value = theme ? .25 : 1;
+    atmoMat.uniforms.uC.value.copy(col('--atmo')); atmoMat.uniforms.uA.value = theme ? .5 : 1; atmoMat.blending = theme ? THREE.NormalBlending : THREE.AdditiveBlending; atmoMat.needsUpdate = true;
+    routeMat.uniforms.uC.value.copy(TC.signal); routeMat.uniforms.uA.value = theme ? .9 : .8; routeMat.blending = theme ? THREE.NormalBlending : THREE.AdditiveBlending; routeMat.needsUpdate = true;
+    for (const m of ZM) { const c = col(bandVar(m.z.score)); m.ring.material.color.copy(c); m.head.material.color.copy(c); m.pulse.material.color.copy(c); }
+  }
+  let t = 0;
+  function update(dt, now) {
+    t += dt;
+    if (tween) { const k = clamp((now - tween.t0) / tween.dur, 0, 1), e = easeIO(k); for (const key of ['R', 'lat', 'lon']) gc[key] = tween.from[key] + (tween.to[key] - tween.from[key]) * e; if (k >= 1) { const r = tween.res; tween = null; lastInput = now; r && r(); } }
+    else if (autoRot && now - lastInput > 5000) gc.lon += dt * 3;
+    place();
+    routeMat.uniforms.uT.value = t; routeGrp.visible = VIS.routes;
+    for (const m of ZM) { const k = (t * .35 + m.phase) % 1; m.pulse.scale.setScalar(1 + k * 1.6); m.pulse.material.opacity = (1 - k) * .45; m.head.rotation.y = t * 1.5; const hs = hover === m.z ? 1.6 : 1; m.head.scale.setScalar(hs); }
+    updateFleet(dt);
+  }
+  return { scene, R, v3, paint, buildZones, buildLabels, recolor, update, place, flyTo, gc, VIEWS, zoneAt, setHover, get hover() { return hover; },
+    set autoRot(v) { autoRot = v; }, get autoRot() { return autoRot; }, input(now) { lastInput = now; if (tween && tween.res) tween.res(); tween = null; }, get fleetN() { return fleetN; }, get inZoneN() { return inZoneN; } };
+})();
+
+/* ================================================================ VUE FOCUS D'UNE ZONE */
+let ZV = null;
+function buildZone(Z) {
+  const scene = new THREE.Scene();
+  const C = { lat: Z.c[0], lon: Z.c[1] };
+  const KX = Math.cos(C.lat * D2R) * 111.32, KZ = 110.57;
+  const wrapLon = d => ((d + 540) % 360) - 180;
+  const ll = (lat, lon) => [wrapLon(lon - C.lon) * KX, -(lat - C.lat) * KZ];
+  const toLL = (x, z) => [C.lat - z / KZ, C.lon + x / KX];
+  const H = Math.round(Z.r * 1.2), S = H / 360;                    // S = 1 pour une zone de 300 km
+  const B = { x0: -H, x1: H, z0: -H, z1: H }, BW = 2 * H;
+  const bb = { lonMin: C.lon - H / KX, lonMax: C.lon + H / KX, latMin: C.lat - H / KZ, latMax: C.lat + H / KZ };
+  const inBB = (la, lo) => la > bb.latMin && la < bb.latMax && lo > bb.lonMin && lo < bb.lonMax;
+  let zseed = 0; for (const ch of Z.id) zseed = (zseed * 31 + ch.charCodeAt(0)) >>> 0;
+  let seed = zseed || 7; const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const SEA_Y = -.8 * S, BOT = -44 * S, LAYERS_Y = [BOT - 55 * S, BOT - 115 * S, BOT - 175 * S];
+  let EX = 1, presim = true, liveMode = live.on;
+
+  /* — trait de côte découpé au cadre (Sutherland-Hodgman) — */
+  const land = [], coastRuns = [];
+  const inside = [p => p[0] >= bb.lonMin, p => p[0] <= bb.lonMax, p => p[1] >= bb.latMin, p => p[1] <= bb.latMax];
+  const cut = [
+    (a, b) => { const t = (bb.lonMin - a[0]) / (b[0] - a[0]); return [bb.lonMin, a[1] + t * (b[1] - a[1])]; },
+    (a, b) => { const t = (bb.lonMax - a[0]) / (b[0] - a[0]); return [bb.lonMax, a[1] + t * (b[1] - a[1])]; },
+    (a, b) => { const t = (bb.latMin - a[1]) / (b[1] - a[1]); return [a[0] + t * (b[0] - a[0]), bb.latMin]; },
+    (a, b) => { const t = (bb.latMax - a[1]) / (b[1] - a[1]); return [a[0] + t * (b[0] - a[0]), bb.latMax]; }];
+  for (const r of WR) {
+    if (r.b < bb.lonMin - .5 || r.a > bb.lonMax + .5 || r.d < bb.latMin - .5 || r.c > bb.latMax + .5) continue;
+    let out = []; for (let i = 0; i < r.n; i++) out.push([r.lon[i], r.lat[i]]);
+    const pts = out;
+    for (let e = 0; e < 4 && out.length; e++) { const inp = out; out = []; for (let i = 0; i < inp.length; i++) { const cur = inp[i], prev = inp[(i + inp.length - 1) % inp.length], ci = inside[e](cur), pi = inside[e](prev); if (ci) { if (!pi) out.push(cut[e](prev, cur)); out.push(cur); } else if (pi) out.push(cut[e](prev, cur)); } }
+    if (out.length >= 3) land.push(out.map(p => ll(p[1], p[0])));
+    let run = [];
+    for (let i = 0; i <= pts.length; i++) { const p = pts[i % pts.length]; if (inBB(p[1], p[0])) run.push(ll(p[1], p[0])); else { if (run.length > 1) coastRuns.push(run); run = []; } }
+    if (run.length > 1) coastRuns.push(run);
+  }
+
+  /* — grille : masque terre/mer par balayage, distance à la côte — */
+  const CELL = Math.max(3, BW / 240), NX = Math.round(BW / CELL) + 1, NZ = NX, NV = NX * NZ;
+  const gx = i => B.x0 + i * CELL, gz = j => B.z0 + j * CELL;
+  const mask = new Uint8Array(NV);
+  for (const P of land) {
+    for (let j = 0; j < NZ; j++) {
+      const z = gz(j), xs = [];
+      for (let i = 0, k = P.length - 1; i < P.length; k = i++) { const a = P[i], b = P[k]; if ((a[1] > z) !== (b[1] > z)) xs.push(a[0] + (z - a[1]) * (b[0] - a[0]) / (b[1] - a[1])); }
+      xs.sort((a, b) => a - b);
+      for (let k = 0; k + 1 < xs.length; k += 2) { const i0 = Math.max(0, Math.ceil((xs[k] - B.x0) / CELL)), i1 = Math.min(NX - 1, Math.floor((xs[k + 1] - B.x0) / CELL)); for (let i = i0; i <= i1; i++) mask[j * NX + i] = 1; }
+    }
+  }
+  function chamfer(isTarget) {
+    const d = new Float32Array(NV), A = CELL, Bd = CELL * 1.4142;
+    for (let k = 0; k < NV; k++) d[k] = isTarget(k) ? 0 : 1e9;
+    for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) { const k = j * NX + i; let v = d[k]; if (!v) continue;
+      if (i > 0) v = Math.min(v, d[k - 1] + A); if (j > 0) { v = Math.min(v, d[k - NX] + A); if (i > 0) v = Math.min(v, d[k - NX - 1] + Bd); if (i < NX - 1) v = Math.min(v, d[k - NX + 1] + Bd); } d[k] = v; }
+    for (let j = NZ - 1; j >= 0; j--) for (let i = NX - 1; i >= 0; i--) { const k = j * NX + i; let v = d[k]; if (!v) continue;
+      if (i < NX - 1) v = Math.min(v, d[k + 1] + A); if (j < NZ - 1) { v = Math.min(v, d[k + NX] + A); if (i < NX - 1) v = Math.min(v, d[k + NX + 1] + Bd); if (i > 0) v = Math.min(v, d[k + NX - 1] + Bd); } d[k] = v; }
+    return d;
+  }
+  const hasLand = mask.some(v => v), hasSea = mask.some(v => !v);
+  const dToSea = hasSea ? chamfer(k => !mask[k]) : new Float32Array(NV).fill(1e4);
+  const dToLand = hasLand ? chamfer(k => mask[k]) : new Float32Array(NV).fill(1e4);
+  const maskAt = (x, z) => { const i = Math.round((x - B.x0) / CELL), j = Math.round((z - B.z0) / CELL); return i < 0 || j < 0 || i >= NX || j >= NZ ? 0 : mask[j * NX + i]; };
+  const clearAt = (x, z) => { const i = clamp(Math.round((x - B.x0) / CELL), 0, NX - 1), j = clamp(Math.round((z - B.z0) / CELL), 0, NZ - 1); return mask[j * NX + i] ? -1 : dToLand[j * NX + i]; };
+  // côtes vs frontières, segments côtiers indexés par case pour la distance exacte près du rivage
+  const coastSegs = [], borderRuns = [], BS = CELL * 4, NB = Math.ceil(BW / BS) + 1, buckets = new Map();
+  for (const run of coastRuns) {
+    let cur = [];
+    for (let i = 0; i < run.length - 1; i++) {
+      const a = run[i], b = run[i + 1], mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2, L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      const nx = -(b[1] - a[1]) / L * CELL * .8, nz = (b[0] - a[0]) / L * CELL * .8;
+      if (maskAt(mx + nx, mz + nz) !== maskAt(mx - nx, mz - nz) || L > CELL * 3) {
+        const s = [a[0], a[1], b[0], b[1]]; coastSegs.push(s);
+        const i0 = Math.floor((Math.min(a[0], b[0]) - B.x0) / BS), i1 = Math.floor((Math.max(a[0], b[0]) - B.x0) / BS), j0 = Math.floor((Math.min(a[1], b[1]) - B.z0) / BS), j1 = Math.floor((Math.max(a[1], b[1]) - B.z0) / BS);
+        for (let bj = j0; bj <= j1; bj++) for (let bi = i0; bi <= i1; bi++) { const key = bj * NB + bi; if (!buckets.has(key)) buckets.set(key, []); buckets.get(key).push(s); }
+        if (cur.length > 1) borderRuns.push(cur); cur = [];
+      } else { if (!cur.length) cur.push(a); cur.push(b); }
+    }
+    if (cur.length > 1) borderRuns.push(cur);
+  }
+  function exactCoast(x, z) {
+    const bi = Math.floor((x - B.x0) / BS), bj = Math.floor((z - B.z0) / BS); let m = 1e18;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) { const arr = buckets.get((bj + dj) * NB + bi + di); if (!arr) continue;
+      for (const [ax, az, bx, bz] of arr) { const dx = bx - ax, dz = bz - az, t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1), ex = ax + dx * t - x, ez = az + dz * t - z, d = ex * ex + ez * ez; if (d < m) m = d; } }
+    return m < 1e17 ? Math.sqrt(m) : null;
+  }
+
+  /* — relief procédural calé sur le trait de côte réel — */
+  // Pas de modèle numérique de terrain embarqué : c'est une maquette, pas une carte d'altitude.
+  function hash(i, j) { const h = Math.sin(i * 127.1 + j * 311.7 + zseed % 1000) * 43758.5453; return h - Math.floor(h); }
+  function vnoise(x, z) { const i = Math.floor(x), j = Math.floor(z), fx = x - i, fz = z - j, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
+    const a = hash(i, j), b = hash(i + 1, j), c = hash(i, j + 1), d = hash(i + 1, j + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
+  function ridged(x, z) { let s = 0, a = .55, f = 1; for (let o = 0; o < 5; o++) { const n = 1 - Math.abs(2 * vnoise(x * f, z * f) - 1); s += n * n * a; a *= .5; f *= 2.03; } return s; }
+  function fbm(x, z) { let s = 0, a = .5, f = 1; for (let o = 0; o < 4; o++) { s += vnoise(x * f + 17, z * f - 9) * a; a *= .5; f *= 2.1; } return s; }
+  const tPos = new Float32Array(NV * 3), tBase = new Float32Array(NV), tSdf = new Float32Array(NV);
+  for (let j = 0; j < NZ; j++) for (let i = 0; i < NX; i++) {
+    const k = j * NX + i, x = gx(i), z = gz(j), isL = mask[k];
+    let d = (isL ? dToSea[k] : dToLand[k]) - CELL / 2;
+    if (d < CELL * 3) { const e = exactCoast(x, z); if (e != null) d = e; }
+    d = Math.max(0, d);
+    tSdf[k] = isL ? d : -d;
+    if (isL) { const ramp = 1 - Math.exp(-d / (32 * S)), mul = .3 + 1.1 * fbm(x / (420 * S) + 3, z / (420 * S) - 5);
+      tBase[k] = (.45 + ramp * mul * (5 + 34 * ridged(x / (85 * S), z / (85 * S)) + 9 * fbm(x / (40 * S), z / (40 * S)))) * S; }
+    tPos[k * 3] = x; tPos[k * 3 + 2] = z;
+  }
+  const tIdx = new Uint32Array((NX - 1) * (NZ - 1) * 6);
+  { let n = 0; for (let j = 0; j < NZ - 1; j++) for (let i = 0; i < NX - 1; i++) { const a = j * NX + i, b = a + 1, c = a + NX, d = c + 1; tIdx.set([a, c, b, b, c, d], n); n += 6; } }
+  const tGeo = new THREE.BufferGeometry();
+  tGeo.setAttribute('position', new THREE.BufferAttribute(tPos, 3)); tGeo.setAttribute('aBase', new THREE.BufferAttribute(tBase, 1)); tGeo.setAttribute('aSdf', new THREE.BufferAttribute(tSdf, 1));
+  tGeo.setIndex(new THREE.BufferAttribute(tIdx, 1));
+  function heightAt(x, z) {
+    const fi = clamp((x - B.x0) / CELL, 0, NX - 1.001), fj = clamp((z - B.z0) / CELL, 0, NZ - 1.001), i = Math.floor(fi), j = Math.floor(fj), u = fi - i, v = fj - j;
+    const h = k => tPos[k * 3 + 1], k = j * NX + i;
+    return h(k) * (1 - u) * (1 - v) + h(k + 1) * u * (1 - v) + h(k + NX) * (1 - u) * v + h(k + NX + 1) * u * v;
+  }
+
+  /* — couloirs : plus court chemin SUR L'EAU entre les entrées des corridors réels — */
+  function snapSea(x, z, minClear) {
+    const i0 = clamp(Math.round((x - B.x0) / CELL), 0, NX - 1), j0 = clamp(Math.round((z - B.z0) / CELL), 0, NZ - 1);
+    for (let r = 0; r < 60; r++) { let best = -1, bd = 1e9;
+      for (let j = j0 - r; j <= j0 + r; j++) for (let i = i0 - r; i <= i0 + r; i++) { if (i < 0 || j < 0 || i >= NX || j >= NZ) continue; if (Math.max(Math.abs(i - i0), Math.abs(j - j0)) !== r) continue;
+        const k = j * NX + i; if (!mask[k] && dToLand[k] >= minClear) { const d = (i - i0) ** 2 + (j - j0) ** 2; if (d < bd) { bd = d; best = k; } } }
+      if (best >= 0) return best; }
+    return -1;
+  }
+  function astar(s, g, minClear) {
+    if (s < 0 || g < 0) return null;
+    const N = NV, gs = new Float32Array(N).fill(1e30), from = new Int32Array(N).fill(-1), closed = new Uint8Array(N);
+    const heap = [], hpush = (k, f) => { heap.push([f, k]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+    const hpop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+    const gi = g % NX, gj = (g / NX) | 0, hh = k => Math.hypot(k % NX - gi, ((k / NX) | 0) - gj) * CELL;
+    gs[s] = 0; hpush(s, hh(s));
+    const DIRS = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.4142], [1, -1, 1.4142], [-1, 1, 1.4142], [-1, -1, 1.4142]];
+    let it = 0;
+    while (heap.length && it++ < 400000) {
+      const [, k] = hpop(); if (closed[k]) continue; closed[k] = 1; if (k === g) break;
+      const i = k % NX, j = (k / NX) | 0;
+      for (const [di, dj, w] of DIRS) { const ni = i + di, nj = j + dj; if (ni < 0 || nj < 0 || ni >= NX || nj >= NZ) continue; const nk = nj * NX + ni;
+        if (closed[nk] || mask[nk] || dToLand[nk] < minClear) continue;
+        const c = gs[k] + w * CELL * (1 + 3.5 * Math.exp(-dToLand[nk] / (6 * CELL)));
+        if (c < gs[nk]) { gs[nk] = c; from[nk] = k; hpush(nk, c + hh(nk)); } }
+    }
+    if (from[g] < 0 && g !== s) return null;
+    const path = []; for (let k = g; k >= 0; k = from[k]) { path.push([gx(k % NX), gz((k / NX) | 0)]); if (k === s) break; }
+    return path.reverse();
+  }
+  const seaOK = (x, z) => !maskAt(x, z);
+  const lineOK = (P, step) => { for (let i = 0; i < P.length - 1; i++) { const [ax, az] = P[i], [bx, bz] = P[i + 1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / step)); for (let s = 0; s <= n; s++) if (!seaOK(ax + (bx - ax) * s / n, az + (bz - az) * s / n)) return false; } return true; };
+  function smoothPath(P) {
+    let Q = P.filter((p, i) => i % 3 === 0 || i === P.length - 1);
+    for (let it = 0; it < 2; it++) { const R2 = [Q[0]]; for (let i = 0; i < Q.length - 1; i++) { const a = Q[i], b = Q[i + 1]; R2.push([a[0] * .75 + b[0] * .25, a[1] * .75 + b[1] * .25], [a[0] * .25 + b[0] * .75, a[1] * .25 + b[1] * .75]); } R2.push(Q[Q.length - 1]); Q = R2; }
+    return lineOK(Q, CELL * .5) ? Q : P;
+  }
+  function offsetPath(P, d) { return P.map((p, i) => { const a = P[Math.max(0, i - 1)], b = P[Math.min(P.length - 1, i + 1)], dx = b[0] - a[0], dz = b[1] - a[1], L = Math.hypot(dx, dz) || 1; return [p[0] + dz / L * d, p[1] - dx / L * d]; }); }
+  // entrées / sorties des corridors réels dans le cadre
+  const pairs = [];
+  const inBox = p => p[0] > B.x0 && p[0] < B.x1 && p[1] > B.z0 && p[1] < B.z1;
+  for (const r of Object.values(ROUTES)) {
+    const P = r.pts.map(([la, lo]) => ll(la, lo)); let run = [];
+    const flush = () => { if (run.length >= 2) { const a = run[0], b = run[run.length - 1]; if (Math.hypot(b[0] - a[0], b[1] - a[1]) > H * .35) pairs.push([a, b]); } run = []; };
+    for (let i = 0; i < P.length - 1; i++) {
+      const a = P[i], b = P[i + 1]; if (Math.abs(a[0]) > 6000 || Math.abs(b[0]) > 6000) { flush(); continue; }
+      let t0 = 0, t1 = 1; const dx = b[0] - a[0], dz = b[1] - a[1];
+      const clipT = (p, q) => { if (p === 0) return q >= 0; const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } return true; };
+      if (clipT(-dx, a[0] - B.x0) && clipT(dx, B.x1 - a[0]) && clipT(-dz, a[1] - B.z0) && clipT(dz, B.z1 - a[1]) && t0 <= t1) {
+        const pa = [a[0] + dx * t0, a[1] + dz * t0], pb = [a[0] + dx * t1, a[1] + dz * t1];
+        if (!run.length) run.push(pa); run.push(pb); if (t1 < 1) flush();
+      } else flush();
+    }
+    flush();
+  }
+  const uniq = []; for (const [a, b] of pairs) { const near = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]) < H * .3; if (!uniq.some(([c, d]) => (near(a, c) && near(b, d)) || (near(a, d) && near(b, c)))) uniq.push([a, b]); }
+  // sans corridor exploitable : ouvertures d'eau sur le bord du cadre, reliées par le centre de la zone
+  function openings() {
+    const out = [];
+    const per = []; for (let i = 0; i < NX; i++) per.push(i); for (let j = 1; j < NZ; j++) per.push(j * NX + NX - 1); for (let i = NX - 2; i >= 0; i--) per.push((NZ - 1) * NX + i); for (let j = NZ - 2; j > 0; j--) per.push(j * NX);
+    const ok = k => !mask[k] && dToLand[k] >= CELL * 2, runs = []; let cur = [];
+    for (const k of per) { if (ok(k)) cur.push(k); else { if (cur.length) runs.push(cur); cur = []; } } if (cur.length) { if (runs.length && ok(per[0])) runs[0] = cur.concat(runs[0]); else runs.push(cur); }
+    // seules les ouvertures reliées au centre PAR LA MER comptent (un cap ou un canal coupé par le cadre isole des bassins)
+    const c0 = snapSea(0, 0, CELL * 2); if (c0 < 0) return out;
+    const reach = new Uint8Array(NV), queue = [c0]; reach[c0] = 1;
+    for (let q = 0; q < queue.length; q++) { const k = queue[q], i = k % NX, j = (k / NX) | 0;
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ni = i + di, nj = j + dj; if (ni < 0 || nj < 0 || ni >= NX || nj >= NZ) continue; const nk = nj * NX + ni; if (!reach[nk] && !mask[nk]) { reach[nk] = 1; queue.push(nk); } } }
+    const opens = runs.filter(r => r.length >= 3 && reach[r[r.length >> 1]]).sort((a, b) => b.length - a.length).slice(0, 3).map(r => { const k = r[r.length >> 1]; return [gx(k % NX), gz((k / NX) | 0)]; });
+    const cp = [gx(c0 % NX), gz((c0 / NX) | 0)];
+    if (opens.length >= 2) { out.push([opens[0], opens[1], cp]); if (opens.length >= 3) out.push([opens[2], opens[0], cp]); }
+    else if (opens.length === 1) out.push([opens[0], cp]);
+    return out;
+  }
+  const lanes = [];
+  function buildLanes(list) { for (const pr of list.slice(0, 3)) {
+    const pts = pr.length === 3 ? [pr[0], pr[2], pr[1]] : pr; let path = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      let seg = null; for (const mc of [CELL * 2, CELL, 0]) { seg = astar(snapSea(pts[i][0], pts[i][1], mc), snapSea(pts[i + 1][0], pts[i + 1][1], mc), mc); if (seg) break; }
+      if (!seg) { if (params.has('debug')) console.log('[ops] A* échoue', Z.id, JSON.stringify(pts.map(q => q.map(Math.round)))); path = null; break; } path = path.concat(i ? seg.slice(1) : seg);
+    }
+    if (!path || path.length < 4) continue;
+    const P = smoothPath(path), off = 4 * S;
+    const A1 = offsetPath(P, off), A2 = offsetPath(P.slice().reverse(), off), narrow = !lineOK(A1, CELL * .5) || !lineOK(A2, CELL * .5);
+    lanes.push(narrow ? P : A1, narrow ? P.slice().reverse() : A2);
+  } }
+  buildLanes(uniq);
+  if (params.has('debug')) console.log('[ops] couloirs', Z.id, 'paires', uniq.length, 'ouvertures', JSON.stringify(openings().map(o => o.map(q => q.map(Math.round)))));
+  // un corridor réel qui passe par un canal trop fin pour la grille (Suez) ne donne pas de chemin sur l'eau
+  if (!lanes.length && hasSea) buildLanes(openings());
+  const LANES = lanes.map(P => { const cum = [0]; for (let i = 1; i < P.length; i++) cum.push(cum[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1])); return { P, cum, len: cum[cum.length - 1] }; });
+  function along(li, s) {
+    const L = LANES[li]; s = ((s % L.len) + L.len) % L.len; let i = 1; while (i < L.cum.length - 1 && L.cum[i] < s) i++;
+    const a = L.P[i - 1], b = L.P[i], t = (s - L.cum[i - 1]) / Math.max(1e-6, L.cum[i] - L.cum[i - 1]), dx = b[0] - a[0], dz = b[1] - a[1], d = Math.hypot(dx, dz) || 1;
+    return { x: a[0] + dx * t, z: a[1] + dz * t, dx: dx / d, dz: dz / d, s, len: L.len };
+  }
+
+  /* — flotte simulée — */
+  const FLEETN = [['MSC', ['MSC ARIA', 'MSC ALDEBARAN', 'MSC LUCIA', 'MSC TESSA', 'MSC AMBRA', 'MSC NOA']], ['Maersk', ['MAERSK ATLAS', 'MADRID MAERSK', 'MAERSK ESSEX', 'MAERSK SELETAR']],
+    ['CMA CGM', ['CMA CGM MARSEILLE', 'CMA CGM RIVOLI', 'CMA CGM LOUVRE', 'CMA CGM PALAIS ROYAL']], ['COSCO', ['COSCO SHIPPING PLANET', 'COSCO HARMONY', 'COSCO PACIFIC']],
+    ['Hapag-Lloyd', ['HAMBURG EXPRESS', 'BERLIN EXPRESS', 'MANILA EXPRESS']], ['ONE', ['ONE INNOVATION', 'ONE APUS', 'ONE STORK']], ['Evergreen', ['EVER ACE', 'EVER FORWARD', 'EVER ALOT']],
+    ['HMM', ['HMM ALGECIRAS', 'HMM OSLO']], ['ZIM', ['ZIM SAMMY OFEK', 'ZIM USA']]];
+  const pool = []; FLEETN.forEach(([c, ns]) => ns.forEach(n => pool.push({ carrier: c, name: n })));
+  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const SPEED = 1.85 * S, ships = [];
+  function addShip(lane, s, o = {}) {
+    const p = o.name ? o : pool[ships.length % pool.length], teu = o.teu != null ? o.teu : Math.round((8 + rnd() * 16) * 10) * 100;
+    ships.push({ carrier: p.carrier, name: p.name, lane, s, off: 0, speed: SPEED * (.85 + rnd() * .3), teu, kn: 13 + rnd() * 6, hull: teu * 9000, cargo: teu * .75 * 30000, ais: true, satT: 0, sim: true, ...o });
+  }
+  const totLen = LANES.reduce((a, L) => a + L.len, 0), nShips = LANES.length ? clamp(Math.round(totLen / (55 * S)), 8, 22) : 0;
+  LANES.forEach((L, li) => { const n = Math.max(1, Math.round(nShips * L.len / totLen)); for (let i = 0; i < n; i++) addShip(li, L.len * ((i + .2 + rnd() * .6) / n)); });
+  // mouillage devant le port le plus proche du centre
+  const portsIn = PORTS.filter(([, la, lo]) => inBB(la, lo)).map(([n, la, lo]) => ({ n, x: ll(la, lo)[0], z: ll(la, lo)[1] }));
+  if (portsIn.length) { const p = portsIn.slice().sort((a, b) => Math.hypot(a.x, a.z) - Math.hypot(b.x, b.z))[0], k = snapSea(p.x, p.z, CELL);
+    if (k >= 0 && Math.hypot(gx(k % NX) - p.x, gz((k / NX) | 0) - p.z) < 40 * S) for (let i = 0; i < 2; i++) { const k2 = snapSea(gx(k % NX) + (i ? 6 : -4) * S, gz((k / NX) | 0) + (i ? 3 : -5) * S, 0); if (k2 >= 0) addShip(null, 0, { ax: gx(k2 % NX), az: gz((k2 / NX) | 0), head: rnd() * 6, speed: 0, kn: 0 }); } }
+  // satellites (simulés) : deux traces diagonales
+  const SATS = [
+    { id: 'SAR', name: 'SAT-SAR', what: 'radar · voit sans AIS ni nuages', a: [B.x0 * .92, B.z0 * .92], b: [B.x1 * .92, B.z1 * .92], hl: .13 * BW, hw: .11 * BW, dur: 30, alt: .4 * BW, off: -.35 * BW, phase: .667 },
+    { id: 'OPT', name: 'SAT-OPT', what: 'optique · confirme la silhouette', a: [B.x1 * .92, B.z0 * .35], b: [B.x0 * .92, B.z1 * .35], hl: .1 * BW, hw: .085 * BW, dur: 41, alt: .36 * BW, off: .35 * BW, phase: .55 }];
+  // le scénario : un contact sans AIS, posé en mer sous la trace radar, invisible tant qu'un passage ne l'a pas vu
+  { const S0 = SATS[0], t = .42, px = S0.a[0] + (S0.b[0] - S0.a[0]) * t, pz = S0.a[1] + (S0.b[1] - S0.a[1]) * t, k = snapSea(px, pz, CELL * 3);
+    if (k >= 0) { const x = gx(k % NX), z = gz((k / NX) | 0), dx = S0.b[0] - S0.a[0], dz = S0.b[1] - S0.a[1], L = Math.hypot(dx, dz), perp = Math.abs(((x - S0.a[0]) * dz - (z - S0.a[1]) * dx) / L);
+      if (perp < S0.hw * .7) addShip(null, 0, { name: 'CONTACT RADAR #1', carrier: '—', teu: 0, hull: 0, cargo: 0, ax: x, az: z, head: rnd() * 6, speed: 0, kn: 4, ais: false, detected: false, drift: true }); } }
+  const exposure = s => s.hull + s.cargo;
+
+  /* — lumières, terrain — */
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x223344, 1.1));
+  const sunL = new THREE.DirectionalLight(0xffffff, 1.4); sunL.position.set(-500, 900, -400); scene.add(sunL);
+  const hemi = scene.children[0];
+  const LIGHT = new THREE.Vector3(-.5, .78, -.38).normalize();
+  const g1 = S < 1.5 ? .5 : 1;
+  const U = {
+    uSea: { value: new THREE.Color() }, uLow: { value: new THREE.Color() }, uHigh: { value: new THREE.Color() }, uContour: { value: new THREE.Color() },
+    uGrid: { value: new THREE.Color() }, uCoast: { value: new THREE.Color() }, uWarn: { value: new THREE.Color() }, uOk: { value: new THREE.Color() },
+    uLight: { value: LIGHT }, uKX: { value: KX }, uKZ: { value: KZ }, uLat0: { value: C.lat }, uLon0: { value: C.lon }, uG1: { value: g1 }, uG2: { value: g1 / 5 },
+    uZoneR: { value: Z.r }, uS: { value: S }, uTime: { value: 0 }, uSweep: { value: 0 }, uShowGrid: { value: 1 }, uShowSweep: { value: 1 }, uDark: { value: 1 },
+    uFp0: { value: new THREE.Vector4() }, uFp0d: { value: new THREE.Vector2(1, 0) }, uFp0a: { value: 0 },
+    uFp1: { value: new THREE.Vector4() }, uFp1d: { value: new THREE.Vector2(1, 0) }, uFp1a: { value: 0 } };
+  const terrainMat = new THREE.ShaderMaterial({
+    uniforms: U, extensions: { derivatives: true },
+    vertexShader: `attribute float aBase; attribute float aSdf; varying vec3 vW; varying vec3 vN; varying float vH; varying float vS;
+      void main(){ vec4 w = modelMatrix*vec4(position,1.); vW=w.xyz; vN=normalize(mat3(modelMatrix)*normal); vH=aBase; vS=aSdf; gl_Position = projectionMatrix*viewMatrix*w; }`,
+    fragmentShader: `
+      uniform vec3 uSea,uLow,uHigh,uContour,uGrid,uCoast,uWarn,uOk,uLight;
+      uniform float uKX,uKZ,uLat0,uLon0,uG1,uG2,uZoneR,uS,uTime,uSweep,uShowGrid,uShowSweep,uDark;
+      uniform vec4 uFp0,uFp1; uniform vec2 uFp0d,uFp1d; uniform float uFp0a,uFp1a;
+      varying vec3 vW; varying vec3 vN; varying float vH; varying float vS;
+      float fw(float v){ return max(fwidth(v), 1e-4); }
+      float lineAt(float v, float stepv, float px){ float f = abs(fract(v/stepv-.5)-.5)*stepv; return 1.-smoothstep(0., fw(v)*px, f); }
+      vec3 fp(vec4 F, vec2 d){ vec2 p = vW.xz - F.xy; float u = dot(p,d), v = dot(p, vec2(-d.y,d.x));
+        float inside = step(abs(u),F.z)*step(abs(v),F.w); float e = min(F.z-abs(u), F.w-abs(v));
+        float edge = inside*(1.-smoothstep(0., fw(e)*1.6, e)); float sl = fract(uTime*.45); float scan = inside*exp(-abs((u/F.z*.5+.5)-sl)*28.);
+        return vec3(inside, edge, scan); }
+      void main(){
+        float lon = uLon0 + vW.x/uKX, lat = uLat0 - vW.z/uKZ;
+        float g = max(lineAt(lon,uG1,1.2), lineAt(lat,uG1,1.2)), gf = max(lineAt(lon,uG2,1.), lineAt(lat,uG2,1.));
+        float land = smoothstep(-.4*uS,.4*uS,vS);
+        vec3 sea = uSea + uCoast*exp(-abs(vS)/(7.*uS))*.30*uDark + uCoast*exp(-abs(vS)/(1.4*uS))*.22;
+        sea += uGrid*(g*.24 + gf*.05)*uShowGrid;
+        float t = clamp(vH/(42.*uS), 0., 1.); t = t*t*(3.-2.*t);
+        vec3 terr = mix(uLow, uHigh, t);
+        float dif = max(dot(normalize(vN), uLight), 0.); terr *= .38 + .95*dif;
+        float cl = lineAt(vH, 8.*uS, 1.)*step(1.2*uS, vH); terr = mix(terr, uContour, cl*.2);
+        terr += uGrid*g*.10*uShowGrid;
+        vec3 c = mix(sea, terr, land);
+        c = mix(c, uCoast, (1.-smoothstep(0., fw(vS)*1.3, abs(vS)))*.95);
+        float r = length(vW.xz), ang = atan(vW.z, vW.x);
+        float ring = (1.-smoothstep(0., fw(r)*1.6, abs(r-uZoneR))) * step(.42, fract(ang/6.2831853*96.));
+        float tick = (1.-smoothstep(0., fw(r)*1.2, abs(r-uZoneR+6.*uS))) * step(fract(ang/6.2831853*36.+.5), .06);
+        float inZ = 1.-smoothstep(uZoneR-1., uZoneR+1., r);
+        c += uWarn*inZ*.03;
+        float da = mod(uSweep - ang, 6.2831853);
+        c += uWarn*inZ*exp(-da*3.2)*uShowSweep*(.5 + .5*smoothstep(0., uZoneR, r))*.24;
+        c = mix(c, uWarn, clamp(ring + tick*.9, 0., 1.));
+        float pr = mod(r - uTime*55.*uS, 70.*uS); c += uWarn*(1.-smoothstep(0., fw(r)*1.8, abs(pr-uS)))*(1.-smoothstep(40.*uS, 130.*uS, r))*.6;
+        vec3 f0 = fp(uFp0,uFp0d), f1 = fp(uFp1,uFp1d);
+        c += uOk*((f0.x*.07 + f0.y*.9 + f0.z*.32)*uFp0a + (f1.x*.07 + f1.y*.9 + f1.z*.32)*uFp1a);
+        gl_FragColor = vec4(c,1.);
+        #include <colorspace_fragment>
+      }` });
+  scene.add(new THREE.Mesh(tGeo, terrainMat));
+
+  /* — socle — */
+  const skirt = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide })); scene.add(skirt);
+  const rimMat = new THREE.LineBasicMaterial({ transparent: true }), rim = new THREE.Line(new THREE.BufferGeometry(), rimMat); scene.add(rim);
+  const edgeIdx = []; for (let i = 0; i < NX; i++) edgeIdx.push(i); for (let j = 1; j < NZ; j++) edgeIdx.push(j * NX + NX - 1); for (let i = NX - 2; i >= 0; i--) edgeIdx.push((NZ - 1) * NX + i); for (let j = NZ - 2; j >= 0; j--) edgeIdx.push(j * NX);
+  function buildSkirt() {
+    const n = edgeIdx.length, pos = new Float32Array(n * 6), cl = new Float32Array(n * 6), idx = [], top = col('--side-top'), bot = col('--side-bot'), rp = new Float32Array(n * 3);
+    edgeIdx.forEach((k, i) => { const x = tPos[k * 3], y = Math.max(SEA_Y, tPos[k * 3 + 1]), z = tPos[k * 3 + 2]; pos.set([x, y, z, x, BOT, z], i * 6); cl.set([top.r, top.g, top.b, bot.r, bot.g, bot.b], i * 6); rp.set([x, y + .3 * S, z], i * 3);
+      if (i < n - 1) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 2, i * 2 + 1, i * 2 + 3); });
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(cl, 3)); g.setIndex(idx); skirt.geometry.dispose(); skirt.geometry = g;
+    const r = new THREE.BufferGeometry(); r.setAttribute('position', new THREE.BufferAttribute(rp, 3)); rim.geometry.dispose(); rim.geometry = r;
+  }
+  const floorM = new THREE.Mesh(new THREE.PlaneGeometry(BW, BW), new THREE.MeshBasicMaterial({ side: THREE.DoubleSide })); floorM.rotation.x = -Math.PI / 2; floorM.position.y = BOT; scene.add(floorM);
+  const borderMat = new THREE.LineDashedMaterial({ dashSize: 3 * S, gapSize: 3 * S, transparent: true, opacity: .5 });
+  const borderLines = borderRuns.map(run => { const pts = []; for (let i = 0; i < run.length - 1; i++) { const [ax, az] = run[i], [bx, bz] = run[i + 1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / (2 * S))); for (let s = 0; s < n; s++) pts.push([ax + (bx - ax) * s / n, az + (bz - az) * s / n]); }
+    pts.push(run[run.length - 1]); const l = new THREE.Line(new THREE.BufferGeometry(), borderMat); l.userData.pts = pts; scene.add(l); return l; });
+  function placeBorders() { for (const l of borderLines) { l.geometry.dispose(); l.geometry = new THREE.BufferGeometry().setFromPoints(l.userData.pts.map(([x, z]) => new THREE.Vector3(x, heightAt(x, z) + .6 * S, z))); l.computeLineDistances(); } }
+  function applyRelief() { for (let k = 0; k < NV; k++) tPos[k * 3 + 1] = tSdf[k] > 0 ? tBase[k] * Math.max(.02, EX) : SEA_Y; tGeo.attributes.position.needsUpdate = true; tGeo.computeVertexNormals(); tGeo.computeBoundingSphere(); buildSkirt(); placeBorders(); }
+
+  /* — calques de sources — */
+  const stack = new THREE.Group(); scene.add(stack);
+  const LAYER_DEF = [['AIS', 'positions déclarées par les navires', '--signal'], ['SATELLITE', 'radar SAR · optique — recoupement', '--ok'], ['PRESSE · JWC', 'veille GDELT · listings institutionnels', '--warn']];
+  const layerMats = LAYER_DEF.map(() => [new THREE.LineDashedMaterial({ dashSize: 7 * S, gapSize: 5 * S, transparent: true }), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide })]);
+  LAYER_DEF.forEach((_, i) => { const y = LAYERS_Y[i], m = (10 + i * 12) * S, x0 = B.x0 - m, x1 = B.x1 + m, z0 = B.z0 - m, z1 = B.z1 + m;
+    const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints([[x0, z0], [x1, z0], [x1, z1], [x0, z1], [x0, z0]].map(([x, z]) => new THREE.Vector3(x, y, z))), layerMats[i][0]); l.computeLineDistances(); stack.add(l);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, z1 - z0), layerMats[i][1]); p.rotation.x = -Math.PI / 2; p.position.y = y; stack.add(p); });
+  const postMat = new THREE.LineDashedMaterial({ dashSize: 2 * S, gapSize: 4 * S, transparent: true, opacity: .35 });
+  { const pts = []; for (const [x, z] of [[B.x0, B.z0], [B.x1, B.z0], [B.x1, B.z1], [B.x0, B.z1]]) pts.push(new THREE.Vector3(x, BOT, z), new THREE.Vector3(x, LAYERS_Y[2], z)); const l = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), postMat); l.computeLineDistances(); stack.add(l); }
+  const MAXS = 260;
+  const mkDots = size => { const p = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ size, sizeAttenuation: false, transparent: true, depthWrite: false })); p.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(MAXS * 3), 3)); p.frustumCulled = false; stack.add(p); return p; };
+  const aisDots = mkDots(3.5 * PR), satDots = mkDots(3.5 * PR);
+  const pressDots = (() => { const pts = [0, LAYERS_Y[2] + .5, 0, H * .15, LAYERS_Y[2] + .5, -H * .1, -H * .12, LAYERS_Y[2] + .5, H * .14]; const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pts.slice(0, (1 + Math.min(2, Z.hl.length)) * 3), 3));
+    const p = new THREE.Points(g, new THREE.PointsMaterial({ size: 8 * PR, sizeAttenuation: false, transparent: true, depthWrite: false })); stack.add(p); return p; })();
+
+  /* — volume de zone, balise — */
+  const wallMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, uniforms: { uC: { value: new THREE.Color() }, uT: { value: 0 }, uA: { value: 1 } },
+    vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+    fragmentShader: `uniform vec3 uC; uniform float uT, uA; varying vec2 vUv;
+      void main(){ float h = clamp(1.-vUv.y, 0., 1.); float a = h*h*mix(1., h, .2)*.30; a += (1.-smoothstep(0.,.03,abs(fract(vUv.y*5.-uT*.35)-.5)-.46))*.06*h;
+        gl_FragColor = vec4(uC, clamp(a*uA, 0., 1.));
+        #include <colorspace_fragment>
+      }` });
+  const wall = new THREE.Mesh(new THREE.CylinderGeometry(Z.r, Z.r, 70 * S, 192, 1, true), wallMat); wall.position.y = 35 * S; scene.add(wall);
+  const beaconMat = new THREE.MeshBasicMaterial(), beacon = new THREE.Group(); scene.add(beacon);
+  { const p = new THREE.Mesh(new THREE.CylinderGeometry(.9 * S, .9 * S, 60 * S, 12), beaconMat); p.position.y = 30 * S + heightAt(0, 0) * 0; beacon.add(p); const h = new THREE.Mesh(new THREE.OctahedronGeometry(6 * S), beaconMat); h.position.y = 66 * S; beacon.add(h); beacon.userData.head = h; }
+  const laneMat = new THREE.LineDashedMaterial({ dashSize: 4 * S, gapSize: 5 * S, transparent: true, opacity: .5 });
+  for (const { P } of LANES) { const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(P.map(([x, z]) => new THREE.Vector3(x, SEA_Y + .25 * S, z))), laneMat); l.computeLineDistances(); scene.add(l); }
+
+  /* — satellites — */
+  const satInk = new THREE.LineBasicMaterial({ transparent: true }), satFill = new THREE.MeshBasicMaterial({ transparent: true });
+  function makeSat(kind) {
+    const g = new THREE.Group(), box = (w, h, d, x, y, z) => { const geo = new THREE.BoxGeometry(w, h, d), m = new THREE.Mesh(geo, satFill); m.position.set(x, y, z); g.add(m); const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), satInk); e.position.copy(m.position); g.add(e); };
+    box(14, 11, 11, 0, 0, 0); box(10, 3, 9, 0, -7, 0); for (const s of [-1, 1]) { box(7, .8, .8, s * 10.5, 0, 0); for (let p = 0; p < 3; p++) box(10, .5, 15, s * (19 + p * 10.6), 0, 0); }
+    if (kind === 'SAR') box(26, .5, 6, 0, -9.5, 0); else { const geo = new THREE.CylinderGeometry(3.5, 5, 6, 8, 1, true), c = new THREE.Mesh(geo, satFill); c.position.y = -11; g.add(c); const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), satInk); e.position.y = -11; g.add(e); }
+    g.scale.setScalar(1.6 * S); scene.add(g); return g;
+  }
+  for (const Sa of SATS) {
+    Sa.g = makeSat(Sa.id);
+    Sa.cone = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide })); Sa.cone.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(36), 3)); scene.add(Sa.cone);
+    Sa.rays = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ dashSize: 6 * S, gapSize: 6 * S, transparent: true })); Sa.rays.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(24), 3)); scene.add(Sa.rays);
+    const dx = Sa.b[0] - Sa.a[0], dz = Sa.b[1] - Sa.a[1], L = Math.hypot(dx, dz); Sa.d = [dx / L, dz / L]; Sa.t = Sa.phase; Sa.alpha = 0; Sa.seen = new Set(); Sa.apex = new THREE.Vector3();
+  }
+  function updateSats(dt) {
+    SATS.forEach((Sa, si) => {
+      Sa.t += dt * simSpeed / Sa.dur; if (Sa.t >= 1) { Sa.t -= 1; passDone(Sa); }
+      const c = [Sa.a[0] + (Sa.b[0] - Sa.a[0]) * Sa.t, Sa.a[1] + (Sa.b[1] - Sa.a[1]) * Sa.t], on = VIS.sat && !liveMode;
+      Sa.alpha = smooth(0, .07, Sa.t) * (1 - smooth(.93, 1, Sa.t)) * (on ? 1 : 0);
+      const [dx, dz] = Sa.d, px = -dz, pz = dx;
+      Sa.apex.set(c[0] + px * Sa.off, Sa.alt, c[1] + pz * Sa.off); Sa.g.position.copy(Sa.apex); Sa.g.rotation.y = Math.atan2(-dz, dx); Sa.g.visible = on;
+      const corners = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([u, v]) => { const x = c[0] + dx * Sa.hl * u + px * Sa.hw * v, z = c[1] + dz * Sa.hl * u + pz * Sa.hw * v; return new THREE.Vector3(x, Math.max(SEA_Y, heightAt(x, z)) + .5 * S, z); });
+      const cp = Sa.cone.geometry.attributes.position.array, rp = Sa.rays.geometry.attributes.position.array, ay = Sa.apex.y - 16 * S;
+      for (let i = 0; i < 4; i++) { const a = corners[i], b = corners[(i + 1) % 4]; cp.set([Sa.apex.x, ay, Sa.apex.z, a.x, a.y, a.z, b.x, b.y, b.z], i * 9); rp.set([Sa.apex.x, ay, Sa.apex.z, a.x, a.y, a.z], i * 6); }
+      Sa.cone.geometry.attributes.position.needsUpdate = true; Sa.cone.geometry.computeBoundingSphere(); Sa.rays.geometry.attributes.position.needsUpdate = true; Sa.rays.computeLineDistances(); Sa.rays.geometry.computeBoundingSphere();
+      Sa.cone.visible = Sa.rays.visible = Sa.alpha > .01; Sa.cone.material.opacity = .022 * Sa.alpha; Sa.rays.material.opacity = .6 * Sa.alpha;
+      (si ? U.uFp1 : U.uFp0).value.set(c[0], c[1], Sa.hl, Sa.hw); (si ? U.uFp1d : U.uFp0d).value.set(dx, dz); (si ? U.uFp1a : U.uFp0a).value = Sa.alpha;
+      if (Sa.alpha > .2) for (const s of ships) { if (s.x == null || (s.ais && !s.vis)) continue; const qx = s.x - c[0], qz = s.z - c[1], u2 = qx * dx + qz * dz, v2 = -qx * dz + qz * dx;
+        if (Math.abs(u2) < Sa.hl && Math.abs(v2) < Sa.hw) { s.satT = simMs; s.satBy = Sa.name; Sa.seen.add(s); if (!s.ais && !s.detected) detectDark(s, Sa); } }
+    });
+  }
+
+  /* — navires — */
+  function hullShape(L, Bm) { const s = new THREE.Shape(), h = Bm / 2; s.moveTo(-L / 2, -h); s.lineTo(L * .3, -h); s.quadraticCurveTo(L * .47, -h * .7, L / 2, 0); s.quadraticCurveTo(L * .47, h * .7, L * .3, h); s.lineTo(-L / 2, h); s.closePath(); return s; }
+  const gHull = new THREE.ExtrudeGeometry(hullShape(10, 1.6), { depth: 1.1, bevelEnabled: false }); gHull.rotateX(-Math.PI / 2);
+  const gBay = new THREE.BoxGeometry(.6, 1, 1.35), gHouse = new THREE.BoxGeometry(.75, 1.7, 1.45), gWing = new THREE.BoxGeometry(.25, .1, 2);
+  const M = { hull: new THREE.MeshLambertMaterial(), deck: new THREE.MeshLambertMaterial(), house: new THREE.MeshLambertMaterial(), dark: new THREE.MeshLambertMaterial(), tank: new THREE.MeshLambertMaterial(),
+    ringIn: new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), ringAp: new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), ringDark: new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }),
+    sel: new THREE.LineBasicMaterial({ transparent: true }), beam: new THREE.LineDashedMaterial({ dashSize: 3 * S, gapSize: 3 * S, transparent: true }) };
+  const SHIP_SCALE = 2.8 * S;
+  const gRing = new THREE.RingGeometry(9.2 * S, 10.4 * S, 48); gRing.rotateX(-Math.PI / 2);
+  const pickables = [];
+  function makeShip(s) {
+    const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+    const dk = !s.ais, tanker = s.type >= 80 && s.type < 90, hm = dk ? M.dark : M.hull;
+    const hull = new THREE.Mesh(gHull, hm); body.add(hull);
+    if (tanker) { const t = new THREE.Mesh(new THREE.BoxGeometry(6.2, .5, 1.1), M.tank); t.position.set(.2, 1.35, 0); body.add(t); }
+    else { const n = dk ? 7 : 11, fill = .55 + rnd() * .45; for (let i = 0; i < n; i++) { if (rnd() > fill + .15) continue; const h = .5 + Math.floor(rnd() * 3) * .3, b = new THREE.Mesh(gBay, dk ? M.dark : M.deck); b.scale.y = h; b.position.set(-2.5 + i * .66, 1.1 + h / 2, 0); body.add(b); } }
+    const house = new THREE.Mesh(gHouse, dk ? M.dark : M.house); house.position.set(-3.8, 1.95, 0); body.add(house);
+    const wing = new THREE.Mesh(gWing, dk ? M.dark : M.house); wing.position.set(-3.6, 2.7, 0); body.add(wing);
+    const sc = s.len ? clamp(s.len / 330, .45, 1.25) : 1; g.scale.setScalar(SHIP_SCALE * sc); s.sc = sc;
+    const ring = new THREE.Mesh(gRing, dk ? M.ringDark : M.ringIn); ring.visible = false; scene.add(ring); s.ring = ring;
+    [hull, house].forEach(m => { m.userData.ship = s; pickables.push(m); });
+    s.g = g; s.body = body; scene.add(g);
+    const N = 48, tg = new THREE.BufferGeometry(); tg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3)); tg.setAttribute('color', new THREE.BufferAttribute(new Float32Array(N * 4), 4));
+    s.trail = new THREE.Line(tg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false })); s.trailN = 0; s.trail.frustumCulled = false; scene.add(s.trail);
+  }
+  function dropShip(s) { scene.remove(s.g, s.ring, s.trail); s.trail.geometry.dispose(); for (const m of [s.g]) m.traverse(o => { if (o.userData.ship) { const i = pickables.indexOf(o); if (i >= 0) pickables.splice(i, 1); } }); }
+  ships.forEach(makeShip);
+  const brackets = new THREE.Group(); scene.add(brackets); brackets.visible = false;
+  { const a = 15 * S, b = 6 * S, pts = []; for (const [sx, sz] of [[1, 1], [1, -1], [-1, -1], [-1, 1]]) pts.push(new THREE.Vector3(sx * a, 0, sz * a), new THREE.Vector3(sx * (a - b), 0, sz * a), new THREE.Vector3(sx * a, 0, sz * a), new THREE.Vector3(sx * a, 0, sz * (a - b)));
+    brackets.add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts), M.sel)); }
+  const beam = new THREE.Line(new THREE.BufferGeometry(), M.beam); beam.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3)); beam.frustumCulled = false; beam.visible = false; scene.add(beam);
+  const beamRings = LAYERS_Y.map(() => { const m = new THREE.Mesh(new THREE.RingGeometry(6 * S, 7.6 * S, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide })); m.visible = false; scene.add(m); return m; });
+
+  // AIS direct : les vrais navires dans le cadre remplacent la flotte simulée
+  const liveShips = new Map();
+  function syncLive() {
+    if (!liveMode) return;
+    liveFresh();
+    const seen = new Set();
+    for (const v of live.vessels.values()) {
+      if (v.lat == null || !inBB(v.lat, v.lon)) continue;
+      seen.add(v.mmsi); let s = liveShips.get(v.mmsi);
+      if (!s) { if (liveShips.size >= MAXS - 20) continue; const e = liveExposure(v); s = { live: true, mmsi: v.mmsi, carrier: '', name: v.name || 'MMSI ' + v.mmsi, ais: true, satT: 0, type: v.type, len: v.len, teu: e.teu, hull: e.hull, cargo: e.cargo, lane: null, kn: v.sog }; makeShip(s); liveShips.set(v.mmsi, s); }
+      const [x, z] = ll(v.lat, v.lon), h = (v.hdg != null ? v.hdg : v.cog) * D2R;
+      Object.assign(s, { ax: x, az: z, head: Math.atan2(Math.cos(h), Math.sin(h)), kn: v.sog, name: v.name || s.name, type: v.type, dest: v.dest, imo: v.imo, vt: v.t });
+      if (v.len && v.len !== s.len) { s.len = v.len; const e = liveExposure(v); Object.assign(s, e); }
+      if (v.type && !s.carrier) s.carrier = typeLabel(v.type);
+    }
+    for (const [k, s] of liveShips) if (!seen.has(k)) { dropShip(s); liveShips.delete(k); if (selected === s) selectShip(null); }
+  }
+  const active = () => liveMode ? [...liveShips.values()] : ships;
+
+  const satOk = s => !liveMode && s.satT && simMs - s.satT < 6 * 3600e3;
+  let lastTrail = 0;
+  function updateShips(dt, t) {
+    const trailTick = simMs - lastTrail > 3.75 * 60e3; if (trailTick) lastTrail = simMs;
+    for (const s of ships) s.g.visible = s.ring.visible = s.trail.visible = !liveMode && false;
+    for (const s of active()) {
+      let x, z, dx, dz, fade = 1;
+      if (s.lane != null) {
+        s.s += s.speed * dt * simSpeed; const p = along(s.lane, s.s); x = p.x; z = p.z; dx = p.dx; dz = p.dz;
+        fade = smooth(0, 22 * S, Math.min(p.s, p.len - p.s)); if (s.lastS != null && p.s < s.lastS) s.trailN = 0; s.lastS = p.s;
+      } else {
+        if (s.drift) { const nx = s.ax + Math.cos(s.head) * dt * simSpeed * .12 * S, nz = s.az - Math.sin(s.head) * dt * simSpeed * .12 * S; if (seaOK(nx, nz)) { s.ax = nx; s.az = nz; } else s.head += 1.3; s.head += dt * simSpeed * .02; }
+        x = s.ax; z = s.az; dx = Math.cos(s.head); dz = -Math.sin(s.head);
+      }
+      s.x = x; s.z = z; s.dx = dx; s.dz = dz;
+      const shown = s.ais || s.detected;
+      s.g.visible = shown; s.g.position.set(x, SEA_Y, z); s.g.rotation.y = Math.atan2(-dz, dx); s.g.scale.setScalar(SHIP_SCALE * (s.sc || 1) * Math.max(.001, fade));
+      s.body.rotation.x = Math.sin(t * .9 + (s.teu || s.mmsi || 1)) * .03;
+      s.dist = Math.hypot(x, z);
+      const moving = s.lane != null || (s.live && s.kn > 1);
+      s.status = s.dist <= Z.r ? 'in' : (moving && (dx * -x + dz * -z) > 0) ? 'appr' : 'out';
+      s.vis = shown && fade > .3;
+      const prev = s.zoneState; s.zoneState = s.status;
+      if (!presim && prev === 'appr' && s.status === 'in' && s.ais) pushEv({ tag: 'ais', text: `${s.name} entre dans la zone`, meta: `${s.carrier || ''} · ${s.teu ? s.teu.toLocaleString('fr-FR') + ' EVP · ' : ''}${money(exposure(s))} exposés${s.live ? ' · AIS réel' : ' · simulé'}`, ship: s });
+      s.ring.visible = s.vis && (s.status !== 'out' || !s.ais); s.ring.material = !s.ais ? M.ringDark : s.status === 'in' ? M.ringIn : M.ringAp;
+      s.ring.position.set(x, SEA_Y + .2 * S, z); s.ring.scale.setScalar(1 + (s.ais ? 0 : Math.sin(t * 5) * .12));
+      const tr = s.trail, P = tr.geometry.attributes.position.array, Cc = tr.geometry.attributes.color.array, N = P.length / 3;
+      const moved = s.live ? (s.lx == null || Math.hypot(x - s.lx, z - s.lz) > .8 * S) : (trailTick && s.lane != null);
+      if (moved) { P.copyWithin(3, 0, (N - 1) * 3); s.trailN = Math.min(N, s.trailN + 1); s.lx = x; s.lz = z; }
+      P[0] = x; P[1] = SEA_Y + .35 * S; P[2] = z;
+      if (moved || !s.trailInit) { s.trailInit = true; const c = s.ais ? TC.signal : TC.crit; for (let i = 0; i < N; i++) { const a = i < s.trailN ? Math.pow(1 - i / N, 1.6) * .9 : 0; Cc.set([c.r, c.g, c.b, a], i * 4); } tr.geometry.attributes.color.needsUpdate = true; }
+      tr.geometry.setDrawRange(0, s.trailN); tr.geometry.attributes.position.needsUpdate = true; tr.visible = VIS.trails && shown && s.trailN > 1;
+    }
+    const ap = aisDots.geometry.attributes.position.array, sp = satDots.geometry.attributes.position.array; let na = 0, ns = 0;
+    for (const s of active()) { if (na >= MAXS) break; if (s.ais && s.vis) { ap.set([s.x, LAYERS_Y[0] + .5 * S, s.z], na * 3); na++; } if (satOk(s) && s.g.visible) { sp.set([s.x, LAYERS_Y[1] + .5 * S, s.z], ns * 3); ns++; } }
+    aisDots.geometry.setDrawRange(0, na); aisDots.geometry.attributes.position.needsUpdate = true; satDots.geometry.setDrawRange(0, ns); satDots.geometry.attributes.position.needsUpdate = true;
+  }
+
+  /* — couleurs — */
+  function recolor() {
+    const dark = !theme, sig = TC.signal;
+    U.uSea.value.copy(col('--sea')); U.uLow.value.copy(col('--land-low')); U.uHigh.value.copy(col('--land-high')); U.uContour.value.copy(col('--contour')); U.uGrid.value.copy(col('--grid')); U.uCoast.value.copy(col('--coast'));
+    U.uWarn.value.copy(TC.warn); U.uOk.value.copy(TC.ok); U.uDark.value = dark ? 1 : .35;
+    floorM.material.color.copy(col('--side-bot')); rimMat.color.copy(col('--coast')); rimMat.opacity = dark ? .75 : .9; borderMat.color.copy(col('--t2')); laneMat.color.copy(sig);
+    LAYER_DEF.forEach(([, , v], i) => { const c = col(v); layerMats[i][0].color.copy(c); layerMats[i][0].opacity = dark ? .6 : .8; layerMats[i][1].color.copy(c); layerMats[i][1].opacity = dark ? .035 : .07; });
+    postMat.color.copy(col('--t3')); aisDots.material.color.copy(sig); satDots.material.color.copy(TC.ok); pressDots.material.color.copy(TC.warn);
+    wallMat.uniforms.uC.value.copy(TC.warn); wallMat.uniforms.uA.value = dark ? 1 : .6; wallMat.blending = dark ? THREE.AdditiveBlending : THREE.NormalBlending; wallMat.needsUpdate = true;
+    beaconMat.color.copy(TC.warn); satInk.color.copy(col('--sat-ink')); satFill.color.copy(col('--bg-1'));
+    SATS.forEach(Sa => { Sa.cone.material.color.copy(TC.ok); Sa.cone.material.blending = dark ? THREE.AdditiveBlending : THREE.NormalBlending; Sa.cone.material.needsUpdate = true; Sa.rays.material.color.copy(col('--sat-ink')); });
+    M.hull.color.copy(sig).multiplyScalar(dark ? .5 : .75); M.hull.emissive.copy(sig).multiplyScalar(dark ? .25 : 0);
+    M.deck.color.copy(sig); M.deck.emissive.copy(sig).multiplyScalar(dark ? .45 : .05);
+    M.tank.color.copy(TC.warn).multiplyScalar(dark ? .8 : 1); M.tank.emissive.copy(TC.warn).multiplyScalar(dark ? .3 : 0);
+    M.house.color.copy(dark ? col('--t1') : new THREE.Color(1, 1, 1)); M.house.emissive.copy(col('--t1')).multiplyScalar(dark ? .2 : 0);
+    M.dark.color.copy(TC.crit); M.dark.emissive.copy(TC.crit).multiplyScalar(dark ? .6 : .1);
+    M.ringIn.color.copy(TC.warn); M.ringIn.opacity = .95; M.ringAp.color.copy(sig); M.ringAp.opacity = .7; M.ringDark.color.copy(TC.crit); M.ringDark.opacity = 1;
+    M.sel.color.copy(col('--t1')); M.beam.color.copy(col('--t1')); M.beam.opacity = .7;
+    hemi.intensity = dark ? 1.0 : 1.6; sunL.intensity = dark ? 1.3 : 1.5; hemi.groundColor.copy(col('--bg-1'));
+    for (const s of ships) s.trailInit = false; for (const s of liveShips.values()) s.trailInit = false;
+    buildSkirt();
+  }
+
+  /* — caméra — */
+  const VIEWS = { home: { R: 2850 * S, phi: .95, theta: -.42, tx: 0, ty: -30 * S, tz: 0 }, strait: { R: 780 * S, phi: 1.2, theta: .72, tx: 0, ty: 0, tz: 0 },
+    top: { R: 2350 * S, phi: .02, theta: 0, tx: 0, ty: 0, tz: 0 }, start: { R: 5200 * S, phi: .02, theta: 0, tx: 0, ty: 0, tz: 0 } };
+  const cam = { ...VIEWS.start };
+
+  /* — étiquettes — */
+  const markEls = [];
+  function buildLabels() {
+    const used = new Set();
+    for (const [n, la, lo] of COUNTRIES) { if (!inBB(la, lo) || used.has(n)) continue; const [x, z] = ll(la, lo); if (!maskAt(x, z)) continue; used.add(n); addLabel('land', n, new THREE.Vector3(x, 0, z), { prio: 3, update: L => L.v.y = Math.max(SEA_Y, heightAt(L.v.x, L.v.z)) + 10 * S }); }
+    for (const [n, la, lo] of SEAS) { if (!inBB(la, lo) || used.has(n)) continue; const [x, z] = ll(la, lo); if (maskAt(x, z)) continue; used.add(n); addLabel('sea', n, new THREE.Vector3(x, SEA_Y, z), { prio: 3 }); }
+    for (const p of portsIn) addLabel('port', p.n.toUpperCase(), new THREE.Vector3(p.x, 0, p.z), { prio: 2, right: true, update: L => L.v.y = Math.max(SEA_Y, heightAt(L.v.x, L.v.z)) + 1.5 * S });
+    addLabel('strait', `${esc(Z.name).toUpperCase()} · R ${Z.r} KM`, new THREE.Vector3(0, 84 * S, 0), { prio: 0 });
+    LAYER_DEF.forEach(([n, s], i) => addLabel('layer', `${n}<small>${s}</small>`, new THREE.Vector3(B.x0 - (10 + i * 12) * S, LAYERS_Y[i], B.z0 - (10 + i * 12) * S), { prio: 1, left: true,
+      update: L => L.vis = VIS.stack ? smooth(1700 * S, 2300 * S, cam.R) * (1 - smooth(1.05, 1.2, cam.phi)) : 0 }));
+    SATS.forEach(Sa => addLabel('sat', `${Sa.name} · SIMULÉ<small>${Sa.what}</small>`, Sa.apex, { prio: 1, right: true, update: L => L.vis = Sa.alpha }));
+    for (let i = 0; i < 3; i++) { const L = addLabel('mk', '', new THREE.Vector3(), { prio: 0, always: true, right: true }); L.vis = 0; markEls.push(L); }
+  }
+
+  /* — sélection — */
+  let selected = null, follow = null;
+  function selectShip(s, fly) {
+    selected = s || null; follow = s && fly ? s : null; brackets.visible = !!s;
+    if (!s) { beam.visible = false; beamRings.forEach(r => r.visible = false); markEls.forEach(m => m.vis = 0); }
+    $('callout').style.display = s ? 'block' : 'none'; if (!s) $('leaderLine').setAttribute('points', '');
+    if (s && fly) flyTo({ R: Math.min(cam.R, 1300 * S), phi: Math.min(Math.max(cam.phi, .75), 1.02), tx: s.x, ty: SEA_Y, tz: s.z }, 1200);
+    if (s) renderCallout(); renderFleet(true);
+  }
+  let tween = null;
+  function flyTo(v, dur = 1400) { tween = { from: { ...cam }, to: { ...cam, ...v }, t0: performance.now(), dur }; }
+  function renderCallout() {
+    const s = selected; if (!s) return;
+    const st = !s.ais ? '<span class="bdg dark">AIS COUPÉ · VU PAR SATELLITE</span>' : s.live ? '<span class="bdg live">AIS RÉEL · DIRECT</span>' : satOk(s) ? '<span class="bdg ok">AIS + SATELLITE ✓</span>' : '<span class="bdg ais">AIS SEUL · NON RECOUPÉ</span>';
+    const [la, lo] = toLL(s.x, s.z), age = s.live && s.vt ? Math.round((Date.now() - s.vt) / 60000) : null;
+    $('callout').innerHTML = `<div class="h"><b>${esc(s.name)}</b><button class="x" aria-label="Fermer">✕</button></div><div style="margin-top:6px">${st}</div>
+      ${s.live ? `<div class="row"><span>Type AIS</span><span>${typeLabel(s.type)}${s.len ? ' · ' + s.len + ' m' : ''}</span></div><div class="row"><span>MMSI${s.imo ? ' · IMO' : ''}</span><span>${s.mmsi}${s.imo ? ' · ' + s.imo : ''}</span></div>${s.dest ? `<div class="row"><span>Destination</span><span>${esc(s.dest)}</span></div>` : ''}`
+        : s.ais ? `<div class="row"><span>Armateur</span><span>${s.carrier}</span></div><div class="row"><span>Capacité</span><span>${s.teu.toLocaleString('fr-FR')} EVP</span></div>` : `<div class="row"><span>Identité</span><span>à qualifier</span></div>`}
+      <div class="row"><span>Position</span><span>${dms(la, 'N', 'S')} ${dms(lo, 'E', 'O')}</span></div>
+      <div class="row"><span>Vitesse</span><span>${s.kn > .3 ? fr1(s.kn) + ' nd' : 'à l’arrêt'}</span></div>
+      <div class="row"><span>Distance au centre</span><span>${Math.round(s.dist)} km</span></div>
+      ${s.ais ? `<div class="row"><span>Exposition estimée</span><span>${money(exposure(s))}</span></div>` : ''}
+      ${s.live ? `<div class="row"><span>Dernier signal</span><span>il y a ${age} min</span></div>` : `<div class="row"><span>Dernier passage satellite</span><span>${s.satT ? hhmm(s.satT) + ' · ' + s.satBy : '—'}</span></div>`}
+      <div class="n">${s.live ? 'Position AIS réelle (aisstream.io) · exposition : ordre de grandeur selon type et longueur' : s.ais ? 'Navire simulé · coque + marchandises, ordre de grandeur' : 'Scénario simulé · un contact sans AIS n’est pas une menace en soi : c’est un signal à qualifier'}</div>`;
+    $('callout').querySelector('.x').onclick = () => selectShip(null);
+  }
+  let calloutK = -1;
+  function updateSelection(t) {
+    const s = selected; if (!s) return; if (!s.g.visible) { selectShip(null); return; }
+    brackets.position.set(s.x, SEA_Y + .3 * S, s.z); brackets.rotation.y = t * .6; brackets.scale.setScalar(1 + Math.sin(t * 4) * .05);
+    const on = VIS.stack;
+    beam.geometry.attributes.position.array.set([s.x, SEA_Y, s.z, s.x, LAYERS_Y[2], s.z]); beam.geometry.attributes.position.needsUpdate = true; beam.computeLineDistances(); beam.visible = on;
+    const ok = [s.ais, satOk(s), true];
+    beamRings.forEach((r, i) => { r.position.set(s.x, LAYERS_Y[i] + .5 * S, s.z); r.material.color.copy(i === 2 ? TC.warn : ok[i] ? (i ? TC.ok : TC.signal) : (i === 1 && liveMode ? TC.t3 : TC.crit)); r.visible = on; });
+    const txt = [s.ais ? ['ok', s.live ? 'AIS ✓ position réelle' : 'AIS ✓ position déclarée'] : ['no', 'AIS ✗ émetteur coupé'],
+      liveMode ? ['w', 'SAT — non branché en direct'] : satOk(s) ? ['ok', `SAT ✓ ${s.satBy} · ${hhmm(s.satT)}`] : ['w', 'SAT — en attente d’un passage'],
+      ['w', `ZONE CITÉE · ${Z.hl.length} titre${Z.hl.length > 1 ? 's' : ''} / 24 h`]];
+    markEls.forEach((m, i) => { m.vis = on ? 1 : 0; m.el.className = 'lb mk ' + txt[i][0]; m.el.textContent = txt[i][1]; m.w = 0; m.v.set(s.x, LAYERS_Y[i], s.z); });
+    if (follow === s && !tween) { cam.tx += (s.x - cam.tx) * .06; cam.tz += (s.z - cam.tz) * .06; }
+    const p = proj(s.x, 4 * S, s.z), co = $('callout'), w = co.offsetWidth, h = co.offsetHeight, f = free;
+    const cx = clamp(p.x + 80, f.x + 8, f.x + f.w - w - 10), cy = clamp(p.y - h - 40, f.y + 8, f.y + f.h - h - 8);
+    co.style.left = cx + 'px'; co.style.top = cy + 'px';
+    const ax = p.x < cx ? cx : cx + w, ay = clamp(p.y, cy + 14, cy + h - 14);
+    $('leaderLine').setAttribute('points', `${p.x.toFixed(1)},${p.y.toFixed(1)} ${((p.x + ax) / 2).toFixed(1)},${ay.toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`);
+    const k = Math.floor(t * 2); if (k !== calloutK) { calloutK = k; renderCallout(); }
+  }
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  function shipAt(e) {
+    ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+    const hit = ray.intersectObjects(pickables, false).find(h => h.object.userData.ship.vis); if (hit) return hit.object.userData.ship;
+    let best = null, bd = 16; for (const s of active()) { if (!s.vis) continue; const p = proj(s.x, 2 * S, s.z), d = Math.hypot(p.x - e.clientX, p.y - e.clientY); if (d < bd) { bd = d; best = s; } } return best;
+  }
+
+  /* — fil, passages — */
+  function passDone(Sa) {
+    const n = [...Sa.seen].filter(s => s.ais).length, d = [...Sa.seen].filter(s => !s.ais).length;
+    if ((n + d) && !liveMode) pushEv({ tag: 'sat', label: Sa.name, text: `Passage terminé : ${n} navire${n > 1 ? 's' : ''} recoupé${n > 1 ? 's' : ''} AIS ↔ image${d ? ` · ${d} contact sans AIS` : ''}`, meta: `${Sa.what} · simulé` });
+    Sa.seen.clear();
+  }
+  let toastT = 0;
+  function detectDark(s, Sa) {
+    s.detected = true; const [la, lo] = toLL(s.x, s.z);
+    pushEv({ tag: 'alert', text: `Contact radar sans AIS · ${dms(la, 'N', 'S')} ${dms(lo, 'E', 'O')}`, meta: `détecté par ${Sa.name} · à qualifier, pas une menace en soi · simulé`, ship: s });
+    if (presim) return;
+    const t = $('toast'); t.innerHTML = `<span class="tag alert">ALERTE</span>Contact sans AIS détecté par ${Sa.name} — ${esc(Z.name)} · à qualifier`; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 4500);
+  }
+
+  /* — démarrage de la zone — */
+  applyRelief(); recolor(); buildLabels();
+  { const step = .25; for (let i = 0; i < 48; i++) { simMs += step * 1000 * RATE; updateShips(step, i * step); updateSats(step); } }
+  presim = false;
+  let tAcc = 0;
+  const api = {
+    Z, S, scene, cam, VIEWS, ships, SATS, LANES, CELL, NX, get selected() { return selected; }, selectShip, shipAt, flyTo, active, exposure, satOk,
+    get liveMode() { return liveMode; }, get tween() { return tween; }, set tween(v) { tween = v; }, get follow() { return follow; }, set follow(v) { follow = v; },
+    setEx(v) { EX = v; applyRelief(); }, recolor,
+    liveChanged() { liveMode = live.on; if (!liveMode) { for (const s of liveShips.values()) dropShip(s); liveShips.clear(); } selectShip(null); syncLive(); updateShips(0, tAcc); renderKpis(); renderFleet(true); layNote(); },
+    syncLive,
+    update(dt, now) {
+      tAcc += dt;
+      if (tween) { const k = clamp((now - tween.t0) / tween.dur, 0, 1), e = easeIO(k); for (const key of Object.keys(tween.to)) cam[key] = tween.from[key] + (tween.to[key] - tween.from[key]) * e; if (k >= 1) { tween = null; lastInput = now; } }
+      U.uTime.value = tAcc; U.uSweep.value = (tAcc * .9) % (Math.PI * 2); U.uShowGrid.value = VIS.grid ? 1 : 0; U.uShowSweep.value = VIS.sweep ? 1 : 0;
+      wall.visible = VIS.sweep; stack.visible = VIS.stack; wallMat.uniforms.uT.value = tAcc;
+      beacon.userData.head.rotation.y = tAcc * 1.2; beacon.userData.head.position.y = (66 + Math.sin(tAcc * 2) * 2) * S;
+      updateShips(dt, tAcc); updateSats(dt); updateSelection(tAcc);
+      SATS.forEach((Sa, i) => { Sa.g.rotation.z = Math.sin(tAcc * .5 + i) * .05; });
+    },
+    placeCam() { const t = new THREE.Vector3(cam.tx, cam.ty, cam.tz); camera.position.set(t.x + cam.R * Math.sin(cam.phi) * Math.sin(cam.theta), t.y + cam.R * Math.cos(cam.phi), t.z + cam.R * Math.sin(cam.phi) * Math.cos(cam.theta)); camera.up.set(0, 1, 0); camera.lookAt(t); },
+    dispose() { scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => m.dispose()); }); },
+  };
+  return api;
+}
+
+/* ================================================================ fil de veille (zone) */
+const feed = [];
+const TAGS = { jwc: 'JWC', press: 'PRESSE', sat: 'SAT', ais: 'AIS', alert: 'ALERTE', sys: 'SCORE', off: 'SOURCE' };
+function pushEv(ev) {
+  ev.time = ev.time || hhmm(simMs); feed.unshift(ev); if (feed.length > 40) feed.pop();
+  const el = document.createElement('div'); el.className = 'ev' + (ev.ship ? ' click' : '') + (ev.quiet ? '' : ' new');
+  el.innerHTML = `<div class="top"><span class="tag ${ev.tag}">${ev.label || TAGS[ev.tag]}</span><span class="t">${ev.time}</span></div>
+    <p>${ev.url ? `<a href="${esc(ev.url)}" target="_blank" rel="noopener">${esc(ev.text)}</a>` : esc(ev.text)}</p>${ev.meta ? `<small>${esc(ev.meta)}</small>` : ''}`;
+  if (ev.ship) el.onclick = () => ZV && ZV.selectShip(ev.ship, true);
+  $('feedList').prepend(el); while ($('feedList').children.length > 40) $('feedList').lastChild.remove();
+  $('stSig').textContent = feed.length;
+  const al = feed.filter(e => e.tag === 'alert').length; $('stAl').textContent = al; $('stAlBox').classList.toggle('alert', al > 0);
+}
+const hlTime = d => d ? `${d.slice(9, 11)}:${d.slice(11, 13)}` : '';
+const hlDate = d => d ? `${d.slice(6, 8)}/${d.slice(4, 6)}` : '';
+function seedFeed(Z) {
+  $('feedList').innerHTML = ''; feed.length = 0;
+  const off = Object.entries(SNAPD.sources || {}).filter(([, v]) => !v).map(([k]) => SRC_LABEL[k] || k);
+  if (off.length) pushEv({ tag: 'off', text: `Source indisponible : ${off.join(', ')}`, meta: 'non comptée dans le score · à rétablir', time: 'n.d.', quiet: true });
+  if (Z.jwc) pushEv({ tag: 'jwc', text: 'Zone listée par le Joint War Committee', meta: 'Lloyd’s / LMA · source institutionnelle · liste en vigueur', time: 'listing', quiet: true });
+  (Z.inc || []).slice(0, 4).forEach(i => pushEv({ tag: 'alert', label: 'ASAM', text: i.t || 'incident maritime', meta: 'NGA ASAM · incident déclaré', time: i.d || '', quiet: true }));
+  Z.hl.slice().reverse().forEach(h => pushEv({ tag: 'press', text: h.t, url: h.u, meta: `${h.s} · GDELT · ${Z.hl.length > 1 ? 'plusieurs titres' : 'signal isolé'}, non recoupé`, time: hlTime(h.d), quiet: true }));
+  pushEv({ tag: 'sys', text: `Score : ${fr1(Z.score)} / 10 · ${trendTxt(Z.trend)} · rating ${rating(Z.score)}/8`, meta: partsTxt(Z) + (rating(Z.score) >= 7 ? ' · AU-DESSUS du seuil 7' : ' · sous le seuil 7'), time: hhmm(SNAP), quiet: true });
+  const n = Object.values(SNAPD.sources || {}).filter(Boolean).length; $('stSrc').textContent = `${n}/${Object.keys(SNAPD.sources || {}).length}`;
+  $('feedUpd').textContent = 'MAJ ' + ddmm(SNAP) + ' · ' + hhmm(SNAP);
+}
+const trendTxt = t => t === '▲' ? 'en hausse ▲' : t === '▼' ? 'en baisse ▼' : 'stable';
+const PART_DEF = [['base', 'Fond structurel', 4], ['mar', 'Incidents maritimes', 3.5], ['con', 'Conflit (presse)', 2.5], ['nat', 'Catastrophes', 3], ['met', 'Météo marine', 1.5]];
+const partsTxt = Z => PART_DEF.filter(([k]) => (Z.parts || {})[k] > 0).map(([k, l]) => `${l.toLowerCase()} ${fr1(Z.parts[k])}`).join(' + ') || 'aucune composante active';
+
+/* ================================================================ panneaux (zone) */
+const IC = {
+  ship: '<path d="M2 11.5h12l-1.6 2.5H3.6z"/><path d="M4 11.5V8h8v3.5M6 8V5.5h4V8M8 5.5V3"/>',
+  coin: '<ellipse cx="8" cy="4.5" rx="5" ry="2"/><path d="M3 4.5v7c0 1.1 2.2 2 5 2s5-.9 5-2v-7M3 8c0 1.1 2.2 2 5 2s5-.9 5-2"/>',
+  sat: '<path d="m6.5 9.5 3-3M4 7 7 4l2 2-3 3zM7 12l3-3 2 2-3 3zM9.5 6.5 12 4"/><path d="M2.5 13.5c1.5-.2 2.8-1.5 3-3"/>',
+  radar: '<circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="3"/><path d="M8 8l4-4"/>',
+  warn: '<path d="M8 1.5 14.5 13.5h-13z"/><path d="M8 6v3.5M8 11.5v.1"/>',
+  globe: '<circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12"/>',
+  shield: '<path d="M8 1.8 13 3.8v4c0 3-2.2 5.2-5 6.4C5.2 13 3 10.8 3 7.8v-4z"/><path d="m5.8 8 1.6 1.6L10.5 6.5"/>',
+};
+const ico = k => `<svg class="i" viewBox="0 0 16 16">${IC[k]}</svg>`;
+let kpiKey = '';
+function renderKpis() {
+  if (!ZV) return; const Z = ZV.Z, A = ZV.active();
+  const inZ = A.filter(s => s.ais && s.vis && s.status === 'in'), appr = A.filter(s => s.ais && s.vis && s.status === 'appr');
+  const exp = inZ.reduce((a, s) => a + ZV.exposure(s), 0), cor = inZ.filter(ZV.satOk).length, dark = A.filter(s => !s.ais && s.detected).length, lv = ZV.liveMode;
+  const key = [lv, inZ.length, appr.length, money(exp), cor, dark].join('|'); if (key === kpiKey) return; kpiKey = key;
+  $('kpis').innerHTML = `
+    <div class="kpi"><div class="ic">${ico('ship')}</div><div style="min-width:0"><div class="l">Navires dans la zone</div><div class="v">${inZ.length}<small> · R ${Z.r} km</small></div><div class="s"><span class="up">+${appr.length}</span> en approche${lv ? ' · AIS réel' : ''}</div></div></div>
+    <div class="kpi w"><div class="ic">${ico('coin')}</div><div style="min-width:0"><div class="l">Exposition estimée</div><div class="v">${money(exp)}</div><div class="s">${lv ? 'selon type et longueur AIS' : 'coque + marchandises · simulé'}</div></div></div>
+    ${lv ? `<div class="kpi"><div class="ic">${ico('sat')}</div><div style="min-width:0"><div class="l">Recoupés par satellite</div><div class="v">—</div><div class="s">aucune source satellite branchée</div></div></div>`
+      : `<div class="kpi g"><div class="ic">${ico('sat')}</div><div style="min-width:0;flex:1"><div class="l">Recoupés par satellite</div><div class="v">${cor}<small> / ${inZ.length}</small></div><div class="bar"><i style="width:${inZ.length ? cor / inZ.length * 100 : 0}%"></i></div></div></div>`}
+    <div class="kpi ${dark ? 'a' : ''}"><div class="ic">${ico('radar')}</div><div style="min-width:0"><div class="l">Contacts sans AIS</div><div class="v">${lv ? '—' : dark}</div><div class="s">${lv ? 'nécessite une source satellite' : dark ? '<span class="bad">à qualifier</span>' : 'aucun détecté'}</div></div></div>`;
+}
+let tab = 'in', fleetKey = '';
+function renderFleet(force) {
+  if (!ZV) return; const A = ZV.active();
+  const lists = { in: A.filter(s => s.ais && s.vis && s.status === 'in'), appr: A.filter(s => s.ais && s.vis && s.status === 'appr'), dark: A.filter(s => !s.ais && s.detected) };
+  lists.in.sort((a, b) => ZV.exposure(b) - ZV.exposure(a)); lists.appr.sort((a, b) => a.dist - b.dist);
+  document.querySelectorAll('#tabs button').forEach(b => { b.classList.toggle('on', b.dataset.t === tab); b.querySelector('b').textContent = lists[b.dataset.t].length; });
+  $('fleetTot').innerHTML = `${money(lists.in.reduce((a, s) => a + ZV.exposure(s), 0))} <small>cumul en zone</small>`;
+  const L = lists[tab].slice(0, 80), sel = ZV.selected;
+  const key = tab + L.map(s => s.name + (ZV.satOk(s) ? 1 : 0)).join('|') + (sel ? sel.name : '');
+  if (key === fleetKey && !force) return; fleetKey = key;
+  const badge = s => !s.ais ? '<span class="bdg dark">AIS COUPÉ · SAT</span>' : s.live ? '<span class="bdg live">AIS RÉEL</span>' : ZV.satOk(s) ? `<span class="bdg ok">AIS + ${s.satBy.replace('SAT-', 'SAT ')}</span>` : '<span class="bdg ais">AIS SEUL</span>';
+  $('fleetBody').innerHTML = L.length ? `<table><thead><tr><th>Navire</th><th>Recoupement</th><th class="r">${ZV.liveMode ? 'Long.' : 'EVP'}</th><th class="r">Exposition</th><th class="r">Centre</th></tr></thead><tbody>${
+    L.map((s, i) => `<tr data-i="${i}" class="${sel === s ? 'sel' : ''}"><td><span class="nm">${esc(s.name)}</span><span class="cr">${esc(s.carrier || '')}</span></td><td>${badge(s)}</td>
+      <td class="r mono">${s.live ? (s.len ? s.len + ' m' : '—') : s.teu ? s.teu.toLocaleString('fr-FR') : '—'}</td><td class="r mono">${s.ais ? money(ZV.exposure(s)) : '—'}</td><td class="r mono">${Math.round(s.dist)} km</td></tr>`).join('')}</tbody></table>`
+    : `<div class="empty">${tab === 'dark' ? (ZV.liveMode ? 'En direct, il faut une source satellite pour voir les navires sans AIS.' : 'Aucun contact sans AIS détecté — ce sont les passages satellite qui les révèlent.') : ZV.liveMode ? 'Aucun navire AIS reçu dans ce cadre pour l’instant (couverture côtière).' : 'Aucun navire.'}</div>`;
+  $('fleetBody').querySelectorAll('tr[data-i]').forEach(tr => tr.onclick = () => { const s = L[+tr.dataset.i]; ZV.selectShip(s === ZV.selected ? null : s, true); });
+}
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => { tab = b.dataset.t; renderFleet(true); });
+$('fleetMin').onclick = () => { $('fleet').classList.toggle('min'); setTimeout(resize, 400); };
+function confLevel(Z) { const press = Z.hl.length, inc = (Z.inc || []).length; return Z.jwc && (press >= 3 || inc) ? ['Élevée', '--ok'] : Z.jwc || inc || press >= 3 ? ['Moyenne', '--warn'] : press ? ['Faible', '--high'] : ['Signal de fond', '--t2']; }
+function renderDossier(Z) {
+  const R8 = rating(Z.score), [bl, bv] = BAND[riskBand(Z.score)], P = Z.parts || {}, lo = rate(R8 - .5), hi = rate(R8 + .5), lp = v => Math.log(v / .01) / Math.log(300) * 100;
+  const ladder = Array.from({ length: 8 }, (_, i) => { const r = i + 1, on = r <= R8, c = r >= 7 ? '--crit' : r >= 5 ? '--high' : r >= 4 ? '--warn' : '--ok';
+    return `<div class="${on ? 'on' : ''} ${r === R8 ? 'cur' : ''} ${r >= 7 ? 'susp' : ''}" style="${on ? `background:var(${c})` : ''}">${r}</div>`; }).join('');
+  const [cf, cv] = confLevel(Z), stCls = R8 >= 7 ? 'c' : Z.score >= 4 ? 'w' : 'g', stTxt = R8 >= 7 ? '● Seuil de suspension atteint' : Z.score >= 4 ? '● Sous surveillance' : '● Veille de fond';
+  $('dossier').innerHTML = `
+    <div class="dh"><div class="ic" style="background:var(${bv.replace('--', '--') + '-soft'});color:var(${bv})">${ico('warn')}</div><div><div class="k">${esc(Z.type).toUpperCase()}${Z.jwc ? ' · ZONE JWC' : ''}</div><h1>${esc(Z.name)}</h1>
+      <div class="co">${dms(Z.c[0], 'N', 'S')} ${dms(Z.c[1], 'E', 'O')} · rayon ${Z.r} km</div></div></div>
+    <div class="status"><span class="st ${stCls}">${stTxt}</span><span class="st n">MAJ ${ddmm(SNAP)} · ${hhmm(SNAP)} UTC</span></div>
+    <p class="ctx">${esc(Z.ctx || '')}</p>
+    <div class="grid2">
+      <div class="card"><div class="l">Score Proteus</div><div class="v" style="color:var(${bv})">${fr1(Z.score)}<small> /10</small></div><div class="bar"><i style="width:${Z.score * 10}%;background:var(${bv})"></i></div></div>
+      <div class="card"><div class="l">Rating de zone</div><div class="v" style="color:var(${bv})">${R8}<small> /8</small></div><div class="l" style="margin-top:6px">${bl} · ${trendTxt(Z.trend)}</div></div>
+      <div class="card"><div class="l">Taux guerre <em>indicatif</em></div><div class="v s">${pct(lo)} – ${pct(hi)}</div></div>
+      <div class="card"><div class="l">Fiabilité du signal</div><div class="v s" style="color:var(${cv})">${cf}</div></div>
+    </div>
+    <div class="sec"><div class="cap"><span>Échelle de rating</span><span>${R8} / 8</span></div><div class="ladder">${ladder}</div>
+      <div class="lg"><span>1 · calme</span><b>7–8 · suspension de garantie</b></div>
+      <div class="premwrap"><div class="prem"></div><i style="left:${lp(lo)}%;width:${Math.max(2, lp(hi) - lp(lo))}%"></i></div>
+      <div class="lg"><span>0,01 %</span><span>0,1 %</span><span>1 %</span><span>3 %</span></div>
+      <div class="lg" style="margin-top:3px"><span>Ordre de grandeur. Proteus ne cote pas : le marché cote.</span></div></div>
+    <div class="sec"><div class="cap"><span>Sources du signal</span><span>fiabilité</span></div><div class="rel">
+      <div><span>Joint War Committee</span><small>${Z.jwc ? 'zone listée · Lloyd’s / LMA' : 'zone non listée'}</small></div><div class="seg ${Z.jwc ? 'l3' : 'na'}">${Z.jwc ? '<i></i><i></i><i></i>' : '—'}</div>
+      <div><span>Presse (GDELT)</span><small>${Z.hl.length} titre${Z.hl.length > 1 ? 's' : ''} / 24 h · non recoupés</small></div><div class="seg ${Z.hl.length >= 3 ? 'l2' : Z.hl.length ? 'l1' : 'na'}">${Z.hl.length ? '<i></i><i></i><i></i>' : '—'}</div>
+      <div><span>Incidents (ASAM)</span><small>${SNAPD.sources && SNAPD.sources.asam ? ((Z.inc || []).length + ' incident(s) déclaré(s)') : 'indisponible à cette date'}</small></div><div class="seg ${SNAPD.sources && SNAPD.sources.asam ? 'l3' : 'na'}">${SNAPD.sources && SNAPD.sources.asam ? '<i></i><i></i><i></i>' : 'n.d.'}</div>
+      <div><span>AIS ↔ satellite</span><small>${live.on ? 'AIS réel · satellite non branché' : 'recoupement des positions · simulé'}</small></div><div class="seg sim"><i></i><i></i><i></i></div>
+    </div></div>
+    <div class="sec"><div class="cap"><span>Composantes du score</span></div>
+      ${PART_DEF.map(([k, l, m]) => `<div class="pr"><span>${l}</span><div class="pw"><div class="pv" style="width:${Math.min(100, (P[k] || 0) / m * 100)}%"></div></div><b>${fr1(P[k] || 0)}</b></div>`).join('')}</div>
+    ${(Z.why || []).length ? `<div class="sec"><div class="cap"><span>Pourquoi ce score</span></div><ul class="why">${Z.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}
+    <div class="sec hl"><div class="cap"><span>Dans la presse</span><span>${Z.hl.length}</span></div>
+      ${Z.hl.length ? Z.hl.map(h => `<a href="${esc(h.u)}" target="_blank" rel="noopener">${esc(h.t)}<small>${esc(h.s)} · ${hlDate(h.d)} ${hlTime(h.d)} UTC</small></a>`).join('') : '<div class="empty" style="padding:8px 0;text-align:left">Aucun titre sur 24 h.</div>'}</div>
+    <div class="stance">Proteus éclaire et documente le risque d’une zone ; le souscripteur et le marché décident.</div>`;
+}
+function layNote() { $('layNote').textContent = live.on ? 'AIS direct : satellites et contact sans AIS coupés (aucune source satellite branchée).' : 'Flotte, passages satellite et contact sans AIS : simulés.'; }
+
+/* ================================================================ panneaux (monde) */
+let zfilter = 'all';
+function zoneRow(z) { const R8 = rating(z.score);
+  return `<div class="zr" data-id="${z.id}"><span class="dt" style="background:var(${bandVar(z.score)})"></span><div style="min-width:0"><b>${esc(z.name)}${z.jwc ? '<span class="jw">JWC</span>' : ''}</b><small>${esc(z.type)} · R ${z.r} km</small></div>
+    <div class="sc" style="color:var(${bandVar(z.score)})">${fr1(z.score)}<small>rating ${R8}/8</small></div></div>`; }
+function renderZoneList() {
+  const q = mode === 'world' ? $('q').value.trim().toLowerCase() : '';
+  const L = zones().slice().sort((a, b) => b.score - a.score).filter(z => (zfilter === 'all' || (zfilter === 'jwc' && z.jwc) || (zfilter === 'hot' && z.score >= 4)) && (!q || z.name.toLowerCase().includes(q) || z.id.includes(q)));
+  $('zlBody').innerHTML = L.map(zoneRow).join('') || '<div class="empty">Aucune zone.</div>';
+  $('zlCount').textContent = `${L.length} / ${zones().length}`;
+  $('zlBody').querySelectorAll('.zr').forEach(r => { const z = zoneById(r.dataset.id);
+    r.onclick = () => openZone(z.id); r.onmouseenter = () => { G.setHover(z); }; r.onmouseleave = () => G.setHover(null); });
+  $('zpBody').innerHTML = zones().slice().sort((a, b) => b.score - a.score).map(zoneRow).join('');
+  $('zpBody').querySelectorAll('.zr').forEach(r => r.onclick = () => { $('zpick').classList.remove('open'); openZone(r.dataset.id); });
+}
+document.querySelectorAll('#ztabs button').forEach(b => b.onclick = () => { zfilter = b.dataset.f; document.querySelectorAll('#ztabs button').forEach(x => x.classList.toggle('on', x === b)); renderZoneList(); });
+let wkKey = '';
+function renderWorldKpis() {
+  const Zs = zones(), jwc = Zs.filter(z => z.jwc).length, above = Zs.filter(z => rating(z.score) >= 7).length, top = Zs.slice().sort((a, b) => b.score - a.score)[0];
+  const key = [jwc, above, top.id, G.fleetN, G.inZoneN, live.on].join('|'); if (key === wkKey) return; wkKey = key;
+  $('wkpis').innerHTML = `
+    <div class="kpi"><div class="ic">${ico('globe')}</div><div style="min-width:0"><div class="l">Zones surveillées</div><div class="v">${Zs.length}<small> · ${jwc} listées JWC</small></div><div class="s">score recalculé chaque heure</div></div></div>
+    <div class="kpi ${above ? 'a' : 'g'}"><div class="ic">${ico('shield')}</div><div style="min-width:0"><div class="l">Au seuil de suspension</div><div class="v">${above}<small> zone${above > 1 ? 's' : ''} · rating ≥ 7</small></div><div class="s">${above ? '<span class="bad">garanties à revoir</span>' : 'aucune zone au seuil'}</div></div></div>
+    <div class="kpi w"><div class="ic">${ico('warn')}</div><div style="min-width:0"><div class="l">Zone la plus exposée</div><div class="v" style="font-size:17px;padding-top:4px">${esc(top.name)}</div><div class="s">${fr1(top.score)} / 10 · rating ${rating(top.score)}/8</div></div></div>
+    <div class="kpi"><div class="ic">${ico('ship')}</div><div style="min-width:0"><div class="l">Navires suivis</div><div class="v">${G.fleetN.toLocaleString('fr-FR')}<small> · ${G.inZoneN} en zone</small></div><div class="s">${live.on ? 'AIS réel · aisstream.io' : 'flotte simulée · AIS direct dispo'}</div></div></div>`;
+}
+function renderWorldFeed() {
+  const items = [];
+  for (const z of zones()) { for (const h of z.hl || []) items.push({ z, h }); }
+  items.sort((a, b) => (b.h.d || '').localeCompare(a.h.d || '') || b.z.score - a.z.score);
+  $('wfBody').innerHTML = items.slice(0, 80).map(({ z, h }, i) => `<div class="ev click" data-i="${i}"><div class="top"><span class="tag zn" style="border-color:var(${bandVar(z.score)});color:var(${bandVar(z.score)})">${esc(z.name)}</span><span class="t">${hlDate(h.d)} ${hlTime(h.d)}</span></div>
+    <p>${esc(h.t)}</p><small>${esc(h.s)} · GDELT · score zone ${fr1(z.score)}</small></div>`).join('') || '<div class="empty">Aucun titre.</div>';
+  $('wfBody').querySelectorAll('.ev').forEach(el => { const it = items[+el.dataset.i]; el.onclick = () => openZone(it.z.id); el.onmouseenter = () => G.setHover(it.z); el.onmouseleave = () => G.setHover(null); });
+  $('wfN').textContent = items.length; $('wfJ').textContent = zones().filter(z => z.jwc).length;
+  const n = Object.values(SNAPD.sources || {}).filter(Boolean).length; $('wfSrc').textContent = `${n}/${Object.keys(SNAPD.sources || {}).length}`;
+  $('wfUpd').textContent = ddmm(SNAP) + ' · ' + hhmm(SNAP) + ' UTC';
+}
+
+/* ================================================================ cadrage, interaction */
+let free = { x: 0, y: 0, w: innerWidth, h: innerHeight };
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h;
+  const r = id => { const el = $(id); return !el || el.offsetParent === null ? null : el.getBoundingClientRect(); };
+  const narrow = w <= 900;
+  const L = r(mode === 'world' ? 'zlist' : 'feed'), Rr = r(mode === 'world' ? 'wfeed' : 'dossier'), K = r(mode === 'world' ? 'wkpis' : 'kpis'), F = r(mode === 'world' ? 'legend' : 'fleet'), T = r('tools');
+  const x0 = L ? L.right : 0, x1 = Rr && !narrow ? Rr.left : w, xc = T ? T.left : x1, y0 = K ? K.bottom : 56, y1 = narrow ? (Rr ? Rr.top : h) : F ? F.top : h;
+  free = { x: x0, y: y0, w: xc - x0, h: y1 - y0 };
+  camera.setViewOffset(w, h, w / 2 - (x0 + x1) / 2, h / 2 - (y0 + y1) / 2, w, h);
+  camera.updateProjectionMatrix(); post.resize(w, h);
+}
+let drag = null, lastInput = 0, autoRot = true, intro = null, hovered = null;
+const hoverEl = document.createElement('div'); hoverEl.className = 'lb hov'; hoverEl.style.opacity = 0; document.body.appendChild(hoverEl); hoverEl.style.position = 'fixed'; hoverEl.style.zIndex = 26;
+canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, m: 0, pan: e.button === 2 || e.shiftKey }; canvas.setPointerCapture(e.pointerId); canvas.classList.add('drag'); });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+canvas.addEventListener('pointermove', e => {
+  if (drag) {
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.m += Math.abs(dx) + Math.abs(dy);
+    const now = performance.now(); lastInput = now; hoverEl.style.opacity = 0;
+    if (busy || intro) return;
+    if (mode === 'world') { G.input(now); const gc = G.gc, k = (gc.R - 100) / 700; gc.lon -= dx * .22 * k; gc.lat = clamp(gc.lat + dy * .18 * k, -70, 75); }
+    else if (ZV && !ZV.tween) { const cam = ZV.cam;
+      if (drag.pan) { const k = cam.R / 1100, ct = Math.cos(cam.theta), st = Math.sin(cam.theta); cam.tx -= (dx * ct + dy * st) * k; cam.tz -= (-dx * st + dy * ct) * k; ZV.follow = null; }
+      else { cam.theta -= dx * .005; cam.phi = clamp(cam.phi - dy * .004, .02, 1.38); } }
+  } else hover(e);
+});
+canvas.addEventListener('pointerup', e => { canvas.classList.remove('drag');
+  if (drag && drag.m < 4 && !busy) { if (mode === 'world') { const z = G.zoneAt(e); if (z) openZone(z.id); } else if (ZV) { const s = ZV.shipAt(e); ZV.selectShip(s && s !== ZV.selected ? s : null, true); } }
+  drag = null; });
+canvas.addEventListener('wheel', e => { e.preventDefault(); if (intro || busy) return; lastInput = performance.now();
+  if (mode === 'world') { G.input(lastInput); G.gc.R = clamp(G.gc.R * Math.exp(e.deltaY * .0012), 230, 1600); }
+  else if (ZV) { ZV.tween = null; ZV.cam.R = clamp(ZV.cam.R * Math.exp(e.deltaY * .0012), 380 * ZV.S, 6000 * ZV.S); } }, { passive: false });
+function hover(e) {
+  if (intro || busy) return;
+  if (mode === 'world') { const z = G.zoneAt(e); canvas.style.cursor = z ? 'pointer' : ''; if (G.hover !== z) G.setHover(z); hoverEl.style.opacity = 0; return; }
+  if (!ZV) return; const s = ZV.shipAt(e); hovered = s; canvas.style.cursor = s ? 'pointer' : ''; hoverEl.style.opacity = s && s !== ZV.selected ? 1 : 0;
+  if (s) { hoverEl.textContent = s.name; const p = proj(s.x, 4 * ZV.S, s.z); hoverEl.style.left = p.x + 'px'; hoverEl.style.top = p.y + 'px'; }
+}
+
+/* ================================================================ passage monde ↔ zone */
+let busy = false;
+const fade = on => new Promise(res => { $('fade').classList.toggle('on', on); setTimeout(res, 380); });
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+async function openZone(id, opts = {}) {
+  const Z = zoneById(id); if (!Z || busy) return; busy = true;
+  $('zpick').classList.remove('open');
+  if (mode === 'world' && !opts.instant) await G.flyTo({ lat: Z.c[0], lon: Z.c[1], R: 260 }, 1100);
+  $('fadeTxt').textContent = 'CONSTRUCTION DE LA MAQUETTE · ' + Z.name.toUpperCase();
+  if (!opts.instant) await fade(true); await nextFrame();
+  if (ZV) { ZV.dispose(); ZV = null; }
+  clearLabels(); $('callout').style.display = 'none'; $('leaderLine').setAttribute('points', '');
+  simMs = SNAP; feed.length = 0; $('feedList').innerHTML = ''; seedFeed(Z);
+  const tb = performance.now(); ZV = buildZone(Z);
+  console.log('[ops] zone', id, Math.round(performance.now() - tb) + ' ms', 'couloirs', ZV.LANES.length, 'navires', ZV.ships.length, 'cellule', ZV.CELL.toFixed(1));
+  mode = 'zone'; document.body.dataset.mode = 'zone';
+  $('zName').textContent = Z.name.toUpperCase(); $('zSub').textContent = `${Z.type} · rating ${rating(Z.score)}/8${Z.jwc ? ' · JWC' : ''}`;
+  renderDossier(Z); kpiKey = ''; fleetKey = ''; tab = 'in'; layNote();
+  if (live.on) ZV.liveChanged();
+  renderKpis(); renderFleet(true);
+  const u = new URL(location.href); u.searchParams.set('zone', id); history.replaceState(null, '', u);
+  resize();
+  if (STILL || opts.still) { Object.assign(ZV.cam, ZV.VIEWS.home); intro = null; document.body.classList.add('ready'); }
+  else { document.body.classList.remove('ready'); Object.assign(ZV.cam, ZV.VIEWS.start); intro = { t0: performance.now() + 150, dur: 5000, kind: 'zone' }; }
+  await fade(false); busy = false; setTimeout(resize, 60);
+}
+async function toWorld() {
+  if (busy) return; busy = true; const Z = ZV ? ZV.Z : null;
+  await fade(true);
+  if (ZV) { ZV.dispose(); ZV = null; } clearLabels(); $('callout').style.display = 'none'; $('leaderLine').setAttribute('points', ''); $('toast').classList.remove('on');
+  mode = 'world'; document.body.dataset.mode = 'world'; intro = null; document.body.classList.add('ready');
+  G.buildLabels(); renderZoneList(); renderWorldKpis(); wkKey = '';
+  const u = new URL(location.href); u.searchParams.delete('zone'); history.replaceState(null, '', u);
+  if (Z) Object.assign(G.gc, { lat: Z.c[0], lon: Z.c[1], R: 260 }); resize();
+  await fade(false); busy = false;
+  G.flyTo({ R: 800, lat: Z ? clamp(Z.c[0], -40, 50) : 18 }, 1300);
+}
+$('brand').onclick = () => { if (mode === 'zone') toWorld(); else G.flyTo(G.VIEWS.home); };
+$('toWorld').onclick = toWorld;
+$('zChip').onclick = () => { renderZoneList(); $('zpick').classList.toggle('open'); };
+
+/* ================================================================ commandes */
+$('tZin').onclick = () => { if (mode === 'world') G.flyTo({ R: clamp(G.gc.R * .7, 230, 1600) }, 500); else ZV.flyTo({ R: clamp(ZV.cam.R * .7, 380 * ZV.S, 6000 * ZV.S) }, 500); };
+$('tZout').onclick = () => { if (mode === 'world') G.flyTo({ R: clamp(G.gc.R / .7, 230, 1600) }, 500); else ZV.flyTo({ R: clamp(ZV.cam.R / .7, 380 * ZV.S, 6000 * ZV.S) }, 500); };
+$('tHome').onclick = () => { if (mode === 'world') G.flyTo(G.VIEWS.home); else { ZV.follow = null; ZV.flyTo(ZV.VIEWS.home); } };
+$('tStrait').onclick = () => { ZV.follow = null; ZV.flyTo(ZV.VIEWS.strait, 1800); };
+$('tTop').onclick = () => { ZV.follow = null; ZV.flyTo(ZV.VIEWS.top); };
+$('tRot').onclick = () => { autoRot = !autoRot; G.autoRot = autoRot; $('tRot').classList.toggle('on', autoRot); };
+$('tReplay').onclick = () => { if (!ZV) return; document.body.classList.remove('ready'); ZV.selectShip(null); ZV.tween = null; Object.assign(ZV.cam, ZV.VIEWS.start); intro = { t0: performance.now(), dur: 5000, kind: 'zone' }; };
+$('tLayers').onclick = () => { $('layers').classList.toggle('open'); $('tLayers').classList.toggle('on'); };
+document.querySelectorAll('#segTheme button').forEach(b => b.onclick = () => { theme = b.dataset.v; recolorAll(); const u = new URL(location.href); theme ? u.searchParams.set('theme', theme) : u.searchParams.delete('theme'); history.replaceState(null, '', u); });
+document.querySelectorAll('#layers input[data-l]').forEach(i => i.onchange = () => { VIS[i.dataset.l] = i.checked; });
+let autoBloom = true;
+$('bloomTg').onchange = e => { post.on = e.target.checked; autoBloom = false; };
+let exT = 0;
+$('ex').oninput = e => { const v = +e.target.value; $('exO').textContent = '×' + fr1(v); clearTimeout(exT); exT = setTimeout(() => ZV && ZV.setEx(v), 60); };
+$('sp').oninput = e => { simSpeed = +e.target.value; $('spO').textContent = '×' + String(simSpeed).replace('.', ','); $('rate').textContent = '×' + Math.round(RATE * simSpeed); };
+$('q').addEventListener('input', () => { if (mode === 'world') renderZoneList(); });
+$('q').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return; const q = e.target.value.trim().toLowerCase(); if (!q) return;
+  if (mode === 'world') { const z = zones().slice().sort((a, b) => b.score - a.score).find(z => z.name.toLowerCase().includes(q) || z.id.includes(q)); if (z) { e.target.value = ''; e.target.blur(); openZone(z.id); } return; }
+  const s = ZV.active().find(x => (x.ais || x.detected) && (x.name.toLowerCase().includes(q) || (x.carrier || '').toLowerCase().includes(q)));
+  if (s) { ZV.selectShip(s, true); e.target.blur(); } else { const z = zones().find(z => z.name.toLowerCase().includes(q)); if (z) { e.target.value = ''; openZone(z.id); } }
+});
+addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== $('q') && document.activeElement !== $('aisKey')) { e.preventDefault(); $('q').focus(); }
+  if (e.key === 'Escape') { if (ZV && ZV.selected) ZV.selectShip(null); $('layers').classList.remove('open'); $('tLayers').classList.remove('on'); $('zpick').classList.remove('open'); $('aism').classList.remove('open'); }
+});
+
+/* ================================================================ couleurs */
+function recolorAll() {
+  if (theme) root.setAttribute('data-theme', theme); else root.removeAttribute('data-theme');
+  TC.signal = col('--signal'); TC.crit = col('--crit'); TC.ok = col('--ok'); TC.warn = col('--warn'); TC.t3 = col('--t3');
+  renderer.setClearColor(col('--bg-0'), 1);
+  post.bloom = num('--bloom'); post.vig = num('--vignette'); post.glow.copy(col('--glow-bg'));
+  G.recolor(); if (ZV) ZV.recolor();
+  document.querySelectorAll('#segTheme button').forEach(b => b.classList.toggle('on', b.dataset.v === theme));
+  $('leaderLine').setAttribute('stroke', css('--t1'));
+}
+
+/* ================================================================ scores en ligne */
+function applySnapshot(d) {
+  if (!d || !d.zones || d.zones.length < 10) return;
+  const fresh = Date.parse(d.updatedAt) || 0; if (fresh <= SNAP) return;
+  SNAPD = d; SNAP = fresh;
+  G.buildZones(); G.recolor(); renderZoneList(); renderWorldFeed(); wkKey = ''; renderWorldKpis();
+  if (mode === 'world') { clearLabels(); G.buildLabels(); }
+  else if (ZV) { const Z = zoneById(ZV.Z.id); if (Z) { renderDossier(Z); } }
+}
+function loadRisk() { fetch(RISK_URL, { cache: 'no-store' }).then(r => { if (!r.ok) throw 0; return r.json(); }).then(applySnapshot).catch(() => {}); }
+
+/* ================================================================ démarrage */
+const T0 = performance.now();
+recolorAll();
+G.buildZones(); G.recolor();
+console.log('[ops] init ms', Math.round(performance.now() - T0));
+renderZoneList(); renderWorldFeed(); renderWorldKpis(); layNote();
+addEventListener('resize', resize);
+const startZone = params.get('zone');
+if (startZone && zoneById(startZone)) { openZone(startZone, { instant: true }); }
+else {
+  G.buildLabels(); resize();
+  if (STILL) document.body.classList.add('ready');
+  else { Object.assign(G.gc, { R: 1700, lat: 30, lon: 10 }); intro = { t0: performance.now(), dur: 2800, kind: 'world' }; }
+}
+if (!STILL) { loadRisk(); setInterval(loadRisk, 30 * 60e3); }
+let tPrev = performance.now(), uiAcc = 0, liveAcc = 0, fpsAcc = 0, fpsN = 0;
+function frame(now) {
+  const dt = Math.min(.05, (now - tPrev) / 1000); tPrev = now;
+  if (mode === 'zone' && !live.on) simMs += dt * 1000 * RATE * simSpeed;
+  if (mode === 'world') {
+    if (intro && intro.kind === 'world') { const k = clamp((now - intro.t0) / intro.dur, 0, 1), e = easeIO(k); G.gc.R = 1700 + (800 - 1700) * e; G.gc.lat = 30 + (18 - 30) * e; G.gc.lon = 10 + (52 - 10) * e;
+      if (k >= 1) { intro = null; document.body.classList.add('ready'); G.input(now); setTimeout(resize, 60); } }
+    G.update(dt, now);
+    post.render(G.scene);
+  } else if (ZV) {
+    if (intro && intro.kind === 'zone') { const k = clamp((now - intro.t0) / intro.dur, 0, 1), e = easeIO(k), f = ZV.VIEWS.home, s = ZV.VIEWS.start, cam = ZV.cam;
+      cam.R = s.R + (f.R - s.R) * e; cam.theta = s.theta + (f.theta - s.theta) * e; cam.phi = s.phi + (f.phi - s.phi) * easeIO(clamp((k - .2) / .8, 0, 1)); cam.tx = f.tx; cam.tz = f.tz; cam.ty = s.ty + (f.ty - s.ty) * e;
+      if (k >= 1) { intro = null; lastInput = now; document.body.classList.add('ready'); setTimeout(resize, 60); } }
+    else if (autoRot && !ZV.tween && !ZV.follow && now - lastInput > 6000) ZV.cam.theta += dt * .02;
+    ZV.update(dt, now); ZV.placeCam();
+    liveAcc += dt; if (live.on && liveAcc > 1) { liveAcc = 0; ZV.syncLive(); }
+    post.render(ZV.scene);
+  }
+  if (now - uiAcc > 500) { uiAcc = now; if (mode === 'zone') { renderKpis(); renderFleet(); $('clock').textContent = hhmm(simMs); } else renderWorldKpis(); aisUi(); }
+  const la = intro ? clamp(((now - intro.t0) / intro.dur - .65) / .35, 0, 1) : 1;
+  placeLabels(la);
+  if (hovered && ZV && hovered.vis && mode === 'zone') { const p = proj(hovered.x, 4 * ZV.S, hovered.z); hoverEl.style.left = p.x + 'px'; hoverEl.style.top = p.y + 'px'; }
+  fpsAcc += dt; fpsN++;
+  if (fpsAcc > 3) { if (autoBloom && fpsN / fpsAcc < 24 && post.on && !STILL) { post.on = false; $('bloomTg').checked = false; } fpsAcc = 0; fpsN = 0; }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+window.__ops = { openZone, toWorld, get ZV() { return ZV; }, G, live, aisHandle, onLiveChange, get mode() { return mode; }, get busy() { return busy; },
+  ffwd: s => { if (!ZV) return; for (let i = 0; i < s * 4; i++) { simMs += 250 * RATE; ZV.update(.25, performance.now()); } } };
+</script>
+</body>
+</html>
