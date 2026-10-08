@@ -1,9 +1,10 @@
 // Assemble la vue focus 3D autonome d'une zone (prototype : Bab el-Mandeb).
 // Usage : node proto/build-focus.js   ->   focus-zone-3d.html (racine du dépôt)
 //
+// La vue focus a sa PROPRE identité (« salle d'opérations ») : elle ne reprend volontairement
+// ni les tokens ni les polices de la carte 2D.
 // Injections, chacune remplacée UNE fois dans proto/focus-zone.html :
-//   /*FONTS*/        -> proto/fonts.css (polices embarquées)
-//   /*TOKENS*/       -> le bloc de tokens de l'application (même identité, mêmes thèmes)
+//   /*FONTS*/        -> proto/fonts-ops/*.woff2 (Chakra Petch, Barlow, JetBrains Mono — OFL)
 //   //THREE_JS       -> proto/vendor/three-0.159.0.min.js
 //   __FOCUS_DATA__   -> trait de côte découpé, couloirs, données réelles de la zone
 const fs = require('fs');
@@ -105,10 +106,15 @@ for (const [name, ln] of Object.entries(lanes)) {
   lanesKm[name] = P;
 }
 
+// Contact sans AIS du scénario simulé : doit être en mer.
+const DARK = [13.95, 42.35];
+if (land.some(poly => inPoly(toKm(...DARK), poly))) throw new Error('le contact simulé est sur la terre');
+
 // ---------- assemblage ----------
 const data = {
   geo: { center: C, bbox: BBOX, box, land, coast },
   lanes: lanesKm,
+  dark: toKm(...DARK),
   zone: {
     id: zone.id, name: zone.name, c: zone.c, r: zone.r, type: zone.type, jwc: zone.jwc,
     score: zone.score, trend: zone.trend, parts: zone.parts, why: zone.why, hl: zone.hl, inc: zone.inc || [],
@@ -118,15 +124,17 @@ const data = {
   updatedAt: snap.updatedAt,
 };
 
-const app = fs.readFileSync(path.join(d, 'proteus-proto.html'), 'utf8');
-const t0 = app.indexOf('  :root{');
-const t1 = app.indexOf('\n  }', app.indexOf(':root[data-density="comfortable"]{', t0)) + 4;
-if (t0 < 0 || t1 < 4) throw new Error('bloc de tokens introuvable dans proteus-proto.html');
-const tokens = app.slice(t0, t1);
+const FACES = [
+  ['Chakra Petch', '500', 'chakra-petch-latin-500-normal.woff2'], ['Chakra Petch', '600', 'chakra-petch-latin-600-normal.woff2'],
+  ['Chakra Petch', '700', 'chakra-petch-latin-700-normal.woff2'], ['Barlow', '400', 'barlow-latin-400-normal.woff2'],
+  ['Barlow', '500', 'barlow-latin-500-normal.woff2'], ['Barlow', '600', 'barlow-latin-600-normal.woff2'],
+  ['JetBrains Mono', '100 800', 'jetbrains-mono-latin-wght-normal.woff2'],
+];
+const fonts = FACES.map(([fam, w, f]) => `@font-face{font-family:'${fam}';font-style:normal;font-weight:${w};font-display:swap;` +
+  `src:url("data:font/woff2;base64,${fs.readFileSync(path.join(d, 'fonts-ops', f)).toString('base64')}") format('woff2');}`).join('\n');
 
 let html = fs.readFileSync(path.join(d, 'focus-zone.html'), 'utf8');
-html = html.replace('/*FONTS*/', () => fs.readFileSync(path.join(d, 'fonts.css'), 'utf8'))
-           .replace('/*TOKENS*/', () => tokens)
+html = html.replace('/*FONTS*/', () => fonts)
            .replace('//THREE_JS', () => fs.readFileSync(path.join(d, 'vendor', 'three-0.159.0.min.js'), 'utf8'))
            .replace('__FOCUS_DATA__', () => JSON.stringify(data));
 
@@ -135,4 +143,4 @@ fs.writeFileSync(out, html);
 console.log('focus-zone-3d.html :', (html.length / 1024 | 0) + ' Ko',
   '| terres', land.length, '| côtes', coast.length,
   '| couloirs', Object.keys(lanesKm).join('/'), 'sur l’eau',
-  '| marqueurs restants :', ['/*FONTS*/', '/*TOKENS*/', '//THREE_JS', '__FOCUS_DATA__'].filter(m => html.includes(m)).join(', ') || 'aucun');
+  '| marqueurs restants :', ['/*FONTS*/', '//THREE_JS', '__FOCUS_DATA__'].filter(m => html.includes(m)).join(', ') || 'aucun');

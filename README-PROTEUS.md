@@ -36,18 +36,32 @@ toute valeur mesurée. Les icônes sont dessinées, jamais des emojis.
   temps réel (aisstream.io, clé gratuite) — à ouvrir en local, l'aperçu en ligne bloque les
   connexions externes.
 
-## La vue focus 3D (`focus-zone-3d.html`) — prototype
+## La vue focus 3D (`focus-zone-3d.html`) — prototype « salle d'opérations »
 
-La carte 2D reste l'outil de travail. La **vue focus** est la maquette en relief d'**une**
-zone, façon salle des cartes : trait de côte réel extrudé, couloirs de navigation, cercle de
-zone, navires animés, et autour, le dossier du souscripteur (score, rating 1-8, bande de taux
-indicative, fiabilité du signal, cumuls, fil de veille). Prototype sur **Bab el-Mandeb**.
+La carte 2D reste l'outil de veille mondiale. La **vue focus** est le poste d'analyse d'**une**
+zone, avec sa propre identité, volontairement en rupture : fond nuit, maillage, lueur, polices
+Chakra Petch / Barlow / JetBrains Mono. Prototype sur **Bab el-Mandeb**.
 
-- Ouverture en « plongée » : on part de la vue à plat de la carte, la caméra bascule en maquette.
-- Glisser pour tourner, molette pour zoomer, clic sur un navire ou une ligne des cumuls.
-- `?theme=nuit` pour la carte de nuit, `?still=1` pour sauter l'intro (captures).
-- Données de zone **réelles** (instantané `risk-snapshot.json`) ; flotte et expositions
-  **simulées**, étiquetées comme telles. Three.js r159 embarqué (licence MIT), 100 % hors ligne.
+Chaque effet 3D porte une information :
+- **Relief** (procédural, calé sur la géographie réelle) et **trait de côte réel**, maillage géographique.
+- **Zone** : anneau gradué du rayon de 300 km, balayage, paroi de zone, balise au détroit.
+- **Satellites et emprises** : deux passages (radar SAR, optique) balaient la zone ; tout navire
+  sous l'emprise est **recoupé AIS ↔ image**. Un **contact sans AIS** n'apparaît que lorsqu'un
+  passage le détecte → alerte « à qualifier », jamais « menace ».
+- **Calques de sources** sous la maquette (AIS · satellite · presse/JWC) : un navire sélectionné
+  projette une colonne qui montre quelle source confirme quoi.
+- Autour : indicateurs (navires, exposition, recoupement, contacts sans AIS), fil de veille,
+  tableau d'exposition, dossier de souscription (score, rating 1-8, taux indicatif, fiabilité).
+
+Commandes : glisser pour tourner, clic droit ou Maj + glisser pour déplacer, molette pour zoomer,
+clic sur un navire, `/` pour chercher, Échap pour désélectionner. Vues : ensemble, rasante du
+détroit, dessus. Panneau **Calques** : thème sombre / clair, calques, lueur, exagération du
+relief, vitesse de simulation. `?theme=clair`, `?still=1` (sans intro, pour les captures).
+
+Données de zone **réelles** (instantané `risk-snapshot.json`). Flotte, expositions, passages
+satellite et contact sans AIS **simulés**, étiquetés comme tels. Three.js r159 embarqué (MIT),
+polices OFL embarquées, 100 % hors ligne. Nécessite WebGL 2 ; sans carte graphique, la lueur se
+coupe d'elle-même.
 
 ## Le dossier `proto/` (sources de fabrication)
 
@@ -60,7 +74,8 @@ indicative, fiabilité du signal, cumuls, fil de veille). Prototype sur **Bab el
 | `build.js` | assemble le tout et produit `proto/proteus.html` |
 | `check.mjs` | test de fumée dans un navigateur (contrat DOM, erreurs JS, captures) |
 | `sync-design-system.mjs` | recopie les tokens de l'app dans `design-system.html` |
-| `focus-zone.html` + `build-focus.js` | source et assemblage de la vue focus 3D → `focus-zone-3d.html` (refuse de construire si un couloir touche la terre) |
+| `focus-zone.html` + `build-focus.js` | source et assemblage de la vue focus 3D → `focus-zone-3d.html` (refuse de construire si un couloir ou le contact simulé touche la terre) |
+| `fonts-ops/` | polices de la vue focus (Chakra Petch, Barlow, JetBrains Mono — licences OFL incluses) |
 | `vendor/three-0.159.0.min.js` | Three.js embarqué (MIT, voir `vendor/three-LICENSE`) |
 
 ### Commandes
