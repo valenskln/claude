@@ -31,7 +31,7 @@ toute valeur mesurée. Les icônes sont dessinées, jamais des emojis.
   des navires — c'est la vraie logique du produit.
 
 ### Ce qui est simulé
-- Les **positions des navires** par défaut (flotte fictive de 43 porte-conteneurs animée le
+- Les **positions des navires** par défaut (flotte fictive de 61 navires — 43 porte-conteneurs, 12 pétroliers, 6 gaziers GNL/GPL — animée le
   long des corridors, temps accéléré). Le bouton **AIS direct** bascule sur un vrai flux
   temps réel (aisstream.io, clé gratuite) — à ouvrir en local, l'aperçu en ligne bloque les
   connexions externes.
@@ -48,6 +48,11 @@ polices Chakra Petch / Barlow / JetBrains Mono. Deux niveaux :
   découpé au cadre, relief procédural (une maquette, pas une carte d'altitude), couloirs
   calculés par plus court chemin **sur l'eau** à partir des corridors réels (jamais sur la
   terre), ports / pays / mers, passages satellite et calques de sources, dossier de souscription.
+
+Flotte simulée en trois familles : **porte-conteneurs**, **pétroliers** (VLCC, Suezmax, Aframax) et
+**gaziers** (méthaniers GNL, Q-Max, GPL), plus nombreux dans les zones de transit énergétique (Ormuz,
+golfe Persique, Bab el-Mandeb…). Capacité, état (chargé / sur lest) et exposition par classe — ordres
+de grandeur documentés dans `proto/ops.html`. Le tableau d'exposition se filtre par famille.
 
 Chaque effet 3D porte une information : les emprises satellite montrent ce qui est recoupé AIS ↔
 image ; un **contact sans AIS** n'apparaît qu'une fois détecté (« à qualifier », jamais « menace ») ;

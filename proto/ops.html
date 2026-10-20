@@ -33,6 +33,7 @@
     --sea:#040A14; --land-low:#0A1626; --land-high:#22597E; --contour:#5BB6E6;
     --grid:#2BE3A0; --coast:#3CD7FF; --side-top:#0A1525; --side-bot:#02050A;
     --globe-land:#0F2236; --globe-sea:#050C18; --atmo:#3CD7FF;
+    --kind-tanker:#B98CFF; --kind-gas:#C6F25E;          /* familles de navires (jamais les couleurs du risque) */
     --sat-ink:#DDE8F6; --vignette:.5; --bloom:1.15; --glow-bg:#0B2238;
 
     --font-display:'Chakra Petch', 'Barlow', system-ui, sans-serif;
@@ -54,6 +55,7 @@
     --sea:#BCD3EB; --land-low:#E2E8EF; --land-high:#8195AD; --contour:#6F86A3;
     --grid:#1E6BFF; --coast:#1E6BFF; --side-top:#C3D1E1; --side-bot:#93A7BE;
     --globe-land:#E4EAF1; --globe-sea:#B9D0E8; --atmo:#1E6BFF;
+    --kind-tanker:#8A3FC8; --kind-gas:#5E8C00;
     --sat-ink:#1D2C44; --vignette:.18; --bloom:.22; --glow-bg:#FFFFFF;
     color-scheme:light;
   }
@@ -224,6 +226,7 @@
   .tabs button.on{background:var(--bg-2);color:var(--t1)}
   .tabs button b{font:600 11px var(--font-mono);margin-left:5px;color:var(--t3)}
   .tabs button.al b{color:var(--crit)}
+  .kd{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px}
   .fh .tot{margin-left:auto;font:600 15px var(--font-mono);white-space:nowrap} .fh .tot small{font:400 11px var(--font-mono);color:var(--t3)}
   .ibtn{width:28px;height:28px;border-radius:7px;border:1px solid var(--line);background:none;display:grid;place-items:center;color:var(--t2);cursor:pointer;flex:none}
   #fleet.min .ibtn svg{transform:rotate(180deg)}
@@ -365,7 +368,8 @@
 <div id="legend" class="glass reveal d4 w-only">
   <span><i style="background:var(--ok)"></i>calme &lt; 4</span><span><i style="background:var(--warn)"></i>modéré</span>
   <span><i style="background:var(--high)"></i>élevé ≥ 7</span><span><i style="background:var(--crit)"></i>critique ≥ 8,5</span>
-  <span class="sep"></span><span>hauteur de balise = score</span><span class="sep"></span><span>flux = corridors réels</span>
+  <span class="sep"></span><span><i style="background:var(--signal)"></i>conteneurs</span><span><i style="background:var(--kind-tanker)"></i>pétroliers</span><span><i style="background:var(--kind-gas)"></i>gaziers</span>
+  <span class="sep"></span><span>balise = score</span>
 </div>
 
 <!-- ============ ZONE ============ -->
@@ -380,6 +384,7 @@
 <section id="fleet" class="glass reveal d4 z-only" aria-label="Exposition">
   <div class="fh"><h2>Exposition</h2>
     <div class="tabs" id="tabs"><button data-t="in" class="on">Dans la zone<b>0</b></button><button data-t="appr">En approche<b>0</b></button><button data-t="dark" class="al">Sans AIS<b>0</b></button></div>
+    <div class="tabs" id="kindF" title="Filtrer par famille de navires"><button data-k="all" class="on">Tous</button><button data-k="container"><i class="kd" style="background:var(--signal)"></i>Cont.</button><button data-k="tanker"><i class="kd" style="background:var(--kind-tanker)"></i>Pétrole</button><button data-k="gas"><i class="kd" style="background:var(--kind-gas)"></i>Gaz</button></div>
     <span class="tot" id="fleetTot"></span>
     <button class="ibtn" id="fleetMin" title="Réduire / déplier"><svg class="i" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button></div>
   <div id="fleetBody"></div>
@@ -713,6 +718,35 @@ function liveExposure(v) {
   if (v.type >= 80 && v.type < 90) return { teu: 0, hull: v.len > 250 ? 90e6 : 40e6, cargo: v.len > 250 ? 160e6 : 50e6 };
   return { teu: 0, hull: v.len > 150 ? 30e6 : 8e6, cargo: 0 };
 }
+/* ================================================================ flotte simulée : trois familles de navires */
+// Ordres de grandeur d'exposition (coque + cargaison), hypothèses de démonstration — pas des valeurs d'assurance :
+//  porte-conteneurs : coque ≈ 9 000 $/EVP, marchandises ≈ 30 000 $ par EVP plein (remplissage 75 %)
+//  pétroliers : VLCC 300 000 t ≈ 120 M$ + 2 M barils × 75 $ ≈ 150 M$ · Suezmax 160 000 t ≈ 85 + 75 M$ · Aframax 110 000 t ≈ 70 + 52 M$
+//  gaziers : méthanier 174 000 m³ ≈ 250 M$ + GNL ≈ 40 M$ · Q-Max 266 000 m³ ≈ 300 + 60 M$ · GPL (VLGC) 84 000 m³ ≈ 110 + 28 M$
+//  un pétrolier ou un gazier sur cinq navigue sur lest (cargaison nulle).
+const KINDS = { container: { label: 'Porte-conteneurs', plural: 'Conteneurs', tok: '--signal' }, tanker: { label: 'Pétrolier', plural: 'Pétroliers', tok: '--kind-tanker' }, gas: { label: 'Gazier', plural: 'Gaziers', tok: '--kind-gas' } };
+const CONTAINER_FLEET = [['MSC', ['MSC ARIA', 'MSC ALDEBARAN', 'MSC LUCIA', 'MSC TESSA', 'MSC AMBRA', 'MSC NOA']], ['Maersk', ['MAERSK ATLAS', 'MADRID MAERSK', 'MAERSK ESSEX', 'MAERSK SELETAR']],
+  ['CMA CGM', ['CMA CGM MARSEILLE', 'CMA CGM RIVOLI', 'CMA CGM LOUVRE', 'CMA CGM PALAIS ROYAL']], ['COSCO', ['COSCO SHIPPING PLANET', 'COSCO HARMONY', 'COSCO PACIFIC']],
+  ['Hapag-Lloyd', ['HAMBURG EXPRESS', 'BERLIN EXPRESS', 'MANILA EXPRESS']], ['ONE', ['ONE INNOVATION', 'ONE APUS', 'ONE STORK']], ['Evergreen', ['EVER ACE', 'EVER FORWARD', 'EVER ALOT']],
+  ['HMM', ['HMM ALGECIRAS', 'HMM OSLO']], ['ZIM', ['ZIM SAMMY OFEK', 'ZIM USA']]];
+const TANKER_FLEET = [['Frontline', ['FRONT VEGA', 'FRONT DIAMOND', 'FRONT LYNX']], ['Maran Tankers', ['MARAN SAGITTA', 'MARAN CASTOR']], ['Bahri', ['BAHRI TABUK', 'BAHRI YANBU']],
+  ['DHT', ['DHT TIGER', 'DHT JAGUAR']], ['Minerva', ['MINERVA ZOE', 'MINERVA LISA']], ['Seaways', ['SEAWAYS RAINIER']]];
+const GAS_FLEET = [['Nakilat', ['AL MAYEDA', 'MOZAH'], 'qmax'], ['Flex LNG', ['FLEX RANGER', 'FLEX AURORA'], 'lng'], ['GasLog', ['GASLOG SALEM', 'GASLOG WARSAW'], 'lng'], ['BW LPG', ['BW ORION', 'BW KYOTO'], 'lpg']];
+const TANKER_CLASS = [['VLCC', 300000, 120e6, 150e6, 330, .45], ['Suezmax', 160000, 85e6, 75e6, 275, .3], ['Aframax', 110000, 70e6, 52e6, 245, .25]];
+const GAS_CLASS = { lng: ['GNL', 174000, 250e6, 40e6, 295], qmax: ['Q-Max', 266000, 300e6, 60e6, 345], lpg: ['GPL', 84000, 110e6, 28e6, 230] };
+// zones de transit énergétique : plus de pétroliers et de gaziers dans le trafic simulé
+const ENERGY_ZONES = new Set(['hormuz', 'persian-gulf', 'oman-gulf', 'bab-el-mandeb', 'aden', 'redsea-n', 'suez', 'niger-delta', 'gog', 'malacca', 'blacksea-nw', 'libya', 'sunda', 'lombok', 'capegoodhope', 'somalia']);
+function shipSpec(kind, sub, rnd) {
+  const f = .92 + rnd() * .16;
+  if (kind === 'tanker') { let r = rnd(), c = TANKER_CLASS[0]; for (const k of TANKER_CLASS) { if (r < k[5]) { c = k; break; } r -= k[5]; }
+    const ballast = rnd() < .2; return { cls: c[0], dwt: Math.round(c[1] * f / 1000) * 1000, hull: c[2] * f, cargo: ballast ? 0 : c[3] * f, ballast, len: c[4], teu: 0 }; }
+  if (kind === 'gas') { const c = GAS_CLASS[sub] || GAS_CLASS.lng, ballast = rnd() < .2;
+    return { cls: c[0], m3: Math.round(c[1] * (sub === 'qmax' ? 1 : f) / 1000) * 1000, hull: c[2] * f, cargo: ballast ? 0 : c[3] * f, ballast, len: c[4], teu: 0 }; }
+  const teu = Math.round((8 + rnd() * 16) * 10) * 100; return { cls: '', teu, hull: teu * 9000, cargo: teu * .75 * 30000, len: Math.round(280 + (teu - 8000) / 16000 * 120) };
+}
+const kindTxt = s => !s.kind || s.kind === 'unknown' ? '—' : s.kind === 'container' ? 'Porte-conteneurs' : s.kind === 'tanker' ? 'Pétrolier ' + (s.cls || '') : s.cls === 'GPL' ? 'Gazier GPL' : 'Méthanier' + (s.cls === 'Q-Max' ? ' Q-Max' : '');
+const capTxt = s => s.kind === 'tanker' && s.dwt ? s.dwt.toLocaleString('fr-FR') + ' t' : s.kind === 'gas' && s.m3 ? s.m3.toLocaleString('fr-FR') + ' m³' : s.teu ? s.teu.toLocaleString('fr-FR') + ' EVP' : '—';
+const kindVar = s => (KINDS[s.kind] || KINDS.container).tok;
 const typeLabel = t => t >= 70 && t < 80 ? 'cargo' : t >= 80 && t < 90 ? 'pétrolier' : t >= 60 && t < 70 ? 'passagers' : t === 30 ? 'pêche' : t ? 'type ' + t : 'type n.c.';
 function liveFresh() { const now = Date.now(); for (const [k, v] of live.vessels) if (now - v.t > 15 * 60e3) live.vessels.delete(k); }
 $('aisBtn').onclick = () => { try { $('aisKey').value = localStorage.getItem('proteus_aiskey') || ''; } catch (e) {} $('aism').classList.add('open'); $('aisKey').focus(); };
@@ -804,7 +838,9 @@ const G = (() => {
   // flotte du globe : simulée le long des corridors, ou réelle (AIS direct)
   const FLEET_PLAN = [['suez', 7], ['cap', 10], ['transpac', 8], ['transat', 6], ['gulf', 5], ['blacksea', 3], ['guinee', 4]];
   let sd = 42; const rr = () => (sd = (sd * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-  const simFleet = []; FLEET_PLAN.forEach(([k, n]) => { const R0 = ROUTE_ARR.find(x => x.k === k); if (!R0) return; for (let i = 0; i < n; i++) simFleet.push({ R: R0, d: rr() * R0.len, dir: rr() < .5 ? 1 : -1, v: 18 + rr() * 10 }); });
+  // pétroliers et gaziers : Golfe → Asie et Europe, GNL américain vers l'Europe, brut nigérian, mer Noire
+  const ENERGY_PLAN = [['gulf', 'tanker', 6], ['gulf', 'gas', 4], ['cap', 'tanker', 4], ['cap', 'gas', 1], ['suez', 'tanker', 3], ['transat', 'gas', 2], ['guinee', 'tanker', 2], ['blacksea', 'tanker', 1]];
+  const simFleet = []; FLEET_PLAN.map(([k, n]) => [k, 'container', n]).concat(ENERGY_PLAN).forEach(([k, kind, n]) => { const R0 = ROUTE_ARR.find(x => x.k === k); if (!R0) return; for (let i = 0; i < n; i++) simFleet.push({ R: R0, kind, d: rr() * R0.len, dir: rr() < .5 ? 1 : -1, v: (kind === 'container' ? 18 : 14) + rr() * 10 }); });
   const MAXP = 60000, fpos = new Float32Array(MAXP * 3), fcol = new Float32Array(MAXP * 3);
   const fgeo = new THREE.BufferGeometry(); fgeo.setAttribute('position', new THREE.BufferAttribute(fpos, 3)); fgeo.setAttribute('color', new THREE.BufferAttribute(fcol, 3));
   const dotTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
@@ -819,10 +855,10 @@ const G = (() => {
     const put = (lat, lon, c) => { const p = v3(lat, lon, R * 1.006); fpos[n * 3] = p.x; fpos[n * 3 + 1] = p.y; fpos[n * 3 + 2] = p.z; fcol[n * 3] = c.r; fcol[n * 3 + 1] = c.g; fcol[n * 3 + 2] = c.b; n++; };
     if (live.on) {
       for (const v of live.vessels.values()) { if (v.lat == null || n >= MAXP) continue; const z = inAnyZone(v.lat, v.lon); if (z) nz++;
-        put(v.lat, v.lon, z ? cw : (v.type >= 70 && v.type < 90) ? cs : ct); }
+        put(v.lat, v.lon, z ? cw : v.type >= 80 && v.type < 90 ? TC.tanker : v.type >= 70 && v.type < 80 ? cs : ct); }
     } else for (const s of simFleet) {
       s.d += s.dir * s.v * dt * simSpeed; if (s.d > s.R.len) { s.d = s.R.len; s.dir = -1; } if (s.d < 0) { s.d = 0; s.dir = 1; }
-      const [la, lo] = posOnRoute(s.R, s.d), z = inAnyZone(la, lo); if (z) nz++; put(la, lo, z ? cw : cs);
+      const [la, lo] = posOnRoute(s.R, s.d), z = inAnyZone(la, lo); if (z) nz++; put(la, lo, z ? cw : s.kind === 'tanker' ? TC.tanker : s.kind === 'gas' ? TC.gas : cs);
     }
     fleetN = n; inZoneN = nz; fgeo.setDrawRange(0, n); fgeo.attributes.position.needsUpdate = true; fgeo.attributes.color.needsUpdate = true;
     fleet.visible = VIS.fleet;
@@ -1080,16 +1116,17 @@ function buildZone(Z) {
   }
 
   /* — flotte simulée — */
-  const FLEETN = [['MSC', ['MSC ARIA', 'MSC ALDEBARAN', 'MSC LUCIA', 'MSC TESSA', 'MSC AMBRA', 'MSC NOA']], ['Maersk', ['MAERSK ATLAS', 'MADRID MAERSK', 'MAERSK ESSEX', 'MAERSK SELETAR']],
-    ['CMA CGM', ['CMA CGM MARSEILLE', 'CMA CGM RIVOLI', 'CMA CGM LOUVRE', 'CMA CGM PALAIS ROYAL']], ['COSCO', ['COSCO SHIPPING PLANET', 'COSCO HARMONY', 'COSCO PACIFIC']],
-    ['Hapag-Lloyd', ['HAMBURG EXPRESS', 'BERLIN EXPRESS', 'MANILA EXPRESS']], ['ONE', ['ONE INNOVATION', 'ONE APUS', 'ONE STORK']], ['Evergreen', ['EVER ACE', 'EVER FORWARD', 'EVER ALOT']],
-    ['HMM', ['HMM ALGECIRAS', 'HMM OSLO']], ['ZIM', ['ZIM SAMMY OFEK', 'ZIM USA']]];
-  const pool = []; FLEETN.forEach(([c, ns]) => ns.forEach(n => pool.push({ carrier: c, name: n })));
-  for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+  const MIX = ENERGY_ZONES.has(Z.id) ? [.4, .38] : [.66, .24];     // conteneurs, pétroliers ; le reste : gaziers
+  const mkPool = F => { const p = []; F.forEach(([c, ns, sub]) => ns.forEach(n => p.push({ carrier: c, name: n, sub }))); for (let i = p.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } return p; };
+  const pools = { container: mkPool(CONTAINER_FLEET), tanker: mkPool(TANKER_FLEET), gas: mkPool(GAS_FLEET) }, used = { container: 0, tanker: 0, gas: 0 };
+  const pickKind = () => { const r = rnd(); return r < MIX[0] ? 'container' : r < MIX[0] + MIX[1] ? 'tanker' : 'gas'; };
   const SPEED = 1.85 * S, ships = [];
   function addShip(lane, s, o = {}) {
-    const p = o.name ? o : pool[ships.length % pool.length], teu = o.teu != null ? o.teu : Math.round((8 + rnd() * 16) * 10) * 100;
-    ships.push({ carrier: p.carrier, name: p.name, lane, s, off: 0, speed: SPEED * (.85 + rnd() * .3), teu, kn: 13 + rnd() * 6, hull: teu * 9000, cargo: teu * .75 * 30000, ais: true, satT: 0, sim: true, ...o });
+    const kind = o.kind || pickKind(), P = pools[kind];
+    let p = o.name ? o : P[used[kind] % P.length];
+    if (!o.name) { const lap = Math.floor(used[kind]++ / P.length); if (lap) p = { ...p, name: p.name + ' ' + 'IIIIIIII'.slice(0, lap + 1) }; }
+    const spec = o.ais === false ? {} : shipSpec(kind, p.sub, rnd), slow = kind === 'container' ? 1 : .8;
+    ships.push({ carrier: p.carrier, name: p.name, kind, lane, s, off: 0, speed: SPEED * (.85 + rnd() * .3) * slow, kn: (kind === 'container' ? 13 : 11) + rnd() * 6, ais: true, satT: 0, sim: true, ...spec, ...o });
   }
   const totLen = LANES.reduce((a, L) => a + L.len, 0), nShips = LANES.length ? clamp(Math.round(totLen / (55 * S)), 8, 22) : 0;
   LANES.forEach((L, li) => { const n = Math.max(1, Math.round(nShips * L.len / totLen)); for (let i = 0; i < n; i++) addShip(li, L.len * ((i + .2 + rnd() * .6) / n)); });
@@ -1104,7 +1141,7 @@ function buildZone(Z) {
   // le scénario : un contact sans AIS, posé en mer sous la trace radar, invisible tant qu'un passage ne l'a pas vu
   { const S0 = SATS[0], t = .42, px = S0.a[0] + (S0.b[0] - S0.a[0]) * t, pz = S0.a[1] + (S0.b[1] - S0.a[1]) * t, k = snapSea(px, pz, CELL * 3);
     if (k >= 0) { const x = gx(k % NX), z = gz((k / NX) | 0), dx = S0.b[0] - S0.a[0], dz = S0.b[1] - S0.a[1], L = Math.hypot(dx, dz), perp = Math.abs(((x - S0.a[0]) * dz - (z - S0.a[1]) * dx) / L);
-      if (perp < S0.hw * .7) addShip(null, 0, { name: 'CONTACT RADAR #1', carrier: '—', teu: 0, hull: 0, cargo: 0, ax: x, az: z, head: rnd() * 6, speed: 0, kn: 4, ais: false, detected: false, drift: true }); } }
+      if (perp < S0.hw * .7) addShip(null, 0, { name: 'CONTACT RADAR #1', carrier: '—', kind: 'unknown', teu: 0, hull: 0, cargo: 0, ax: x, az: z, head: rnd() * 6, speed: 0, kn: 4, ais: false, detected: false, drift: true }); } }
   const exposure = s => s.hull + s.cargo;
 
   /* — lumières, terrain — */
@@ -1247,7 +1284,10 @@ function buildZone(Z) {
   function hullShape(L, Bm) { const s = new THREE.Shape(), h = Bm / 2; s.moveTo(-L / 2, -h); s.lineTo(L * .3, -h); s.quadraticCurveTo(L * .47, -h * .7, L / 2, 0); s.quadraticCurveTo(L * .47, h * .7, L * .3, h); s.lineTo(-L / 2, h); s.closePath(); return s; }
   const gHull = new THREE.ExtrudeGeometry(hullShape(10, 1.6), { depth: 1.1, bevelEnabled: false }); gHull.rotateX(-Math.PI / 2);
   const gBay = new THREE.BoxGeometry(.6, 1, 1.35), gHouse = new THREE.BoxGeometry(.75, 1.7, 1.45), gWing = new THREE.BoxGeometry(.25, .1, 2);
+  const gTDeck = new THREE.BoxGeometry(6.6, .22, 1.3), gPipe = new THREE.BoxGeometry(6.2, .12, .22), gMani = new THREE.BoxGeometry(.5, .3, 1.4);
+  const gDome = new THREE.SphereGeometry(.68, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), gTrunk = new THREE.BoxGeometry(6.4, .55, 1.0), gCap = new THREE.CylinderGeometry(.22, .22, .2, 10);
   const M = { hull: new THREE.MeshLambertMaterial(), deck: new THREE.MeshLambertMaterial(), house: new THREE.MeshLambertMaterial(), dark: new THREE.MeshLambertMaterial(), tank: new THREE.MeshLambertMaterial(),
+    hullT: new THREE.MeshLambertMaterial(), deckT: new THREE.MeshLambertMaterial(), hullG: new THREE.MeshLambertMaterial(), deckG: new THREE.MeshLambertMaterial(),
     ringIn: new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), ringAp: new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }), ringDark: new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false }),
     sel: new THREE.LineBasicMaterial({ transparent: true }), beam: new THREE.LineDashedMaterial({ dashSize: 3 * S, gapSize: 3 * S, transparent: true }) };
   const SHIP_SCALE = 2.8 * S;
@@ -1255,9 +1295,18 @@ function buildZone(Z) {
   const pickables = [];
   function makeShip(s) {
     const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-    const dk = !s.ais, tanker = s.type >= 80 && s.type < 90, hm = dk ? M.dark : M.hull;
+    const dk = !s.ais, kind = s.kind, hm = dk ? M.dark : kind === 'tanker' ? M.hullT : kind === 'gas' ? M.hullG : M.hull;
     const hull = new THREE.Mesh(gHull, hm); body.add(hull);
-    if (tanker) { const t = new THREE.Mesh(new THREE.BoxGeometry(6.2, .5, 1.1), M.tank); t.position.set(.2, 1.35, 0); body.add(t); }
+    if (kind === 'tanker') {          // pont plat, rampe de tuyauteries et manifold au milieu
+      const dm = dk ? M.dark : M.deckT, d = new THREE.Mesh(gTDeck, dm); d.position.set(.3, 1.22, 0); body.add(d);
+      const pipe = new THREE.Mesh(gPipe, dm); pipe.position.set(.3, 1.48, 0); body.add(pipe);
+      const mf = new THREE.Mesh(gMani, dm); mf.position.set(.6, 1.55, 0); body.add(mf);
+    } else if (kind === 'gas' && s.cls === 'GNL') {   // méthanier à sphères (type Moss)
+      for (let i = 0; i < 4; i++) { const d = new THREE.Mesh(gDome, dk ? M.dark : M.deckG); d.position.set(-2.1 + i * 1.45, 1.1, 0); body.add(d); }
+    } else if (kind === 'gas') {      // membrane (Q-Max) ou GPL : pont-tronc continu, dômes de cuves
+      const t = new THREE.Mesh(gTrunk, dk ? M.dark : M.deckG); t.position.set(.3, 1.4, 0); body.add(t);
+      for (let i = 0; i < (s.cls === 'GPL' ? 3 : 4); i++) { const d = new THREE.Mesh(gCap, dk ? M.dark : M.deckG); d.position.set(-1.9 + i * 1.5, 1.78, 0); body.add(d); }
+    }
     else { const n = dk ? 7 : 11, fill = .55 + rnd() * .45; for (let i = 0; i < n; i++) { if (rnd() > fill + .15) continue; const h = .5 + Math.floor(rnd() * 3) * .3, b = new THREE.Mesh(gBay, dk ? M.dark : M.deck); b.scale.y = h; b.position.set(-2.5 + i * .66, 1.1 + h / 2, 0); body.add(b); } }
     const house = new THREE.Mesh(gHouse, dk ? M.dark : M.house); house.position.set(-3.8, 1.95, 0); body.add(house);
     const wing = new THREE.Mesh(gWing, dk ? M.dark : M.house); wing.position.set(-3.6, 2.7, 0); body.add(wing);
@@ -1285,7 +1334,7 @@ function buildZone(Z) {
     for (const v of live.vessels.values()) {
       if (v.lat == null || !inBB(v.lat, v.lon)) continue;
       seen.add(v.mmsi); let s = liveShips.get(v.mmsi);
-      if (!s) { if (liveShips.size >= MAXS - 20) continue; const e = liveExposure(v); s = { live: true, mmsi: v.mmsi, carrier: '', name: v.name || 'MMSI ' + v.mmsi, ais: true, satT: 0, type: v.type, len: v.len, teu: e.teu, hull: e.hull, cargo: e.cargo, lane: null, kn: v.sog }; makeShip(s); liveShips.set(v.mmsi, s); }
+      if (!s) { if (liveShips.size >= MAXS - 20) continue; const e = liveExposure(v); s = { live: true, mmsi: v.mmsi, carrier: '', name: v.name || 'MMSI ' + v.mmsi, ais: true, satT: 0, type: v.type, len: v.len, kind: v.type >= 80 && v.type < 90 ? 'tanker' : 'container', teu: e.teu, hull: e.hull, cargo: e.cargo, lane: null, kn: v.sog }; makeShip(s); liveShips.set(v.mmsi, s); }
       const [x, z] = ll(v.lat, v.lon), h = (v.hdg != null ? v.hdg : v.cog) * D2R;
       Object.assign(s, { ax: x, az: z, head: Math.atan2(Math.cos(h), Math.sin(h)), kn: v.sog, name: v.name || s.name, type: v.type, dest: v.dest, imo: v.imo, vt: v.t });
       if (v.len && v.len !== s.len) { s.len = v.len; const e = liveExposure(v); Object.assign(s, e); }
@@ -1325,7 +1374,7 @@ function buildZone(Z) {
       const moved = s.live ? (s.lx == null || Math.hypot(x - s.lx, z - s.lz) > .8 * S) : (trailTick && s.lane != null);
       if (moved) { P.copyWithin(3, 0, (N - 1) * 3); s.trailN = Math.min(N, s.trailN + 1); s.lx = x; s.lz = z; }
       P[0] = x; P[1] = SEA_Y + .35 * S; P[2] = z;
-      if (moved || !s.trailInit) { s.trailInit = true; const c = s.ais ? TC.signal : TC.crit; for (let i = 0; i < N; i++) { const a = i < s.trailN ? Math.pow(1 - i / N, 1.6) * .9 : 0; Cc.set([c.r, c.g, c.b, a], i * 4); } tr.geometry.attributes.color.needsUpdate = true; }
+      if (moved || !s.trailInit) { s.trailInit = true; const c = !s.ais ? TC.crit : s.kind === 'tanker' ? TC.tanker : s.kind === 'gas' ? TC.gas : TC.signal; for (let i = 0; i < N; i++) { const a = i < s.trailN ? Math.pow(1 - i / N, 1.6) * .9 : 0; Cc.set([c.r, c.g, c.b, a], i * 4); } tr.geometry.attributes.color.needsUpdate = true; }
       tr.geometry.setDrawRange(0, s.trailN); tr.geometry.attributes.position.needsUpdate = true; tr.visible = VIS.trails && shown && s.trailN > 1;
     }
     const ap = aisDots.geometry.attributes.position.array, sp = satDots.geometry.attributes.position.array; let na = 0, ns = 0;
@@ -1346,7 +1395,8 @@ function buildZone(Z) {
     SATS.forEach(Sa => { Sa.cone.material.color.copy(TC.ok); Sa.cone.material.blending = dark ? THREE.AdditiveBlending : THREE.NormalBlending; Sa.cone.material.needsUpdate = true; Sa.rays.material.color.copy(col('--sat-ink')); });
     M.hull.color.copy(sig).multiplyScalar(dark ? .5 : .75); M.hull.emissive.copy(sig).multiplyScalar(dark ? .25 : 0);
     M.deck.color.copy(sig); M.deck.emissive.copy(sig).multiplyScalar(dark ? .45 : .05);
-    M.tank.color.copy(TC.warn).multiplyScalar(dark ? .8 : 1); M.tank.emissive.copy(TC.warn).multiplyScalar(dark ? .3 : 0);
+    M.tank.color.copy(TC.tanker).multiplyScalar(dark ? .8 : 1); M.tank.emissive.copy(TC.tanker).multiplyScalar(dark ? .3 : 0);
+    for (const [h, d, c] of [[M.hullT, M.deckT, TC.tanker], [M.hullG, M.deckG, TC.gas]]) { h.color.copy(c).multiplyScalar(dark ? .5 : .75); h.emissive.copy(c).multiplyScalar(dark ? .25 : 0); d.color.copy(c); d.emissive.copy(c).multiplyScalar(dark ? .45 : .05); }
     M.house.color.copy(dark ? col('--t1') : new THREE.Color(1, 1, 1)); M.house.emissive.copy(col('--t1')).multiplyScalar(dark ? .2 : 0);
     M.dark.color.copy(TC.crit); M.dark.emissive.copy(TC.crit).multiplyScalar(dark ? .6 : .1);
     M.ringIn.color.copy(TC.warn); M.ringIn.opacity = .95; M.ringAp.color.copy(sig); M.ringAp.opacity = .7; M.ringDark.color.copy(TC.crit); M.ringDark.opacity = 1;
@@ -1392,7 +1442,7 @@ function buildZone(Z) {
     const [la, lo] = toLL(s.x, s.z), age = s.live && s.vt ? Math.round((Date.now() - s.vt) / 60000) : null;
     $('callout').innerHTML = `<div class="h"><b>${esc(s.name)}</b><button class="x" aria-label="Fermer">✕</button></div><div style="margin-top:6px">${st}</div>
       ${s.live ? `<div class="row"><span>Type AIS</span><span>${typeLabel(s.type)}${s.len ? ' · ' + s.len + ' m' : ''}</span></div><div class="row"><span>MMSI${s.imo ? ' · IMO' : ''}</span><span>${s.mmsi}${s.imo ? ' · ' + s.imo : ''}</span></div>${s.dest ? `<div class="row"><span>Destination</span><span>${esc(s.dest)}</span></div>` : ''}`
-        : s.ais ? `<div class="row"><span>Armateur</span><span>${s.carrier}</span></div><div class="row"><span>Capacité</span><span>${s.teu.toLocaleString('fr-FR')} EVP</span></div>` : `<div class="row"><span>Identité</span><span>à qualifier</span></div>`}
+        : s.ais ? `<div class="row"><span>Armateur</span><span>${s.carrier}</span></div><div class="row"><span>Type</span><span>${kindTxt(s)}</span></div><div class="row"><span>Capacité</span><span>${capTxt(s)}</span></div>${s.kind !== 'container' ? `<div class="row"><span>Chargement</span><span>${s.ballast ? 'sur lest' : s.kind === 'tanker' ? 'brut chargé' : s.cls === 'GPL' ? 'GPL chargé' : 'GNL chargé'}</span></div>` : ''}` : `<div class="row"><span>Identité</span><span>à qualifier</span></div>`}
       <div class="row"><span>Position</span><span>${dms(la, 'N', 'S')} ${dms(lo, 'E', 'O')}</span></div>
       <div class="row"><span>Vitesse</span><span>${s.kn > .3 ? fr1(s.kn) + ' nd' : 'à l’arrêt'}</span></div>
       <div class="row"><span>Distance au centre</span><span>${Math.round(s.dist)} km</span></div>
@@ -1517,29 +1567,30 @@ function renderKpis() {
   const key = [lv, inZ.length, appr.length, money(exp), cor, dark].join('|'); if (key === kpiKey) return; kpiKey = key;
   $('kpis').innerHTML = `
     <div class="kpi"><div class="ic">${ico('ship')}</div><div style="min-width:0"><div class="l">Navires dans la zone</div><div class="v">${inZ.length}<small> · R ${Z.r} km</small></div><div class="s"><span class="up">+${appr.length}</span> en approche${lv ? ' · AIS réel' : ''}</div></div></div>
-    <div class="kpi w"><div class="ic">${ico('coin')}</div><div style="min-width:0"><div class="l">Exposition estimée</div><div class="v">${money(exp)}</div><div class="s">${lv ? 'selon type et longueur AIS' : 'coque + marchandises · simulé'}</div></div></div>
+    <div class="kpi w"><div class="ic">${ico('coin')}</div><div style="min-width:0"><div class="l">Exposition estimée</div><div class="v">${money(exp)}</div><div class="s">${lv ? 'selon type et longueur AIS' : (() => { const by = k => inZ.filter(s => s.kind === k).reduce((a, s) => a + ZV.exposure(s), 0), t = by('tanker'), g = by('gas'); return t + g ? `dont pétrole ${money(t)} · gaz ${money(g)}` : 'coque + marchandises · simulé'; })()}</div></div></div>
     ${lv ? `<div class="kpi"><div class="ic">${ico('sat')}</div><div style="min-width:0"><div class="l">Recoupés par satellite</div><div class="v">—</div><div class="s">aucune source satellite branchée</div></div></div>`
       : `<div class="kpi g"><div class="ic">${ico('sat')}</div><div style="min-width:0;flex:1"><div class="l">Recoupés par satellite</div><div class="v">${cor}<small> / ${inZ.length}</small></div><div class="bar"><i style="width:${inZ.length ? cor / inZ.length * 100 : 0}%"></i></div></div></div>`}
     <div class="kpi ${dark ? 'a' : ''}"><div class="ic">${ico('radar')}</div><div style="min-width:0"><div class="l">Contacts sans AIS</div><div class="v">${lv ? '—' : dark}</div><div class="s">${lv ? 'nécessite une source satellite' : dark ? '<span class="bad">à qualifier</span>' : 'aucun détecté'}</div></div></div>`;
 }
-let tab = 'in', fleetKey = '';
+let tab = 'in', fleetKey = '', kindF = 'all';
 function renderFleet(force) {
-  if (!ZV) return; const A = ZV.active();
+  if (!ZV) return; const A = ZV.active().filter(s => kindF === 'all' || s.kind === kindF || (!s.ais && tab === 'dark'));
   const lists = { in: A.filter(s => s.ais && s.vis && s.status === 'in'), appr: A.filter(s => s.ais && s.vis && s.status === 'appr'), dark: A.filter(s => !s.ais && s.detected) };
   lists.in.sort((a, b) => ZV.exposure(b) - ZV.exposure(a)); lists.appr.sort((a, b) => a.dist - b.dist);
   document.querySelectorAll('#tabs button').forEach(b => { b.classList.toggle('on', b.dataset.t === tab); b.querySelector('b').textContent = lists[b.dataset.t].length; });
-  $('fleetTot').innerHTML = `${money(lists.in.reduce((a, s) => a + ZV.exposure(s), 0))} <small>cumul en zone</small>`;
+  $('fleetTot').innerHTML = `${money(lists.in.reduce((a, s) => a + ZV.exposure(s), 0))} <small>cumul en zone${kindF === 'all' ? '' : ' · ' + KINDS[kindF].plural.toLowerCase()}</small>`;
   const L = lists[tab].slice(0, 80), sel = ZV.selected;
-  const key = tab + L.map(s => s.name + (ZV.satOk(s) ? 1 : 0)).join('|') + (sel ? sel.name : '');
+  const key = tab + kindF + L.map(s => s.name + (ZV.satOk(s) ? 1 : 0)).join('|') + (sel ? sel.name : '');
   if (key === fleetKey && !force) return; fleetKey = key;
   const badge = s => !s.ais ? '<span class="bdg dark">AIS COUPÉ · SAT</span>' : s.live ? '<span class="bdg live">AIS RÉEL</span>' : ZV.satOk(s) ? `<span class="bdg ok">AIS + ${s.satBy.replace('SAT-', 'SAT ')}</span>` : '<span class="bdg ais">AIS SEUL</span>';
-  $('fleetBody').innerHTML = L.length ? `<table><thead><tr><th>Navire</th><th>Recoupement</th><th class="r">${ZV.liveMode ? 'Long.' : 'EVP'}</th><th class="r">Exposition</th><th class="r">Centre</th></tr></thead><tbody>${
-    L.map((s, i) => `<tr data-i="${i}" class="${sel === s ? 'sel' : ''}"><td><span class="nm">${esc(s.name)}</span><span class="cr">${esc(s.carrier || '')}</span></td><td>${badge(s)}</td>
-      <td class="r mono">${s.live ? (s.len ? s.len + ' m' : '—') : s.teu ? s.teu.toLocaleString('fr-FR') : '—'}</td><td class="r mono">${s.ais ? money(ZV.exposure(s)) : '—'}</td><td class="r mono">${Math.round(s.dist)} km</td></tr>`).join('')}</tbody></table>`
+  $('fleetBody').innerHTML = L.length ? `<table><thead><tr><th>Navire</th><th>Recoupement</th><th class="r">${ZV.liveMode ? 'Long.' : 'Capacité'}</th><th class="r">Exposition</th><th class="r">Centre</th></tr></thead><tbody>${
+    L.map((s, i) => `<tr data-i="${i}" class="${sel === s ? 'sel' : ''}"><td><i class="kd" style="background:var(${s.ais ? kindVar(s) : '--crit'})"></i><span class="nm">${esc(s.name)}</span><span class="cr">${esc(s.live ? s.carrier || '' : s.ais ? (s.kind === 'container' ? s.carrier : kindTxt(s).replace('Pétrolier ', '').replace('Méthanier', 'GNL') + ' · ' + s.carrier) : '')}</span></td><td>${badge(s)}</td>
+      <td class="r mono">${s.live ? (s.len ? s.len + ' m' : '—') : s.ais ? capTxt(s) : '—'}</td><td class="r mono">${s.ais ? money(ZV.exposure(s)) : '—'}</td><td class="r mono">${Math.round(s.dist)} km</td></tr>`).join('')}</tbody></table>`
     : `<div class="empty">${tab === 'dark' ? (ZV.liveMode ? 'En direct, il faut une source satellite pour voir les navires sans AIS.' : 'Aucun contact sans AIS détecté — ce sont les passages satellite qui les révèlent.') : ZV.liveMode ? 'Aucun navire AIS reçu dans ce cadre pour l’instant (couverture côtière).' : 'Aucun navire.'}</div>`;
   $('fleetBody').querySelectorAll('tr[data-i]').forEach(tr => tr.onclick = () => { const s = L[+tr.dataset.i]; ZV.selectShip(s === ZV.selected ? null : s, true); });
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => { tab = b.dataset.t; renderFleet(true); });
+document.querySelectorAll('#kindF button').forEach(b => b.onclick = () => { kindF = b.dataset.k; document.querySelectorAll('#kindF button').forEach(x => x.classList.toggle('on', x === b)); renderFleet(true); });
 $('fleetMin').onclick = () => { $('fleet').classList.toggle('min'); setTimeout(resize, 400); };
 function confLevel(Z) { const press = Z.hl.length, inc = (Z.inc || []).length; return Z.jwc && (press >= 3 || inc) ? ['Élevée', '--ok'] : Z.jwc || inc || press >= 3 ? ['Moyenne', '--warn'] : press ? ['Faible', '--high'] : ['Signal de fond', '--t2']; }
 function renderDossier(Z) {
@@ -1729,7 +1780,7 @@ addEventListener('keydown', e => {
 /* ================================================================ couleurs */
 function recolorAll() {
   if (theme) root.setAttribute('data-theme', theme); else root.removeAttribute('data-theme');
-  TC.signal = col('--signal'); TC.crit = col('--crit'); TC.ok = col('--ok'); TC.warn = col('--warn'); TC.t3 = col('--t3');
+  TC.signal = col('--signal'); TC.crit = col('--crit'); TC.ok = col('--ok'); TC.warn = col('--warn'); TC.t3 = col('--t3'); TC.tanker = col('--kind-tanker'); TC.gas = col('--kind-gas');
   renderer.setClearColor(col('--bg-0'), 1);
   post.bloom = num('--bloom'); post.vig = num('--vignette'); post.glow.copy(col('--glow-bg'));
   G.recolor(); if (ZV) ZV.recolor();
@@ -1754,7 +1805,7 @@ recolorAll();
 G.buildZones(); G.recolor();
 console.log('[ops] init ms', Math.round(performance.now() - T0));
 renderZoneList(); renderWorldFeed(); renderWorldKpis(); layNote();
-addEventListener('resize', resize);
+addEventListener('resize', resize); resize();          // les cibles de rendu existent avant la première image
 const startZone = params.get('zone');
 if (startZone && zoneById(startZone)) { openZone(startZone, { instant: true }); }
 else {

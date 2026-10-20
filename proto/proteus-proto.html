@@ -71,6 +71,9 @@
     --carrier-cosco:#0D7358;  --carrier-hapag:#B84E16; --carrier-one:#A62463;
     --carrier-evergreen:#256E33; --carrier-hmm:#6244A0; --carrier-zim:#8C2F7E;
     --carrier-other:var(--p-ink-300);
+    /* familles de navires : pétrolier à l'encre pleine, gazier en silhouette évidée —
+       la couleur reste réservée à l'armateur des porte-conteneurs */
+    --kind-tanker:var(--text-primary); --kind-gas:var(--surface-raised);
 
     /* — coques de l'illustration navire — */
     --hull-cmacgm:#1B2D5B; --hull-msc:#2B2E33;  --hull-maersk:#0E6E9C;
@@ -825,7 +828,7 @@ function applyI18nSweep(root){
 
 const ABOUT_FR = `
   <h2>Proteus.AI — prototype de faisabilité</h2>
-  <p class="sub">Croiser le tracking des porte-conteneurs avec l’analyse du risque géopolitique.</p>
+  <p class="sub">Croiser le suivi des navires — porte-conteneurs, pétroliers, gaziers — avec l’analyse du risque géopolitique.</p>
   <h4>Ce qui est réel dans ce prototype</h4>
   <ul>
     <li>Les <b>36 zones à risque</b> suivies, leurs scores et leur contexte : basés sur la situation géopolitique réelle et recalculés chaque heure (zones listées par le Joint War Committee, attaques en mer Rouge, guerre en mer Noire, piraterie dans le golfe de Guinée…).</li>
@@ -851,7 +854,7 @@ const ABOUT_FR = `
   <p class="sub" style="margin-top:16px">Astuce : cliquez sur un navire ou une zone sur la carte, ou dans les classements. Molette pour zoomer, cliquer-glisser pour déplacer.</p>`;
 const ABOUT_EN = `
   <h2>Proteus.AI — feasibility prototype</h2>
-  <p class="sub">Crossing container-ship tracking with geopolitical risk analysis.</p>
+  <p class="sub">Crossing vessel tracking — container ships, tankers, gas carriers — with geopolitical risk analysis.</p>
   <h4>What's real in this prototype</h4>
   <ul>
     <li>The <b>36 tracked risk zones</b>, their scores and context: based on the real geopolitical situation and recalculated every hour (zones listed by the Joint War Committee, Red Sea attacks, war in the Black Sea, piracy in the Gulf of Guinea…).</li>
@@ -1032,6 +1035,46 @@ const SHIPS = [];
   }
 }
 
+/* Pétroliers et gaziers (simulés) : Golfe → Asie et Europe, GNL américain vers l'Europe,
+   brut nigérian, mer Noire. Capacités par classe : VLCC 300 000 t, Suezmax 160 000 t,
+   Aframax 110 000 t ; méthanier 174 000 m³, Q-Max 266 000 m³, gazier GPL 84 000 m³. */
+const ENERGY_PLAN = [['gulf','tanker',5],['gulf','gas',3],['cap','tanker',3],['cap','gas',1],['suez','tanker',2],['transat','gas',2],['guinee','tanker',2],['blacksea','tanker',1]];
+const ENERGY_FLEET = {
+  tanker:[['Frontline',['FRONT VEGA','FRONT DIAMOND','FRONT LYNX']],['Maran Tankers',['MARAN SAGITTA','MARAN CASTOR']],['Bahri',['BAHRI TABUK','BAHRI YANBU']],
+          ['DHT',['DHT TIGER','DHT JAGUAR']],['Minerva',['MINERVA ZOE','MINERVA LISA']],['Seaways',['SEAWAYS RAINIER']]],
+  gas:[['Nakilat',['AL MAYEDA','MOZAH'],'Q-Max'],['Flex LNG',['FLEX RANGER','FLEX AURORA'],'GNL'],['GasLog',['GASLOG SALEM'],'GNL'],['BW LPG',['BW ORION'],'GPL']],
+};
+const TANKER_CLASSES=[['VLCC',300000],['Suezmax',160000],['Aframax',110000]];
+const GAS_M3={'GNL':174000,'Q-Max':266000,'GPL':84000};
+{
+  const pools={}; for(const k in ENERGY_FLEET){ pools[k]=[]; for(const [op,ns,cls] of ENERGY_FLEET[k]) for(const n of ns) pools[k].push({op,name:n,cls}); }
+  for(const [route,kind,n] of ENERGY_PLAN){
+    for(let i=0;i<n;i++){
+      const P=pools[kind]; if(!P.length) break;
+      const p=P.splice(Math.floor(rnd()*P.length),1)[0];
+      const c=kind==='tanker'?TANKER_CLASSES[Math.floor(rnd()*3)]:null;
+      SHIPS.push({ name:p.name, op:p.op, route, kind,
+        cls: kind==='tanker'?c[0]:p.cls, dwt: kind==='tanker'?c[1]:0, m3: kind==='gas'?GAS_M3[p.cls]:0,
+        ballast: rnd()<0.2,                  // un sur cinq navigue sur lest
+        dir: rnd()<0.5?1:-1, dist: rnd()*ROUTES[route].len, kn: 12+rnd()*4.5, teu:0,
+        lat:0, lon:0, seg:0, exp:0, zoneState:{}, worstZone:null });
+    }
+  }
+}
+function shipKind(s){ return s.kind || (s.live && s.type>=80 && s.type<90 ? 'tanker' : 'container'); }
+function shipColor(s){ const k=shipKind(s); return k==='tanker'?T.tanker : k==='gas'?T.ink : opColor(s.op); }
+// pastille d'identité : pleine à la couleur de l'armateur, pleine à l'encre (pétrolier), évidée (gazier)
+function shipDot(s, extra){ const k=shipKind(s);
+  return k==='gas' ? `background:${T.gas};box-shadow:inset 0 0 0 2px ${T.ink}${extra?','+extra:''}` : `background:${shipColor(s)}${extra?';box-shadow:'+extra:''}`; }
+function kindLabel(s){ const k=shipKind(s);
+  if(k==='tanker') return tr('pétrolier','tanker')+(s.cls?' '+s.cls:'');
+  if(k==='gas') return s.cls==='GPL'?tr('gazier GPL','LPG carrier'):tr('méthanier','LNG carrier')+(s.cls==='Q-Max'?' Q-Max':'');
+  return tr('porte-conteneurs','container ship'); }
+function capLabel(s){ const k=shipKind(s);
+  if(k==='tanker'&&s.dwt) return s.dwt.toLocaleString(locale())+' '+tr('tpl','dwt');
+  if(k==='gas'&&s.m3) return s.m3.toLocaleString(locale())+' m³';
+  return s.teu?s.teu.toLocaleString(locale())+' '+tr('EVP','TEU'):''; }
+
 /* ================= Vue / projection ================= */
 const cv = document.getElementById('map'), ctx = cv.getContext('2d');
 let W=0,H=0,DPR=1;
@@ -1097,6 +1140,7 @@ function readTokens(){
   T.landStroke = v('--map-land-stroke'); T.grat = v('--map-graticule');
   T.river = v('--map-river');      T.label = v('--map-label');
   T.other = v('--carrier-other');
+  T.tanker = v('--kind-tanker'); T.gas = v('--kind-gas'); T.ink = v('--text-primary');
   T.calm  = v('--risk-calm');      T.near  = v('--risk-moderate');
   T.inZ   = v('--risk-critical');
   // la rampe de risque alimente à la fois le canvas et les styles injectés
@@ -1339,7 +1383,7 @@ function draw(){
   }
   // route (simulé) ou sillage réellement parcouru (direct) du navire sélectionné
   if(selShip){
-    ctx.strokeStyle=opColor(selShip.op); ctx.globalAlpha=.65;
+    ctx.strokeStyle=shipColor(selShip); ctx.globalAlpha=.65;
     ctx.setLineDash([4,5]); ctx.lineWidth=1.6;
     ctx.beginPath();
     if(selShip.live){
@@ -1367,10 +1411,19 @@ function draw(){
       ang=Math.atan2(y2-y,x2-x);
     }
     ctx.save(); ctx.translate(x,y); ctx.rotate(ang); ctx.scale(grow,grow);
-    ctx.fillStyle=opColor(s.op);
-    ctx.beginPath(); ctx.moveTo(6,0); ctx.lineTo(-4,3.4); ctx.lineTo(-2.2,0); ctx.lineTo(-4,-3.4); ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle=T.water; ctx.lineWidth=.7; ctx.stroke();   // liseré pour le contraste
+    const kind=shipKind(s);
+    if(kind==='container'){
+      ctx.fillStyle=opColor(s.op);
+      ctx.beginPath(); ctx.moveTo(6,0); ctx.lineTo(-4,3.4); ctx.lineTo(-2.2,0); ctx.lineTo(-4,-3.4); ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle=T.water; ctx.lineWidth=.7; ctx.stroke();   // liseré pour le contraste
+    }else{
+      // coque à poupe carrée : pleine à l'encre (pétrolier) ou évidée avec sphère (gazier)
+      ctx.beginPath(); ctx.moveTo(6.5,0); ctx.lineTo(3.4,2.7); ctx.lineTo(-4.4,2.7); ctx.lineTo(-4.4,-2.7); ctx.lineTo(3.4,-2.7); ctx.closePath();
+      ctx.fillStyle=kind==='gas'?T.gas:T.tanker; ctx.fill();
+      ctx.strokeStyle=kind==='gas'?T.ink:T.water; ctx.lineWidth=kind==='gas'?1.1:.7; ctx.stroke();
+      if(kind==='gas'){ ctx.fillStyle=T.ink; ctx.beginPath(); ctx.arc(0,0,1.3,0,7); ctx.fill(); }
+    }
     ctx.rotate(-ang);                                          // anneaux non déformés
     if(st>0){
       ctx.strokeStyle=st===2?T.inZ:T.near; ctx.lineWidth=1.8;
@@ -1614,14 +1667,13 @@ function renderRanks(){
   lastTop=top;
   slist.innerHTML = top.length ? top.map((s,i)=>{
     const st=shipState(s);
-    const ring = st ? `;box-shadow:0 0 0 2px ${st===2?T.inZ:T.near}` : '';
-    const col = opColor(s.op)+ring;
+    const ring = st ? `0 0 0 2px ${st===2?T.inZ:T.near}` : '';
     const label = s.name || ('MMSI '+s.mmsi);
     const sub = s.live
       ? `${esc(s.op||tr('armateur n.c.','operator n/a'))}${s.dest?' · → '+esc(s.dest):''}`
-      : `${esc(s.op)} · ${esc(rName(s.route))}`;
+      : `${esc(s.op)}${shipKind(s)!=='container'?' · '+esc(kindLabel(s)):''} · ${esc(rName(s.route))}`;
     return `<div class="srow" data-i="${i}">
-      <span class="dot" style="background:${col}"></span>
+      <span class="dot" style="${shipDot(s, ring)}"></span>
       <span>${esc(label)}<br><small>${sub}</small></span>
       <span class="exp mono" style="color:${s.exp>0?riskCSS(Math.max(3,s.exp)):'var(--ink3)'}">${s.exp>0?s.exp.toFixed(1):'—'}</span>
     </div>`;}).join('')
@@ -1696,6 +1748,27 @@ function shipArt(op){
   </svg>`;
 }
 
+// illustration des pétroliers et gaziers, dessinée à l'encre comme le reste de la carte
+function energyArt(s){
+  const k=shipKind(s), ink='var(--ink)', hull=k==='tanker'?'var(--ink)':'var(--ink2)';
+  let deck='';
+  if(k==='tanker') deck=`<rect x="96" y="70" width="210" height="8" fill="none" stroke="${ink}" stroke-width="1.6"/>
+    <path d="M100 74 H300" stroke="${ink}" stroke-width="1.2" stroke-dasharray="3 3"/><rect x="186" y="62" width="18" height="10" fill="none" stroke="${ink}" stroke-width="1.6"/>`;
+  else if(s.cls==='GNL') for(let i=0;i<4;i++) deck+=`<path d="M${108+i*50} 78 a22 22 0 0 1 44 0" fill="var(--panel)" stroke="${ink}" stroke-width="1.6"/>`;
+  else deck=`<rect x="100" y="62" width="206" height="16" rx="3" fill="var(--panel)" stroke="${ink}" stroke-width="1.6"/>`
+    +[0,1,2].map(i=>`<rect x="${128+i*62}" y="56" width="12" height="6" fill="none" stroke="${ink}" stroke-width="1.4"/>`).join('');
+  return `<svg viewBox="0 0 360 130" role="img" aria-label="${esc(kindLabel(s))} ${esc(s.op)}">
+    <rect width="360" height="130" fill="var(--panel2)"/>
+    ${deck}
+    <rect x="52" y="40" width="34" height="38" fill="var(--panel)" stroke="${ink}" stroke-width="1.6"/>
+    <path d="M57 48 H81 M57 56 H81 M57 64 H81" stroke="${ink}" stroke-width="1.6"/>
+    <rect x="60" y="28" width="12" height="12" fill="${ink}"/>
+    <path d="M36 78 L324 78 L338 88 L318 106 L56 106 L42 92 Z" fill="${k==='tanker'?hull:'var(--panel)'}" stroke="${ink}" stroke-width="1.6"/>
+    <text x="196" y="97" fill="${k==='tanker'?'var(--panel)':ink}" font-size="12" font-weight="600" text-anchor="middle" letter-spacing="2.5" font-family="IBM Plex Mono,monospace">${esc(s.name)}</text>
+    <path d="M0 108 Q22 103 45 108 T90 108 T135 108 T180 108 T225 108 T270 108 T315 108 T360 108 L360 130 L0 130 Z" fill="var(--ocean)" opacity=".85"/>
+  </svg>`;
+}
+
 /* ================= Sélection & fiches ================= */
 const detail=document.getElementById('detail');
 function selectShip(s, center){
@@ -1715,8 +1788,8 @@ function renderShipCard(s){
   detail.style.display='block';
   detail.innerHTML=`<button class="x" aria-label="${tr('Fermer','Close')}">✕</button>
     <h2>${icon('ship')} ${esc(s.name)}</h2>
-    <div class="sub">${esc(s.op)} · ${tr('porte-conteneurs','container ship')} ${s.teu.toLocaleString(locale())} ${tr('EVP','TEU')}</div>
-    ${shipVisual(s.op)}
+    <div class="sub">${esc(s.op)} · ${esc(kindLabel(s))} ${capLabel(s)}${shipKind(s)!=='container'?' · '+(s.ballast?tr('sur lest','in ballast'):tr('chargé','laden')):''}</div>
+    ${shipKind(s)==='container' ? shipVisual(s.op) : `<div class="shipart">${energyArt(s)}</div>`}
     <dl class="kv">
       <dt>${tr('Route','Route')}</dt><dd>${esc(rName(s.route))} <small style="color:var(--ink3)">(${esc(rNote(s.route))})</small></dd>
       <dt>Destination</dt><dd>${esc(goingTo)}</dd>
@@ -1932,7 +2005,7 @@ searchIn.oninput=()=>{
     .slice(0,8);
   searchRes.innerHTML = searchHits.length
     ? searchHits.map((s,i)=>`<div class="sr" data-i="${i}">
-        <span style="width:9px;height:9px;border-radius:50%;background:${opColor(s.op)};flex:none"></span>
+        <span style="width:9px;height:9px;border-radius:50%;${shipDot(s)};flex:none"></span>
         ${esc(s.name||('MMSI '+s.mmsi))}<small>${esc(s.op||'—')}</small></div>`).join('')
     : `<div class="sr"><small>${tr('Aucun navire trouvé','No vessel found')}</small></div>`;
   searchRes.style.display='block';
@@ -1960,7 +2033,9 @@ function renderLegend(){
   document.getElementById('legops').innerHTML =
     Object.entries(OP_COLORS).map(([op,c])=>
       `<span><span class="sw" style="background:${c}"></span>${op}</span>`).join('')
-    + `<span><span class="sw" style="background:var(--other)"></span>${tr('Autres','Other')}</span>`;
+    + `<span><span class="sw" style="background:var(--other)"></span>${tr('Autres','Other')}</span>`
+    + `<span class="lsep"></span><span><span class="sw" style="background:var(--kind-tanker)"></span>${tr('Pétrolier','Tanker')}</span>`
+    + `<span><span class="sw" style="background:var(--kind-gas);box-shadow:inset 0 0 0 2px var(--ink)"></span>${tr('Gazier','Gas carrier')}</span>`;
 }
 renderLegend();
 
