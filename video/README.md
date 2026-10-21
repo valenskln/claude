@@ -22,8 +22,8 @@ Prérequis : Node + Playwright (Chromium), ffmpeg, Python 3 + numpy. Construire 
 cd video
 node shoot.mjs zone preview      # aperçu rapide d'un plan (une image toutes les 2 s)
 ./render.sh                      # rendu complet
-python3 music.py soundtrack.wav  # bande-son
-./assemble.sh                    # montage final
+python3 music.py soundtrack.wav 69.4  # bande-son (2e argument : instant du signal d'alerte satellite, en s)
+./assemble.sh                    # montage final → proteus-demo.mp4, -sans-son.mp4, -leger.mp4
 ```
 
 Les chemins de Chromium et de playwright-core sont ceux de l'environnement de développement :

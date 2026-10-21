@@ -17,4 +17,6 @@ F+="${prev}format=yuv420p[vout]"
 ffmpeg -y -hide_banner -loglevel warning "${IN[@]}" -i soundtrack.wav -filter_complex "$F;[8:a]loudnorm=I=-18:TP=-1.5:LRA=11[aout]" \
   -map "[vout]" -map "[aout]" -c:v libx264 -preset slow -crf 18 -profile:v high -r 25 -c:a aac -b:a 192k -movflags +faststart -shortest proteus-demo.mp4
 ffmpeg -y -hide_banner -loglevel warning -i proteus-demo.mp4 -an -c:v copy proteus-demo-sans-son.mp4
+# version légère (≈ 30 Mo) pour l'e-mail et LinkedIn
+ffmpeg -y -hide_banner -loglevel warning -i proteus-demo.mp4 -c:v libx264 -preset slow -crf 25 -maxrate 3M -bufsize 6M -c:a aac -b:a 128k -movflags +faststart proteus-demo-leger.mp4
 ffprobe -v error -show_entries format=duration,size -of default=nw=1 proteus-demo.mp4
