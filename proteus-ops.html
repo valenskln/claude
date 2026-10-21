@@ -135,13 +135,14 @@
   .tag{font:700 9.5px/1 var(--font-mono);letter-spacing:.08em;padding:3px 6px;border-radius:4px;white-space:nowrap}
   .tag.jwc{background:var(--warn-soft);color:var(--warn)} .tag.press{background:var(--signal-soft);color:var(--signal)}
   .tag.sat{background:var(--ok-soft);color:var(--ok)} .tag.ais{color:var(--t2);border:1px solid var(--line-hi)}
-  .tag.alert{background:var(--crit-soft);color:var(--crit)} .tag.sys{background:var(--glass-row);color:var(--t2);border:1px solid var(--line)}
+  .tag.alert{background:var(--crit-soft);color:var(--crit)} .tag.coast{color:var(--crit);border:1px dashed var(--crit)} .tag.sys{background:var(--glass-row);color:var(--t2);border:1px solid var(--line)}
   .tag.off{color:var(--high);border:1px dashed var(--high)} .tag.zn{color:var(--t1);border:1px solid var(--line-hi);overflow:hidden;text-overflow:ellipsis;max-width:130px}
   .ev .t{font:400 11px var(--font-mono);color:var(--t3);margin-left:auto;white-space:nowrap}
   .ev p{margin:0;font:500 13px/1.35 var(--font-ui);color:var(--t1)}
   .ev small{display:block;margin-top:3px;font:400 10.5px/1.35 var(--font-mono);color:var(--t3)}
   .ev a{color:inherit;text-decoration:none} .ev a:hover{color:var(--signal)}
   .kpis{position:absolute;z-index:20;top:70px;left:328px;right:368px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .kpis.k5{grid-template-columns:repeat(5,minmax(0,1fr))}
   .kpi{display:flex;gap:11px;align-items:flex-start;padding:12px 13px;border-radius:var(--r-panel);background:var(--glass);border:1px solid var(--line);
        backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));min-width:0}
   .kpi .ic{width:36px;height:36px;border-radius:9px;display:grid;place-items:center;flex:none;background:var(--signal-soft);color:var(--signal)}
@@ -217,6 +218,13 @@
   .pr .pw{height:5px;border-radius:3px;background:var(--line)} .pr .pv{height:100%;border-radius:3px;background:var(--warn)}
   .pr b{font:600 12px var(--font-mono);text-align:right;color:var(--t1)}
   ul.why{margin:0;padding-left:16px;font-size:13px;color:var(--t2)} ul.why li{margin:3px 0}
+  .thr{padding:9px 0;border-top:1px solid var(--line)} .thr:first-of-type{border-top:0;padding-top:2px}
+  .thr .th{display:flex;justify-content:space-between;gap:8px;align-items:baseline} .thr .th b{font:600 13.5px/1.25 var(--font-ui);color:var(--t1)}
+  .thr .lv{font:600 10px/1.2 var(--font-mono);letter-spacing:.06em;text-transform:uppercase;text-align:right;flex:none}
+  .thr small{display:block;font:400 11px/1.35 var(--font-mono);color:var(--t3);margin-top:2px}
+  .thr p{margin:5px 0 4px;font-size:12.5px;line-height:1.4;color:var(--t2)}
+  .thr ul{margin:0;padding:0;list-style:none} .thr li{display:grid;grid-template-columns:58px 1fr;gap:6px;font-size:12px;line-height:1.35;color:var(--t2);margin-top:3px}
+  .thr li span{font:500 11px/1.35 var(--font-mono);color:var(--crit)}
   .hl a{display:block;padding:8px 0;border-top:1px solid var(--line);color:var(--t1);text-decoration:none;font-size:13px}
   .hl a:hover{color:var(--signal)} .hl small{display:block;font:400 10.5px var(--font-mono);color:var(--t3);margin-top:2px}
   .stance{margin-top:16px;padding:10px 12px;border-radius:8px;background:var(--signal-soft);color:var(--t2);font-size:12.5px;border-left:2px solid var(--signal)}
@@ -246,7 +254,7 @@
   td .nm{font:600 13px var(--font-ui)} td .cr{font:400 10.5px var(--font-mono);color:var(--t3);margin-left:7px}
   .bdg{display:inline-flex;align-items:center;gap:5px;height:21px;padding:0 7px;border-radius:5px;font:600 10.5px var(--font-mono);white-space:nowrap}
   .bdg.ok{background:var(--ok-soft);color:var(--ok)} .bdg.ais{color:var(--t2);border:1px solid var(--line-hi)}
-  .bdg.dark{background:var(--crit-soft);color:var(--crit)} .bdg.live{background:var(--signal-soft);color:var(--signal)}
+  .bdg.dark{background:var(--crit-soft);color:var(--crit)} .bdg.coast{color:var(--crit);border:1px dashed var(--crit);background:transparent} .bdg.live{background:var(--signal-soft);color:var(--signal)}
 
   /* — commandes de vue + calques — */
   #tools{position:absolute;z-index:22;top:178px;right:380px;display:flex;flex-direction:column;gap:2px;padding:4px}
@@ -303,6 +311,8 @@
   .lb.sat small{display:block;color:var(--t3);font-weight:400}
   .lb.zone{font:600 10px/1 var(--font-mono);letter-spacing:.14em;color:var(--warn)}
   .lb.mk{transform:translate(14px,-50%);font:600 10.5px/1.2 var(--font-mono);color:var(--t1);padding:3px 6px;border-radius:4px;background:var(--glass-hi);border:1px solid var(--line-hi)}
+  .lb.thr{transform:translate(12px,-50%);padding:4px 7px;border:1px solid var(--crit);border-radius:5px;background:var(--glass-hi);font:600 10.5px/1.25 var(--font-mono);letter-spacing:.06em;color:var(--crit);white-space:nowrap}
+  .lb.thr small{display:block;font-weight:400;color:var(--t2);letter-spacing:.02em}
   .lb.mk.ok{border-color:var(--ok);color:var(--ok)} .lb.mk.no{border-color:var(--crit);color:var(--crit)} .lb.mk.w{border-color:var(--warn);color:var(--warn)}
   .lb.hov{transform:translate(12px,-160%);font:600 11px var(--font-mono);color:var(--t1);background:var(--glass-hi);padding:3px 7px;border-radius:4px;border:1px solid var(--line-hi)}
   .lb.gz{transform:translate(10px,-50%);font:600 10.5px/1.15 var(--font-mono);letter-spacing:.06em;color:var(--t1);text-shadow:0 0 6px var(--bg-0);pointer-events:auto;cursor:pointer}
@@ -327,7 +337,7 @@
   @media (max-width:1360px){ #feed,#zlist{display:none!important} .kpis,#fleet{left:14px} }
   @media (max-width:900px){
     #dossier,#wfeed{top:auto;height:42vh;left:14px;right:14px;width:auto} #fleet,#tools,#legend,.search,.chip-zone small,.pill.proto,.hbtn{display:none!important}
-    .kpis{right:14px;grid-template-columns:repeat(2,1fr)}
+    .kpis,.kpis.k5{right:14px;grid-template-columns:repeat(2,1fr)}
   }
 </style>
 </head>
@@ -388,7 +398,7 @@
 <aside id="dossier" class="glass reveal d3 z-only" aria-label="Dossier de zone"></aside>
 <section id="fleet" class="glass reveal d4 z-only" aria-label="Exposition">
   <div class="fh"><h2>Exposition</h2>
-    <div class="tabs" id="tabs"><button data-t="in" class="on">Dans la zone<b>0</b></button><button data-t="appr">En approche<b>0</b></button><button data-t="dark" class="al">Sans AIS<b>0</b></button></div>
+    <div class="tabs" id="tabs"><button data-t="in" class="on">Dans la zone<b>0</b></button><button data-t="appr">En approche<b>0</b></button><button data-t="dark" class="al">Sans AIS<b>0</b></button><button data-t="coast" class="al" title="Navires dans l’enveloppe d’un secteur côtier à risque">Côte<b>0</b></button></div>
     <div class="tabs" id="kindF" title="Filtrer par famille de navires"><button data-k="all" class="on">Tous</button><button data-k="container"><i class="kd" style="background:var(--signal)"></i>Cont.</button><button data-k="tanker"><i class="kd" style="background:var(--kind-tanker)"></i>Pétrole</button><button data-k="gas"><i class="kd" style="background:var(--kind-gas)"></i>Gaz</button></div>
     <span class="tot" id="fleetTot"></span>
     <button class="ibtn" id="fleetMin" title="Réduire / déplier"><svg class="i" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4"/></svg></button></div>
@@ -416,6 +426,7 @@
   <label class="tg z-only"><input type="checkbox" data-l="sat" checked>Satellites et emprises</label>
   <label class="tg z-only"><input type="checkbox" data-l="stack" checked>Calques de sources</label>
   <label class="tg z-only"><input type="checkbox" data-l="sweep" checked>Balayage de zone</label>
+  <label class="tg z-only"><input type="checkbox" data-l="coast" checked>Menaces côtières</label>
   <label class="tg"><input type="checkbox" data-l="grid" checked>Maillage géographique</label>
   <label class="tg z-only"><input type="checkbox" data-l="trails" checked>Sillages</label>
   <label class="tg"><input type="checkbox" data-l="labels" checked>Étiquettes</label>
@@ -599,6 +610,40 @@ const SEAS = [['MER ROUGE',15.0,41.95],['MER ROUGE',22.5,37.8],['MER ROUGE',26.5
  ['GOLFE DE GUAYAQUIL',-3.0,-80.5],['CANAL DU MOZAMBIQUE',-16.0,42.0],['OCÉAN ATLANTIQUE',36.0,-9.0],['OCÉAN ATLANTIQUE',-35.5,15.0],['MER D’ALBORAN',36.0,-3.5],
  ['DÉTROIT DE LOMBOK',-8.6,115.75],['DÉTROIT DE LA SONDE',-6.0,105.7],['DÉTROIT DE LUÇON',20.5,121.0],['MER DES PHILIPPINES',18.0,126.0],['MER IONIENNE',38.0,18.5],['GOLFE DE SYRTE',31.5,18.5]];
 
+// Menaces côtières : secteurs de côte d'où un danger peut atteindre la navigation (présence militaire,
+// zone de guerre, attaques documentées). Échelle régionale, d'après des faits publics et datés ; aucune
+// localisation de site précis. line = le secteur, posé sur le trait de côte ; reach = enveloppe d'exposition
+// en mer (km), hypothèse de travail paramétrable. En production : avis UKMTO / JMIC / MARAD, ACLED, OSM.
+const COAST_LEVEL = [null, ['Présence militaire', '--warn'], ['Actions contre la navigation', '--high'], ['Attaques armées documentées', '--crit']];
+const COAST_THREATS = [
+  { id: 'ir-bandar', name: 'Bandar Abbas · Qeshm', country: 'Iran', lvl: 2, reach: 90, line: [[26.95, 55.58], [27.19, 56.28], [27.0, 56.95]],
+    what: 'Port d’attache de la marine iranienne et du 1er district naval des Gardiens de la révolution, face au rail de navigation du détroit.',
+    facts: [['2019-07', 'Stena Impero saisi dans le détroit par les Gardiens de la révolution, conduit à Bandar Abbas.'], ['2024-04', 'MSC Aries saisi près du détroit par un commando héliporté des Gardiens de la révolution.']] },
+  { id: 'ir-islands', name: 'Îles Abou Moussa · Tumbs', country: 'Iran (revendiquées par les Émirats)', lvl: 1, reach: 60, line: [[25.87, 55.03], [26.24, 55.14], [26.26, 55.31]],
+    what: 'Îles sous contrôle iranien, avec garnisons, à proximité immédiate des voies de navigation vers le Golfe.',
+    facts: [['1971-11', 'Prise de contrôle iranienne des Tumbs ; Abou Moussa passe sous administration iranienne.']] },
+  { id: 'ir-jask', name: 'Côte de Jask', country: 'Iran', lvl: 2, reach: 80, line: [[26.05, 57.25], [25.64, 57.77], [25.42, 58.4]],
+    what: 'Base navale de Jask, à l’entrée du golfe d’Oman, sur la route des pétroliers qui sortent du détroit.',
+    facts: [['2008-10', 'Ouverture de la base navale de Jask.'], ['2023-04', 'Pétrolier Advantage Sweet saisi en golfe d’Oman par la marine iranienne.']] },
+  { id: 'ye-west', name: 'Côte ouest du Yémen · Hodeïda', country: 'Yémen (zone tenue par les Houthis)', lvl: 3, reach: 150, line: [[15.6, 42.75], [14.8, 42.95], [13.3, 43.25], [12.7, 43.47]],
+    what: 'Lancements de missiles et de drones contre des navires de commerce, documentés depuis novembre 2023.',
+    facts: [['2023-11', 'Galaxy Leader saisi en mer Rouge.'], ['2024-03', 'Le Rubymar coule, deux semaines après une frappe de missile.'], ['2025-07', 'Magic Seas et Eternity C coulés en mer Rouge.']] },
+  { id: 'ru-crimea', name: 'Crimée · Sébastopol', country: 'Crimée (occupée par la Russie)', lvl: 3, reach: 120, line: [[45.5, 32.75], [45.2, 33.35], [44.6, 33.5], [44.45, 34.0]],
+    what: 'Base principale de la flotte russe de la mer Noire ; zone de conflit armé.',
+    facts: [['2023-07', 'La Russie déclare que tout navire faisant route vers un port ukrainien peut être tenu pour transporteur de cargaison militaire.']] },
+  { id: 'ua-odesa', name: 'Ports d’Odessa · Tchornomorsk', country: 'Ukraine (zone de guerre)', lvl: 3, reach: 40, line: [[46.62, 30.95], [46.48, 30.75], [46.3, 30.65]],
+    what: 'Ports visés par des frappes de missiles et de drones ; navires civils touchés à quai ou en approche.',
+    facts: [['2023-08', 'Depuis la fin de l’accord céréalier : frappes répétées sur les ports d’Odessa, Tchornomorsk et Ismaïl.']] },
+];
+const COAST_SRC = 'UKMTO · JMIC · MARAD · presse internationale';
+const ZONE_SPAN = 1.75;                      // demi-largeur du cadre 3D = rayon de zone × ZONE_SPAN : on voit les pays riverains
+// secteurs côtiers dont un point tombe dans le cadre 3D de la zone
+function threatsFor(Z) {
+  const H = Z.r * ZONE_SPAN, KX = Math.cos(Z.c[0] * D2R) * 111.32;
+  return COAST_THREATS.filter(T => T.line.some(([la, lo]) => Math.abs(la - Z.c[0]) * 110.57 < H && Math.abs((((lo - Z.c[1]) + 540) % 360) - 180) * KX < H))
+    .sort((a, b) => b.lvl - a.lvl);
+}
+
 /* ================================================================ rendu partagé */
 const canvas = $('scene');
 let renderer;
@@ -610,7 +655,7 @@ const PR = Math.min(2, devicePixelRatio || 1);
 renderer.setPixelRatio(PR);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 const camera = new THREE.PerspectiveCamera(24, 1, 1, 30000);
-const VIS = { sat: true, stack: true, sweep: true, grid: true, trails: true, labels: true, routes: true, fleet: true };
+const VIS = { sat: true, stack: true, sweep: true, coast: true, grid: true, trails: true, labels: true, routes: true, fleet: true };
 let mode = 'world';
 const TC = {};
 
@@ -953,7 +998,7 @@ function buildZone(Z) {
   const wrapLon = d => ((d + 540) % 360) - 180;
   const ll = (lat, lon) => [wrapLon(lon - C.lon) * KX, -(lat - C.lat) * KZ];
   const toLL = (x, z) => [C.lat - z / KZ, C.lon + x / KX];
-  const H = Math.round(Z.r * 1.2), S = H / 360;                    // S = 1 pour une zone de 300 km
+  const H = Math.round(Z.r * ZONE_SPAN), S = H / 360;              // cadre élargi aux pays riverains ; S = 1 pour une demi-largeur de 360 km
   const B = { x0: -H, x1: H, z0: -H, z1: H }, BW = 2 * H;
   const bb = { lonMin: C.lon - H / KX, lonMax: C.lon + H / KX, latMin: C.lat - H / KZ, latMax: C.lat + H / KZ };
   const inBB = (la, lo) => la > bb.latMin && la < bb.latMax && lo > bb.lonMin && lo < bb.lonMax;
@@ -1053,6 +1098,21 @@ function buildZone(Z) {
   const tGeo = new THREE.BufferGeometry();
   tGeo.setAttribute('position', new THREE.BufferAttribute(tPos, 3)); tGeo.setAttribute('aBase', new THREE.BufferAttribute(tBase, 1)); tGeo.setAttribute('aSdf', new THREE.BufferAttribute(tSdf, 1));
   tGeo.setIndex(new THREE.BufferAttribute(tIdx, 1));
+
+  /* — menaces côtières : bande sur la terre le long du secteur, enveloppe d'exposition en mer — */
+  const segD = (x, z, ax, az, bx, bz) => { const dx = bx - ax, dz = bz - az, t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1), 0, 1); return Math.hypot(ax + dx * t - x, az + dz * t - z); };
+  const lineD = (P, x, z) => { let m = 1e9; for (let i = 0; i < P.length - 1; i++) m = Math.min(m, segD(x, z, P[i][0], P[i][1], P[i + 1][0], P[i + 1][1])); return m; };
+  const THR = threatsFor(Z).map(T => { const P = T.line.map(([la, lo]) => ll(la, lo)); let L = 0; const cum = [0]; for (let i = 1; i < P.length; i++) cum.push(L += Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+    let i = 1; while (i < P.length - 1 && cum[i] < L / 2) i++; const t = (L / 2 - cum[i - 1]) / Math.max(1e-6, cum[i] - cum[i - 1]);
+    return { ...T, P, mid: [P[i - 1][0] + (P[i][0] - P[i - 1][0]) * t, P[i - 1][1] + (P[i][1] - P[i - 1][1]) * t] }; });
+  const CBAND = 34;                                                  // profondeur de la bande côtière dans les terres (km)
+  { const aCl = new Float32Array(NV), aCd = new Float32Array(NV), aCr = new Float32Array(NV);
+    for (let k = 0; k < NV; k++) { let bl = 0, bd = 0, br = 0, be = -1e9; const x = tPos[k * 3], z = tPos[k * 3 + 2];
+      for (const T of THR) { const d = lineD(T.P, x, z); if (tSdf[k] > 0) bl = Math.max(bl, T.lvl / 3 * (1 - smooth(CBAND * .6, CBAND, d))); if (T.reach - d > be) { be = T.reach - d; bd = d; br = T.reach; } }
+      aCl[k] = bl; aCd[k] = bd; aCr[k] = br; }
+    tGeo.setAttribute('aCl', new THREE.BufferAttribute(aCl, 1)); tGeo.setAttribute('aCd', new THREE.BufferAttribute(aCd, 1)); tGeo.setAttribute('aCr', new THREE.BufferAttribute(aCr, 1)); }
+  // le secteur côtier le plus menaçant dont l'enveloppe contient le point (x, z)
+  function coastAt(x, z) { let best = null; for (const T of THR) { const d = lineD(T.P, x, z); if (d < T.reach && (!best || T.lvl > best.T.lvl || (T.lvl === best.T.lvl && d < best.d))) best = { T, d }; } return best; }
   function heightAt(x, z) {
     const fi = clamp((x - B.x0) / CELL, 0, NX - 1.001), fj = clamp((z - B.z0) / CELL, 0, NZ - 1.001), i = Math.floor(fi), j = Math.floor(fj), u = fi - i, v = fj - j;
     const h = k => tPos[k * 3 + 1], k = j * NX + i;
@@ -1194,16 +1254,18 @@ function buildZone(Z) {
     uSea: { value: new THREE.Color() }, uLow: { value: new THREE.Color() }, uHigh: { value: new THREE.Color() }, uContour: { value: new THREE.Color() },
     uGrid: { value: new THREE.Color() }, uCoast: { value: new THREE.Color() }, uWarn: { value: new THREE.Color() }, uOk: { value: new THREE.Color() },
     uLight: { value: LIGHT }, uKX: { value: KX }, uKZ: { value: KZ }, uLat0: { value: C.lat }, uLon0: { value: C.lon }, uG1: { value: g1 }, uG2: { value: g1 / 5 },
-    uZoneR: { value: Z.r }, uS: { value: S }, uTime: { value: 0 }, uSweep: { value: 0 }, uShowGrid: { value: 1 }, uShowSweep: { value: 1 }, uDark: { value: 1 },
+    uZoneR: { value: Z.r }, uS: { value: S }, uTime: { value: 0 }, uSweep: { value: 0 }, uShowGrid: { value: 1 }, uShowSweep: { value: 1 }, uDark: { value: 1 }, uCrit: { value: new THREE.Color() }, uShowCoast: { value: 1 },
     uFp0: { value: new THREE.Vector4() }, uFp0d: { value: new THREE.Vector2(1, 0) }, uFp0a: { value: 0 },
     uFp1: { value: new THREE.Vector4() }, uFp1d: { value: new THREE.Vector2(1, 0) }, uFp1a: { value: 0 } };
   const terrainMat = new THREE.ShaderMaterial({
     uniforms: U, extensions: { derivatives: true },
-    vertexShader: `attribute float aBase; attribute float aSdf; varying vec3 vW; varying vec3 vN; varying float vH; varying float vS;
-      void main(){ vec4 w = modelMatrix*vec4(position,1.); vW=w.xyz; vN=normalize(mat3(modelMatrix)*normal); vH=aBase; vS=aSdf; gl_Position = projectionMatrix*viewMatrix*w; }`,
+    vertexShader: `attribute float aBase; attribute float aSdf; attribute float aCl; attribute float aCd; attribute float aCr;
+      varying vec3 vW; varying vec3 vN; varying float vH; varying float vS; varying float vCl; varying float vCd; varying float vCr;
+      void main(){ vec4 w = modelMatrix*vec4(position,1.); vW=w.xyz; vN=normalize(mat3(modelMatrix)*normal); vH=aBase; vS=aSdf; vCl=aCl; vCd=aCd; vCr=aCr; gl_Position = projectionMatrix*viewMatrix*w; }`,
     fragmentShader: `
-      uniform vec3 uSea,uLow,uHigh,uContour,uGrid,uCoast,uWarn,uOk,uLight;
-      uniform float uKX,uKZ,uLat0,uLon0,uG1,uG2,uZoneR,uS,uTime,uSweep,uShowGrid,uShowSweep,uDark;
+      uniform vec3 uSea,uLow,uHigh,uContour,uGrid,uCoast,uWarn,uOk,uLight,uCrit;
+      uniform float uKX,uKZ,uLat0,uLon0,uG1,uG2,uZoneR,uS,uTime,uSweep,uShowGrid,uShowSweep,uDark,uShowCoast;
+      varying float vCl; varying float vCd; varying float vCr;
       uniform vec4 uFp0,uFp1; uniform vec2 uFp0d,uFp1d; uniform float uFp0a,uFp1a;
       varying vec3 vW; varying vec3 vN; varying float vH; varying float vS;
       float fw(float v){ return max(fwidth(v), 1e-4); }
@@ -1234,6 +1296,13 @@ function buildZone(Z) {
         c += uWarn*inZ*exp(-da*3.2)*uShowSweep*(.5 + .5*smoothstep(0., uZoneR, r))*.24;
         c = mix(c, uWarn, clamp(ring + tick*.9, 0., 1.));
         float pr = mod(r - uTime*55.*uS, 70.*uS); c += uWarn*(1.-smoothstep(0., fw(r)*1.8, abs(pr-uS)))*(1.-smoothstep(40.*uS, 130.*uS, r))*.6;
+        // menaces côtières : bande hachurée dans les terres, enveloppe en mer bordée d'un trait, ondes qui partent de la côte
+        float hatch = step(.55, fract((vW.x + vW.z)/(7.*uS) - uTime*.15));
+        c = mix(c, uCrit, land*vCl*(.30 + .30*hatch)*uShowCoast);
+        float ce = vCr - vCd, has = step(1., vCr), inE = step(0., ce)*has*(1.-land);
+        c += uCrit*inE*(.035 + .05*uDark*exp(-vCd/(40.*uS)))*uShowCoast;
+        c = mix(c, uCrit, (1.-smoothstep(0., fw(ce)*1.6, abs(ce)))*has*(1.-land)*.75*uShowCoast);
+        float wv = mod(vCd - uTime*22.*uS, 38.*uS); c += uCrit*inE*(1.-smoothstep(0., fw(vCd)*1.8, abs(wv-uS)))*(1.-smoothstep(0., vCr, vCd))*.45*uShowCoast;
         vec3 f0 = fp(uFp0,uFp0d), f1 = fp(uFp1,uFp1d);
         c += uOk*((f0.x*.07 + f0.y*.9 + f0.z*.32)*uFp0a + (f1.x*.07 + f1.y*.9 + f1.z*.32)*uFp1a);
         gl_FragColor = vec4(c,1.);
@@ -1257,7 +1326,17 @@ function buildZone(Z) {
   const borderLines = borderRuns.map(run => { const pts = []; for (let i = 0; i < run.length - 1; i++) { const [ax, az] = run[i], [bx, bz] = run[i + 1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / (2 * S))); for (let s = 0; s < n; s++) pts.push([ax + (bx - ax) * s / n, az + (bz - az) * s / n]); }
     pts.push(run[run.length - 1]); const l = new THREE.Line(new THREE.BufferGeometry(), borderMat); l.userData.pts = pts; scene.add(l); return l; });
   function placeBorders() { for (const l of borderLines) { l.geometry.dispose(); l.geometry = new THREE.BufferGeometry().setFromPoints(l.userData.pts.map(([x, z]) => new THREE.Vector3(x, heightAt(x, z) + .6 * S, z))); l.computeLineDistances(); } }
-  function applyRelief() { for (let k = 0; k < NV; k++) tPos[k * 3 + 1] = tSdf[k] > 0 ? tBase[k] * Math.max(.02, EX) : SEA_Y; tGeo.attributes.position.needsUpdate = true; tGeo.computeVertexNormals(); tGeo.computeBoundingSphere(); buildSkirt(); placeBorders(); }
+  /* — capteurs côtiers : un mât par secteur à risque, le secteur tracé sur la côte, une onde qui balaie l'enveloppe — */
+  const thrMat = new THREE.MeshBasicMaterial(), thrLineMat = new THREE.LineBasicMaterial({ transparent: true });
+  const masts = THR.map(T => { const g = new THREE.Group(); g.position.set(T.mid[0], 0, T.mid[1]); scene.add(g);
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(.55 * S, .55 * S, 34 * S, 8), thrMat); m.position.y = 17 * S; g.add(m);
+    const h = new THREE.Mesh(new THREE.OctahedronGeometry(3.4 * S), thrMat); h.position.y = 37 * S; g.add(h);
+    const r = new THREE.Mesh(new THREE.RingGeometry(.97, 1, 96).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide })); g.add(r);
+    const l = new THREE.Line(new THREE.BufferGeometry(), thrLineMat); scene.add(l);
+    const pts = []; for (let i = 0; i < T.P.length - 1; i++) { const [ax, az] = T.P[i], [bx, bz] = T.P[i + 1], n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / (2 * S))); for (let s = 0; s < n; s++) pts.push([ax + (bx - ax) * s / n, az + (bz - az) * s / n]); }
+    pts.push(T.P[T.P.length - 1]); return { T, g, h, r, l, pts }; });
+  function placeThreats() { for (const M of masts) { M.l.geometry.dispose(); M.l.geometry = new THREE.BufferGeometry().setFromPoints(M.pts.map(([x, z]) => new THREE.Vector3(x, Math.max(SEA_Y, heightAt(x, z)) + 1.2 * S, z))); M.g.position.y = Math.max(SEA_Y, heightAt(M.T.mid[0], M.T.mid[1])); M.r.position.y = SEA_Y - M.g.position.y + .4 * S; } }
+  function applyRelief() { for (let k = 0; k < NV; k++) tPos[k * 3 + 1] = tSdf[k] > 0 ? tBase[k] * Math.max(.02, EX) : SEA_Y; tGeo.attributes.position.needsUpdate = true; tGeo.computeVertexNormals(); tGeo.computeBoundingSphere(); buildSkirt(); placeBorders(); placeThreats(); }
 
   /* — calques de sources — */
   const stack = new THREE.Group(); scene.add(stack);
@@ -1406,6 +1485,8 @@ function buildZone(Z) {
       const moving = s.lane != null || (s.live && s.kn > 1);
       s.status = s.dist <= Z.r ? 'in' : (moving && (dx * -x + dz * -z) > 0) ? 'appr' : 'out';
       s.vis = shown && fade > .3;
+      const first = s.coast === undefined, pc = s.coast ? s.coast.T : null; s.coast = shown ? coastAt(x, z) : null;
+      if (!presim && !first && s.ais && s.vis && s.coast && s.coast.T !== pc) pushEv({ tag: 'coast', text: `${s.name} entre dans l’enveloppe côtière · ${s.coast.T.name}`, meta: `${s.coast.T.country} · ${COAST_LEVEL[s.coast.T.lvl][0].toLowerCase()} · ${Math.round(s.coast.d)} km du secteur${s.live ? ' · AIS réel' : ' · simulé'}`, ship: s });
       const prev = s.zoneState; s.zoneState = s.status;
       if (!presim && prev === 'appr' && s.status === 'in' && s.ais) pushEv({ tag: 'ais', text: `${s.name} entre dans la zone`, meta: `${s.carrier || ''} · ${s.teu ? s.teu.toLocaleString('fr-FR') + ' EVP · ' : ''}${money(exposure(s))} exposés${s.live ? ' · AIS réel' : ' · simulé'}`, ship: s });
       s.ring.visible = s.vis && (s.status !== 'out' || !s.ais); s.ring.material = !s.ais ? M.ringDark : s.status === 'in' ? M.ringIn : M.ringAp;
@@ -1426,7 +1507,8 @@ function buildZone(Z) {
   function recolor() {
     const dark = !theme, sig = TC.signal;
     U.uSea.value.copy(col('--sea')); U.uLow.value.copy(col('--land-low')); U.uHigh.value.copy(col('--land-high')); U.uContour.value.copy(col('--contour')); U.uGrid.value.copy(col('--grid')); U.uCoast.value.copy(col('--coast'));
-    U.uWarn.value.copy(TC.warn); U.uOk.value.copy(TC.ok); U.uDark.value = dark ? 1 : .35;
+    U.uWarn.value.copy(TC.warn); U.uOk.value.copy(TC.ok); U.uCrit.value.copy(TC.crit); U.uDark.value = dark ? 1 : .35;
+    thrMat.color.copy(TC.crit); thrLineMat.color.copy(TC.crit); thrLineMat.opacity = .95; masts.forEach(M => M.r.material.color.copy(TC.crit));
     floorM.material.color.copy(col('--side-bot')); rimMat.color.copy(col('--coast')); rimMat.opacity = dark ? .75 : .9; borderMat.color.copy(col('--t2')); laneMat.color.copy(sig);
     LAYER_DEF.forEach(([, , v], i) => { const c = col(v); layerMats[i][0].color.copy(c); layerMats[i][0].opacity = dark ? .6 : .8; layerMats[i][1].color.copy(c); layerMats[i][1].opacity = dark ? .035 : .07; });
     postMat.color.copy(col('--t3')); aisDots.material.color.copy(sig); satDots.material.color.copy(TC.ok); pressDots.material.color.copy(TC.warn);
@@ -1461,6 +1543,8 @@ function buildZone(Z) {
     addLabel('strait', `${esc(Z.name).toUpperCase()} · R ${Z.r} KM`, new THREE.Vector3(0, 84 * S, 0), { prio: 0 });
     LAYER_DEF.forEach(([n, s], i) => addLabel('layer', `${n}<small>${s}</small>`, new THREE.Vector3(B.x0 - (10 + i * 12) * S, LAYERS_Y[i], B.z0 - (10 + i * 12) * S), { prio: 1, left: true,
       update: L => L.vis = VIS.stack ? smooth(1700 * S, 2300 * S, cam.R) * (1 - smooth(1.05, 1.2, cam.phi)) : 0 }));
+    for (const M of masts) addLabel('thr', esc(M.T.name.toUpperCase()), new THREE.Vector3(M.T.mid[0], 0, M.T.mid[1]),
+      { prio: .5, right: true, update: L => { L.v.y = M.g.position.y + 40 * S; L.vis = VIS.coast ? 1 : 0; } });
     SATS.forEach(Sa => addLabel('sat', `${Sa.name} · SIMULÉ<small>${Sa.what}</small>`, Sa.apex, { prio: 1, right: true, update: L => L.vis = Sa.alpha }));
     for (let i = 0; i < 3; i++) { const L = addLabel('mk', '', new THREE.Vector3(), { prio: 0, always: true, right: true }); L.vis = 0; markEls.push(L); }
   }
@@ -1486,6 +1570,7 @@ function buildZone(Z) {
       <div class="row"><span>Position</span><span>${dms(la, 'N', 'S')} ${dms(lo, 'E', 'O')}</span></div>
       <div class="row"><span>Vitesse</span><span>${s.kn > .3 ? fr1(s.kn) + ' nd' : 'à l’arrêt'}</span></div>
       <div class="row"><span>Distance au centre</span><span>${Math.round(s.dist)} km</span></div>
+      ${s.coast ? `<div class="row"><span>Menace côtière</span><span style="color:var(--crit)">${esc(s.coast.T.name)} · ${Math.round(s.coast.d)} km</span></div>` : ''}
       ${s.ais ? `<div class="row"><span>Exposition estimée</span><span>${money(exposure(s))}</span></div>` : ''}
       ${s.live ? `<div class="row"><span>Dernier signal</span><span>il y a ${age} min</span></div>` : `<div class="row"><span>Dernier passage satellite</span><span>${s.satT ? hhmm(s.satT) + ' · ' + s.satBy : '—'}</span></div>`}
       <div class="n">${s.live ? 'Position AIS réelle (aisstream.io) · exposition : ordre de grandeur selon type et longueur' : s.ais ? 'Navire simulé · coque + marchandises, ordre de grandeur' : 'Scénario simulé · un contact sans AIS n’est pas une menace en soi : c’est un signal à qualifier'}</div>`;
@@ -1538,7 +1623,7 @@ function buildZone(Z) {
   presim = false;
   let tAcc = 0;
   const api = {
-    Z, S, scene, cam, VIEWS, ships, SATS, LANES, CELL, NX, get selected() { return selected; }, selectShip, shipAt, flyTo, active, exposure, satOk,
+    Z, S, scene, cam, VIEWS, ships, SATS, LANES, CELL, NX, coast: THR, get selected() { return selected; }, selectShip, shipAt, flyTo, active, exposure, satOk,
     get liveMode() { return liveMode; }, get tween() { return tween; }, set tween(v) { tween = v; }, get follow() { return follow; }, set follow(v) { follow = v; },
     setEx(v) { EX = v; applyRelief(); }, recolor,
     liveChanged() { liveMode = live.on; if (!liveMode) { for (const s of liveShips.values()) dropShip(s); liveShips.clear(); } selectShip(null); syncLive(); updateShips(0, tAcc); renderKpis(); renderFleet(true); layNote(); },
@@ -1546,7 +1631,8 @@ function buildZone(Z) {
     update(dt, now) {
       tAcc += dt;
       if (tween) { const k = clamp((now - tween.t0) / tween.dur, 0, 1), e = easeIO(k); for (const key of Object.keys(tween.to)) cam[key] = tween.from[key] + (tween.to[key] - tween.from[key]) * e; if (k >= 1) { tween = null; lastInput = now; } }
-      U.uTime.value = tAcc; U.uSweep.value = (tAcc * .9) % (Math.PI * 2); U.uShowGrid.value = VIS.grid ? 1 : 0; U.uShowSweep.value = VIS.sweep ? 1 : 0;
+      U.uTime.value = tAcc; U.uSweep.value = (tAcc * .9) % (Math.PI * 2); U.uShowGrid.value = VIS.grid ? 1 : 0; U.uShowSweep.value = VIS.sweep ? 1 : 0; U.uShowCoast.value = VIS.coast ? 1 : 0;
+      for (const M of masts) { M.g.visible = M.l.visible = VIS.coast; M.h.rotation.y = tAcc * 1.4; const k = (tAcc * .22 + M.T.lvl * .31) % 1; M.r.scale.setScalar(Math.max(1, k * M.T.reach)); M.r.material.opacity = .55 * (1 - k) * (1 - k); }
       wall.visible = VIS.sweep; stack.visible = VIS.stack; wallMat.uniforms.uT.value = tAcc;
       beacon.userData.head.rotation.y = tAcc * 1.2; beacon.userData.head.position.y = (66 + Math.sin(tAcc * 2) * 2) * S;
       updateShips(dt, tAcc); updateSats(dt); updateSelection(tAcc);
@@ -1560,7 +1646,7 @@ function buildZone(Z) {
 
 /* ================================================================ fil de veille (zone) */
 const feed = [];
-const TAGS = { jwc: 'JWC', press: 'PRESSE', sat: 'SAT', ais: 'AIS', alert: 'ALERTE', sys: 'SCORE', off: 'SOURCE' };
+const TAGS = { coast: 'CÔTE', jwc: 'JWC', press: 'PRESSE', sat: 'SAT', ais: 'AIS', alert: 'ALERTE', sys: 'SCORE', off: 'SOURCE' };
 function pushEv(ev) {
   ev.time = ev.time || hhmm(simMs); feed.unshift(ev); if (feed.length > 40) feed.pop();
   const el = document.createElement('div'); el.className = 'ev' + (ev.ship ? ' click' : '') + (ev.quiet ? '' : ' new');
@@ -1597,6 +1683,7 @@ const IC = {
   warn: '<path d="M8 1.5 14.5 13.5h-13z"/><path d="M8 6v3.5M8 11.5v.1"/>',
   globe: '<circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12"/>',
   shield: '<path d="M8 1.8 13 3.8v4c0 3-2.2 5.2-5 6.4C5.2 13 3 10.8 3 7.8v-4z"/><path d="m5.8 8 1.6 1.6L10.5 6.5"/>',
+  coast: '<path d="M1.5 13.5c2.2-.2 3-2.5 5.5-2.5 1.6 0 2.3.9 4 .9 1.3 0 2.2-.4 3.5-.9"/><path d="M5 11V4.5M3.6 4.5h2.8"/><path d="M8 3.2a3.6 3.6 0 0 1 0 5.1M10 1.7a6 6 0 0 1 0 8.1"/>',
 };
 const ico = k => `<svg class="i" viewBox="0 0 16 16">${IC[k]}</svg>`;
 let kpiKey = '';
@@ -1604,29 +1691,33 @@ function renderKpis() {
   if (!ZV) return; const Z = ZV.Z, A = ZV.active();
   const inZ = A.filter(s => s.ais && s.vis && s.status === 'in'), appr = A.filter(s => s.ais && s.vis && s.status === 'appr');
   const exp = inZ.reduce((a, s) => a + ZV.exposure(s), 0), cor = inZ.filter(ZV.satOk).length, dark = A.filter(s => !s.ais && s.detected).length, lv = ZV.liveMode;
-  const key = [lv, inZ.length, appr.length, money(exp), cor, dark].join('|'); if (key === kpiKey) return; kpiKey = key;
+  const TH = ZV.coast, inC = A.filter(s => s.ais && s.vis && s.coast), expC = inC.reduce((a, s) => a + ZV.exposure(s), 0);
+  const key = [lv, inZ.length, appr.length, money(exp), cor, dark, inC.length, money(expC)].join('|'); if (key === kpiKey) return; kpiKey = key;
+  $('kpis').classList.toggle('k5', TH.length > 0);
   $('kpis').innerHTML = `
     <div class="kpi"><div class="ic">${ico('ship')}</div><div style="min-width:0"><div class="l">Navires dans la zone</div><div class="v">${inZ.length}<small> · R ${Z.r} km</small></div><div class="s"><span class="up">+${appr.length}</span> en approche${lv ? ' · AIS réel' : ''}</div></div></div>
     <div class="kpi w"><div class="ic">${ico('coin')}</div><div style="min-width:0"><div class="l">Exposition estimée</div><div class="v">${money(exp)}</div><div class="s">${lv ? 'selon type et longueur AIS' : (() => { const by = k => inZ.filter(s => s.kind === k).reduce((a, s) => a + ZV.exposure(s), 0), t = by('tanker'), g = by('gas'); return t + g ? `dont pétrole ${money(t)} · gaz ${money(g)}` : 'coque + marchandises · simulé'; })()}</div></div></div>
     ${lv ? `<div class="kpi"><div class="ic">${ico('sat')}</div><div style="min-width:0"><div class="l">Recoupés par satellite</div><div class="v">—</div><div class="s">aucune source satellite branchée</div></div></div>`
       : `<div class="kpi g"><div class="ic">${ico('sat')}</div><div style="min-width:0;flex:1"><div class="l">Recoupés par satellite</div><div class="v">${cor}<small> / ${inZ.length}</small></div><div class="bar"><i style="width:${inZ.length ? cor / inZ.length * 100 : 0}%"></i></div></div></div>`}
-    <div class="kpi ${dark ? 'a' : ''}"><div class="ic">${ico('radar')}</div><div style="min-width:0"><div class="l">Contacts sans AIS</div><div class="v">${lv ? '—' : dark}</div><div class="s">${lv ? 'nécessite une source satellite' : dark ? '<span class="bad">à qualifier</span>' : 'aucun détecté'}</div></div></div>`;
+    <div class="kpi ${dark ? 'a' : ''}"><div class="ic">${ico('radar')}</div><div style="min-width:0"><div class="l">Contacts sans AIS</div><div class="v">${lv ? '—' : dark}</div><div class="s">${lv ? 'nécessite une source satellite' : dark ? '<span class="bad">à qualifier</span>' : 'aucun détecté'}</div></div></div>
+    ${TH.length ? `<div class="kpi ${inC.length ? 'a' : ''}"><div class="ic">${ico('coast')}</div><div style="min-width:0"><div class="l">Sous menace côtière</div><div class="v">${inC.length}<small> · ${money(expC)}</small></div><div class="s">${TH.length} secteur${TH.length > 1 ? 's' : ''} · ${esc(TH[0].country.split(' (')[0])}</div></div></div>` : ''}`;
 }
 let tab = 'in', fleetKey = '', kindF = 'all';
 function renderFleet(force) {
   if (!ZV) return; const A = ZV.active().filter(s => kindF === 'all' || s.kind === kindF || (!s.ais && tab === 'dark'));
-  const lists = { in: A.filter(s => s.ais && s.vis && s.status === 'in'), appr: A.filter(s => s.ais && s.vis && s.status === 'appr'), dark: A.filter(s => !s.ais && s.detected) };
-  lists.in.sort((a, b) => ZV.exposure(b) - ZV.exposure(a)); lists.appr.sort((a, b) => a.dist - b.dist);
+  const lists = { in: A.filter(s => s.ais && s.vis && s.status === 'in'), appr: A.filter(s => s.ais && s.vis && s.status === 'appr'), dark: A.filter(s => !s.ais && s.detected), coast: A.filter(s => s.ais && s.vis && s.coast) };
+  lists.in.sort((a, b) => ZV.exposure(b) - ZV.exposure(a)); lists.appr.sort((a, b) => a.dist - b.dist); lists.coast.sort((a, b) => b.coast.T.lvl - a.coast.T.lvl || a.coast.d - b.coast.d);
   document.querySelectorAll('#tabs button').forEach(b => { b.classList.toggle('on', b.dataset.t === tab); b.querySelector('b').textContent = lists[b.dataset.t].length; });
   $('fleetTot').innerHTML = `${money(lists.in.reduce((a, s) => a + ZV.exposure(s), 0))} <small>cumul en zone${kindF === 'all' ? '' : ' · ' + KINDS[kindF].plural.toLowerCase()}</small>`;
   const L = lists[tab].slice(0, 80), sel = ZV.selected;
-  const key = tab + kindF + L.map(s => s.name + (ZV.satOk(s) ? 1 : 0)).join('|') + (sel ? sel.name : '');
+  const key = tab + kindF + L.map(s => s.name + (ZV.satOk(s) ? 1 : 0) + (s.coast ? s.coast.T.id + Math.round(s.coast.d / 5) : '')).join('|') + (sel ? sel.name : '');
   if (key === fleetKey && !force) return; fleetKey = key;
   const badge = s => !s.ais ? '<span class="bdg dark">AIS COUPÉ · SAT</span>' : s.live ? '<span class="bdg live">AIS RÉEL</span>' : ZV.satOk(s) ? `<span class="bdg ok">AIS + ${s.satBy.replace('SAT-', 'SAT ')}</span>` : '<span class="bdg ais">AIS SEUL</span>';
-  $('fleetBody').innerHTML = L.length ? `<table><thead><tr><th>Navire</th><th>Recoupement</th><th class="r">${ZV.liveMode ? 'Long.' : 'Capacité'}</th><th class="r">Exposition</th><th class="r">Centre</th></tr></thead><tbody>${
-    L.map((s, i) => `<tr data-i="${i}" class="${sel === s ? 'sel' : ''}"><td><i class="kd" style="background:var(${s.ais ? kindVar(s) : '--crit'})"></i><span class="nm">${esc(s.name)}</span><span class="cr">${esc(s.live ? s.carrier || '' : s.ais ? (s.kind === 'container' ? s.carrier : kindTxt(s).replace('Pétrolier ', '').replace('Méthanier', 'GNL') + ' · ' + s.carrier) : '')}</span></td><td>${badge(s)}</td>
+  const cst = tab === 'coast', coastB = s => `<span class="bdg coast">${esc(s.coast.T.name)} · ${Math.round(s.coast.d)} km</span>`;
+  $('fleetBody').innerHTML = L.length ? `<table><thead><tr><th>Navire</th><th>${cst ? 'Secteur côtier' : 'Recoupement'}</th><th class="r">${ZV.liveMode ? 'Long.' : 'Capacité'}</th><th class="r">Exposition</th><th class="r">Centre</th></tr></thead><tbody>${
+    L.map((s, i) => `<tr data-i="${i}" class="${sel === s ? 'sel' : ''}"><td><i class="kd" style="background:var(${s.ais ? kindVar(s) : '--crit'})"></i><span class="nm">${esc(s.name)}</span><span class="cr">${esc(s.live ? s.carrier || '' : s.ais ? (s.kind === 'container' ? s.carrier : kindTxt(s).replace('Pétrolier ', '').replace('Méthanier', 'GNL') + ' · ' + s.carrier) : '')}</span></td><td>${cst ? coastB(s) : badge(s)}</td>
       <td class="r mono">${s.live ? (s.len ? s.len + ' m' : '—') : s.ais ? capTxt(s) : '—'}</td><td class="r mono">${s.ais ? money(ZV.exposure(s)) : '—'}</td><td class="r mono">${Math.round(s.dist)} km</td></tr>`).join('')}</tbody></table>`
-    : `<div class="empty">${tab === 'dark' ? (ZV.liveMode ? 'En direct, il faut une source satellite pour voir les navires sans AIS.' : 'Aucun contact sans AIS détecté — ce sont les passages satellite qui les révèlent.') : ZV.liveMode ? 'Aucun navire AIS reçu dans ce cadre pour l’instant (couverture côtière).' : 'Aucun navire.'}</div>`;
+    : `<div class="empty">${cst ? (ZV.coast.length ? 'Aucun navire dans l’enveloppe d’un secteur côtier à risque.' : 'Aucun secteur côtier à risque recensé autour de cette zone.') : tab === 'dark' ? (ZV.liveMode ? 'En direct, il faut une source satellite pour voir les navires sans AIS.' : 'Aucun contact sans AIS détecté — ce sont les passages satellite qui les révèlent.') : ZV.liveMode ? 'Aucun navire AIS reçu dans ce cadre pour l’instant (couverture côtière).' : 'Aucun navire.'}</div>`;
   $('fleetBody').querySelectorAll('tr[data-i]').forEach(tr => tr.onclick = () => { const s = L[+tr.dataset.i]; ZV.selectShip(s === ZV.selected ? null : s, true); });
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => { tab = b.dataset.t; renderFleet(true); });
@@ -1660,6 +1751,10 @@ function renderDossier(Z) {
       <div><span>Incidents (ASAM)</span><small>${SNAPD.sources && SNAPD.sources.asam ? ((Z.inc || []).length + ' incident(s) déclaré(s)') : 'indisponible à cette date'}</small></div><div class="seg ${SNAPD.sources && SNAPD.sources.asam ? 'l3' : 'na'}">${SNAPD.sources && SNAPD.sources.asam ? '<i></i><i></i><i></i>' : 'n.d.'}</div>
       <div><span>AIS ↔ satellite</span><small>${live.on ? 'AIS réel · satellite non branché' : 'recoupement des positions · simulé'}</small></div><div class="seg sim"><i></i><i></i><i></i></div>
     </div></div>
+    ${(() => { const TH = threatsFor(Z); return TH.length ? `<div class="sec"><div class="cap"><span>Menaces côtières</span><span>${TH.length} secteur${TH.length > 1 ? 's' : ''}</span></div>
+      ${TH.map(T => `<div class="thr"><div class="th"><b>${esc(T.name)}</b><span class="lv" style="color:var(${COAST_LEVEL[T.lvl][1]})">${COAST_LEVEL[T.lvl][0]}</span></div><small>${esc(T.country)} · enveloppe ${T.reach} km en mer</small>
+        <p>${esc(T.what)}</p><ul>${T.facts.map(([d, t]) => `<li><span>${d.slice(5)}/${d.slice(0, 4)}</span>${esc(t)}</li>`).join('')}</ul></div>`).join('')}
+      <div class="lg" style="margin-top:6px"><span>Secteurs à l’échelle régionale, faits publics datés (${COAST_SRC}) ; aucune localisation de site. L’enveloppe en mer est une hypothèse de travail, paramétrable.</span></div></div>` : ''; })()}
     <div class="sec"><div class="cap"><span>Composantes du score</span></div>
       ${PART_DEF.map(([k, l, m]) => `<div class="pr"><span>${l}</span><div class="pw"><div class="pv" style="width:${Math.min(100, (P[k] || 0) / m * 100)}%"></div></div><b>${fr1(P[k] || 0)}</b></div>`).join('')}</div>
     ${(Z.why || []).length ? `<div class="sec"><div class="cap"><span>Pourquoi ce score</span></div><ul class="why">${Z.why.map(w => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}

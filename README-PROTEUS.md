@@ -58,6 +58,24 @@ Chaque effet 3D porte une information : les emprises satellite montrent ce qui e
 image ; un **contact sans AIS** n'apparaît qu'une fois détecté (« à qualifier », jamais « menace ») ;
 le navire sélectionné projette une colonne à travers les calques AIS · satellite · presse/JWC.
 
+### Menaces côtières
+Le cadre 3D couvre 1,75 × le rayon de la zone, ce qui fait apparaître les pays riverains. Les
+**secteurs côtiers à risque** y sont dessinés : une bande hachurée dans les terres le long du
+secteur, un mât « capteur » et une **enveloppe d'exposition** en mer, bordée d'un trait, que
+balaie une onde. Tout navire qui entre dans une enveloppe est signalé : un événement CÔTE dans le
+fil, un indicateur « Sous menace côtière » (nombre de navires et exposition), un onglet **Côte**
+dans le tableau d'exposition et une ligne sur la fiche du navire. Cela vaut aussi pour les navires
+de l'AIS réel. Le dossier de zone liste chaque secteur avec son niveau (présence militaire ·
+actions contre la navigation · attaques armées documentées) et des faits datés.
+
+Secteurs recensés (`COAST_THREATS` dans `proto/ops.html`) : Bandar Abbas · Qeshm, îles Abou Moussa ·
+Tumbs, côte de Jask (Iran), côte ouest du Yémen (zone houthie), Crimée, ports d'Odessa. Ils sont
+tracés **à l'échelle régionale**, d'après des faits publics et datés, sans localisation de site
+précis. La largeur de l'enveloppe est une hypothèse de travail, à paramétrer par le souscripteur.
+Pour la production, les secteurs seraient alimentés par les avis UKMTO, JMIC et MARAD (zones de
+menace décrites en clair), les événements géolocalisés ACLED (licence à prendre), et les
+installations militaires d'OpenStreetMap (ODbL).
+
 ### AIS réel
 Bouton **AIS DIRECT** → clé gratuite aisstream.io (même clé que la carte 2D, gardée dans le
 navigateur). Les vrais navires remplacent la flotte simulée, sur le globe et dans chaque zone
